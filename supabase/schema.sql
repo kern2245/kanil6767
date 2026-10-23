@@ -44,3 +44,23 @@ select * from (values
   ('features', '세 번째 기능', '필요 없으면 삭제하면 됩니다.', 3)
 ) as v(section, title, description, sort_order)
 where not exists (select 1 from public.items);
+
+-- 5) 첫 화면(히어로) 글자를 저장하는 표 — 한 줄(id = 1)만 사용
+--    비어 있는 칸은 site.config.ts 의 글자가 대신 보입니다.
+create table if not exists public.hero (
+  id              integer primary key default 1 check (id = 1),
+  eyebrow         text,   -- 작은 윗글씨
+  title           text,   -- 큰 제목 (줄바꿈 가능)
+  description     text,   -- 소개 문장
+  primary_label   text,   -- 첫 번째 버튼 글자
+  secondary_label text,   -- 두 번째 버튼 글자
+  updated_at      timestamptz not null default now()
+);
+
+alter table public.hero enable row level security;
+
+drop policy if exists "Anyone can read hero" on public.hero;
+create policy "Anyone can read hero"
+  on public.hero for select
+  to anon, authenticated
+  using (true);

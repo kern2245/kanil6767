@@ -3,7 +3,8 @@
 /* 관리자 페이지의 버튼들이 실제로 하는 일 (서버에서 실행됨)
    - login / logout      : 로그인, 로그아웃
    - saveItem            : 카드 추가 또는 수정 (이미지 업로드 포함)
-   - deleteItem          : 카드 삭제 */
+   - deleteItem          : 카드 삭제
+   - saveHero            : 첫 화면(히어로) 글자 저장 */
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -113,4 +114,32 @@ export async function deleteItem(formData: FormData) {
 
   revalidatePath("/");
   revalidatePath("/admin");
+}
+
+/* ---------- 히어로 글자 저장 ---------- */
+
+export async function saveHero(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  if (!(await isAdmin())) return { message: "로그인이 필요합니다. 새로고침 후 다시 로그인하세요." };
+
+  const supabase = getAdminClient();
+  if (!supabase) return { message: "Supabase가 연결되지 않았습니다. .env.local 을 확인하세요." };
+
+  // 빈 칸은 null 로 저장 → 사이트에는 site.config.ts 의 기본 글자가 보임
+  const text = (name: string) => String(formData.get(name) ?? "").trim() || null;
+
+  const { error } = await supabase.from("hero").upsert({
+    id: 1,
+    eyebrow: text("eyebrow"),
+    title: text("title"),
+    description: text("description"),
+    primary_label: text("primary_label"),
+    secondary_label: text("secondary_label"),
+    updated_at: new Date().toISOString(),
+  });
+
+  if (error) return { message: `저장 실패: ${error.message}` };
+
+  revalidatePath("/");
+  revalidatePath("/admin");
+  return { ok: true, message: "저장했습니다." };
 }

@@ -13,3 +13,12 @@ export type Item = {
   is_visible: boolean;
   created_at: string;
 };
+
+/** 관리자 페이지에서 바꿀 수 있는 히어로 글자. supabase/schema.sql 의 hero 테이블과 같습니다. */
+export type HeroTexts = {
+  eyebrow: string;
+  title: string;
+  description: string;
+  primaryLabel: string;
+  secondaryLabel: string;
+};

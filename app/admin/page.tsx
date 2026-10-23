@@ -5,19 +5,21 @@ import { ArrowLeft, EyeOff } from "lucide-react";
 import { siteConfig } from "@/site.config";
 import { isAdmin, isAdminPasswordSet } from "@/lib/admin-auth";
 import { getAdminClient } from "@/lib/supabase-admin";
+import { getHeroTexts } from "@/lib/data";
 import type { Item } from "@/lib/types";
 import { Container } from "@/components/layout/container";
 import { Button } from "@/components/ui/button";
 import { logout } from "./actions";
 import { LoginForm } from "./_components/login-form";
 import { ItemForm } from "./_components/item-form";
+import { HeroForm } from "./_components/hero-form";
 import { DeleteButton } from "./_components/delete-button";
 
 /* 관리자 페이지 (주소: /admin)
    1) 비밀번호가 설정 안 됐으면 → 설정 안내
    2) 로그인 안 했으면 → 로그인 화면
    3) Supabase 연결 안 됐으면 → 연결 안내
-   4) 모두 준비됐으면 → 섹션별 카드(항목) 관리 */
+   4) 모두 준비됐으면 → "히어로" 탭(첫 화면 글자) + 섹션별 카드(항목) 관리 */
 
 export const metadata = { title: "관리자" };
 
@@ -27,6 +29,41 @@ function Notice({ title, children }: { title: string; children: React.ReactNode 
       <h1 className="text-xl font-semibold">{title}</h1>
       <div className="mt-4 space-y-2 text-sm leading-relaxed text-muted-foreground">{children}</div>
     </div>
+  );
+}
+
+/** 상단 바: 사이트로 돌아가기 + 로그아웃 */
+function AdminTopBar() {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex items-center gap-3">
+        <Button asChild variant="ghost" size="icon" aria-label="사이트로 돌아가기">
+          <Link href="/">
+            <ArrowLeft />
+          </Link>
+        </Button>
+        <h1 className="text-2xl font-semibold">관리자</h1>
+      </div>
+      <form action={logout}>
+        <Button type="submit" variant="outline" size="sm">
+          로그아웃
+        </Button>
+      </form>
+    </div>
+  );
+}
+
+/** 탭: 맨 앞 "히어로" + site.config.ts 의 adminSections */
+function SectionTabs({ current }: { current: string }) {
+  const tabs = [{ key: "hero", label: "히어로" }, ...siteConfig.adminSections];
+  return (
+    <nav className="mt-8 flex flex-wrap gap-2">
+      {tabs.map((s) => (
+        <Button key={s.key} asChild size="sm" variant={s.key === current ? "default" : "outline"}>
+          <Link href={`/admin?section=${s.key}`}>{s.label}</Link>
+        </Button>
+      ))}
+    </nav>
   );
 }
 
@@ -75,7 +112,23 @@ export default async function AdminPage(props: PageProps<"/admin">) {
 
   const sections = siteConfig.adminSections;
   const requested = typeof searchParams.section === "string" ? searchParams.section : undefined;
+  const isHeroTab = requested === "hero";
   const current = sections.find((s) => s.key === requested) ?? sections[0];
+
+  // "히어로" 탭: 첫 화면 글자 수정
+  if (isHeroTab) {
+    const heroTexts = await getHeroTexts();
+    return (
+      <Container className="py-10">
+        <AdminTopBar />
+        <SectionTabs current="hero" />
+        <section className="mt-8 max-w-2xl rounded-xl border p-6">
+          <h2 className="mb-5 text-lg font-semibold">첫 화면(히어로) 글자</h2>
+          <HeroForm texts={heroTexts} />
+        </section>
+      </Container>
+    );
+  }
 
   const { data, error } = await supabase
     .from("items")
@@ -87,31 +140,8 @@ export default async function AdminPage(props: PageProps<"/admin">) {
 
   return (
     <Container className="py-10">
-      {/* 상단 바 */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Button asChild variant="ghost" size="icon" aria-label="사이트로 돌아가기">
-            <Link href="/">
-              <ArrowLeft />
-            </Link>
-          </Button>
-          <h1 className="text-2xl font-semibold">관리자</h1>
-        </div>
-        <form action={logout}>
-          <Button type="submit" variant="outline" size="sm">
-            로그아웃
-          </Button>
-        </form>
-      </div>
-
-      {/* 섹션 탭 (site.config.ts 의 adminSections) */}
-      <nav className="mt-8 flex flex-wrap gap-2">
-        {sections.map((s) => (
-          <Button key={s.key} asChild size="sm" variant={s.key === current.key ? "default" : "outline"}>
-            <Link href={`/admin?section=${s.key}`}>{s.label}</Link>
-          </Button>
-        ))}
-      </nav>
+      <AdminTopBar />
+      <SectionTabs current={current.key} />
 
       {error ? (
         <p className="mt-6 rounded-lg border border-destructive/40 p-4 text-sm text-destructive">
