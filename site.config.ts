@@ -14,12 +14,9 @@ export const siteConfig = {
   title: "My Studio — 나의 첫 웹사이트",
   description: "바이브 코딩으로 만든 나의 웹사이트입니다.",
 
-  /* 상단 메뉴 (href 의 #이름 은 아래 섹션의 id 와 같아야 해당 위치로 이동) */
-  nav: [
-    { label: "소개", href: "#about" },
-    { label: "기능", href: "#features" },
-    { label: "연락처", href: "#contact" },
-  ],
+  /* 상단 메뉴 (href 의 #이름 은 아래 섹션의 id 와 같아야 해당 위치로 이동)
+     지금은 비어 있음. 다시 넣으려면 예) { label: "웹툰", href: "#webtoons" } */
+  nav: [] as { label: string; href: string }[],
 
   /* 상단 메뉴 오른쪽 버튼 (누르면 새 탭에서 관리자 페이지가 열림) */
   secretButton: { label: "비밀 버튼", href: "/admin" },
