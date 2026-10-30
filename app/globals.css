@@ -121,3 +121,42 @@
     font-family: var(--font-display);
   }
 }
+
+/* ==========================================================================
+   ★ 제목 그라데이션 팔레트 (히어로 큰 제목)
+   --------------------------------------------------------------------------
+   사이트에 접속할 때마다 아래 6개 중 하나가 무작위로 골라집니다. (app/layout.tsx)
+   색을 바꾸려면 각 줄의 #색코드 를 바꾸세요.
+   ========================================================================== */
+:root {
+  --title-gradient: linear-gradient(90deg, #86e3ce, #d0e6a5, #ffdd94, #fa897b, #ccabd8);
+}
+[data-palette="1"] {
+  --title-gradient: linear-gradient(90deg, #cca8db, #8a74a1, #8ececa, #00979d, #005b5c);
+}
+[data-palette="2"] {
+  --title-gradient: linear-gradient(90deg, #54c0cc, #1f4f58, #7a9a0e, #dcd964, #253502);
+}
+[data-palette="3"] {
+  --title-gradient: linear-gradient(90deg, #86e3ce, #d0e6a5, #ffdd94, #fa897b, #ccabd8);
+}
+[data-palette="4"] {
+  --title-gradient: linear-gradient(90deg, #00184b, #03457a, #0a8bc0, #97cadb, #d6e8ee);
+}
+[data-palette="5"] {
+  --title-gradient: linear-gradient(90deg, #e35d47, #ff7f50, #f7c46c, #88d8c7, #a9c962);
+}
+[data-palette="6"] {
+  --title-gradient: linear-gradient(90deg, #f4cfc3, #e8958f, #ffc98b, #ffb07c, #c6c09c);
+}
+
+/* 글자 모양대로 그라데이션을 칠하는 클래스 */
+.title-gradient {
+  /* 제목 밝기: 팔레트 위에 흰색을 살짝 겹쳐 밝게 만듭니다.
+     0.3 의 숫자를 키우면 더 밝게(최대 1 = 흰색), 0 이면 원래 색 */
+  --title-brighten: rgb(255 255 255 / 0.3);
+  background-image: linear-gradient(var(--title-brighten), var(--title-brighten)), var(--title-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}

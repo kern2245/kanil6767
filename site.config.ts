@@ -10,7 +10,7 @@ import type { Item } from "@/lib/types";
 
 export const siteConfig = {
   /* 브라우저 탭 제목과 검색 결과에 보이는 정보 */
-  name: "My Studio",
+  name: "セカイ",
   title: "My Studio — 나의 첫 웹사이트",
   description: "바이브 코딩으로 만든 나의 웹사이트입니다.",
 
@@ -53,8 +53,8 @@ export const siteConfig = {
 
   /* 연락처 섹션 */
   contact: {
-    eyebrow: "Contact",
-    title: "함께 이야기해요",
+    eyebrow: "tea time",
+    title: "나하고 tea타임 할래요?",
     description: "궁금한 점이 있다면 언제든 연락 주세요.",
     email: "hello@example.com",
     links: [

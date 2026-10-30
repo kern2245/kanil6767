@@ -15,6 +15,15 @@ export function Footer() {
               {item.label}
             </a>
           ))}
+          {/* 비밀 버튼: 새 탭에서 관리자 페이지 열기 (글자·주소는 site.config.ts 의 secretButton) */}
+          <a
+            href={siteConfig.secretButton.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-foreground"
+          >
+            {siteConfig.secretButton.label}
+          </a>
           {/* 숨은 관리자 버튼 */}
           <Link
             href="/admin"
