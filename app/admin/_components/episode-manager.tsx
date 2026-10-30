@@ -6,14 +6,16 @@ import { Trash2 } from "lucide-react";
 
 import { deleteEpisode, saveEpisode, uploadEpisodeImage } from "@/app/admin/actions";
 import { Button } from "@/components/ui/button";
+import { pdfToImages } from "@/lib/pdf-to-images";
 
 const inputClass =
   "h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/50";
 
 type EpisodeRow = { id: string; number: number; title: string; imageCount: number };
 
-/** 웹툰 한 개의 회차 관리: 회차 추가(그림 여러 장) + 올린 회차 목록·삭제
-    그림은 파일 이름 순서대로(001, 002 …) 위에서 아래로 붙습니다. */
+/** 웹툰 한 개의 회차 관리: 회차 추가(그림 여러 장 또는 PDF) + 올린 회차 목록·삭제
+    그림은 파일 이름 순서대로(001, 002 …) 위에서 아래로 붙습니다.
+    PDF 는 브라우저에서 쪽마다 JPG 로 바꾼 뒤 한 장씩 올립니다. (lib/pdf-to-images.ts) */
 export function EpisodeManager({ webtoonId, episodes }: { webtoonId: string; episodes: EpisodeRow[] }) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
@@ -28,16 +30,35 @@ export function EpisodeManager({ webtoonId, episodes }: { webtoonId: string; epi
     const number = Number(data.get("number"));
     const title = String(data.get("title") ?? "");
     // 파일 이름 순서대로 정렬 (1, 2, 10 처럼 숫자도 자연스럽게)
-    const files = (data.getAll("images") as File[])
+    const picked = (data.getAll("images") as File[])
       .filter((f) => f.size > 0)
       .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
 
-    if (files.length === 0) {
-      setStatus({ message: "만화 그림을 한 장 이상 골라 주세요." });
+    if (picked.length === 0) {
+      setStatus({ message: "만화 그림이나 PDF를 하나 이상 골라 주세요." });
       return;
     }
 
     setPending(true);
+
+    // PDF 는 쪽마다 그림(JPG)으로 바꾸고, 그림 파일은 그대로 사용
+    const files: File[] = [];
+    for (const f of picked) {
+      if (f.type === "application/pdf" || /\.pdf$/i.test(f.name)) {
+        try {
+          const pages = await pdfToImages(f, (p, total) =>
+            setStatus({ message: `PDF를 그림으로 바꾸는 중… ${f.name} ${p} / ${total}쪽` }),
+          );
+          files.push(...pages);
+        } catch {
+          setStatus({ message: `${f.name}: PDF를 읽지 못했습니다. 다른 PDF로 해 보거나 그림 파일로 올려 주세요.` });
+          setPending(false);
+          return;
+        }
+      } else {
+        files.push(f);
+      }
+    }
     const urls: string[] = [];
     for (let i = 0; i < files.length; i++) {
       setStatus({ message: `그림 올리는 중… ${i + 1} / ${files.length}` });
@@ -86,10 +107,17 @@ export function EpisodeManager({ webtoonId, episodes }: { webtoonId: string; epi
           </label>
         </div>
         <label className="grid gap-1.5 text-sm">
-          <span className="font-medium">만화 그림 * (여러 장 한 번에 선택, 한 장 4MB 이하)</span>
-          <input name="images" type="file" accept="image/*" multiple required className="text-sm" />
+          <span className="font-medium">만화 그림 또는 PDF * (여러 개 한 번에 선택, 그림은 한 장 4MB 이하)</span>
+          <input
+            name="images"
+            type="file"
+            accept="image/*,application/pdf,.pdf"
+            multiple
+            required
+            className="text-sm"
+          />
           <span className="text-xs text-muted-foreground">
-            파일 이름 순서대로 위에서 아래로 붙습니다. (예: 001.jpg, 002.jpg, 003.jpg)
+            파일 이름 순서대로 위에서 아래로 붙습니다. (예: 001.jpg, 002.jpg) PDF는 쪽 순서대로 그림으로 바뀌어 올라갑니다.
           </span>
         </label>
         <div className="flex flex-wrap items-center gap-3">
