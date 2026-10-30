@@ -1,6 +1,6 @@
 import { sampleItems, sampleWebtoons, siteConfig } from "@/site.config";
 import { getPublicClient } from "@/lib/supabase";
-import type { HeroTexts, Item, Webtoon } from "@/lib/types";
+import type { Episode, HeroTexts, Item, Webtoon } from "@/lib/types";
 
 /**
  * 특정 섹션의 카드 목록을 가져옵니다.
@@ -81,4 +81,54 @@ export async function getWebtoons(): Promise<Webtoon[]> {
     return sampleWebtoons;
   }
   return data && data.length > 0 ? (data as Webtoon[]) : sampleWebtoons;
+}
+
+/** 웹툰 한 개 (웹툰 페이지·뷰어용). 없거나 숨김이면 null. */
+export async function getWebtoon(id: string): Promise<Webtoon | null> {
+  const supabase = getPublicClient();
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from("webtoons")
+    .select("*")
+    .eq("id", id)
+    .eq("is_visible", true)
+    .maybeSingle();
+  if (error) {
+    console.error("[getWebtoon] Supabase 읽기 실패:", error.message);
+    return null;
+  }
+  return (data as Webtoon) ?? null;
+}
+
+/** 웹툰의 회차 목록 (그림 주소는 빼고, 회차 번호 순서대로) */
+export async function getEpisodes(webtoonId: string): Promise<Omit<Episode, "image_urls">[]> {
+  const supabase = getPublicClient();
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from("episodes")
+    .select("id, webtoon_id, number, title, created_at")
+    .eq("webtoon_id", webtoonId)
+    .order("number", { ascending: true });
+  if (error) {
+    console.error("[getEpisodes] Supabase 읽기 실패:", error.message);
+    return [];
+  }
+  return data ?? [];
+}
+
+/** 회차 하나 (뷰어용, 그림 주소 포함). 없으면 null. */
+export async function getEpisode(webtoonId: string, number: number): Promise<Episode | null> {
+  const supabase = getPublicClient();
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from("episodes")
+    .select("*")
+    .eq("webtoon_id", webtoonId)
+    .eq("number", number)
+    .maybeSingle();
+  if (error) {
+    console.error("[getEpisode] Supabase 읽기 실패:", error.message);
+    return null;
+  }
+  return (data as Episode) ?? null;
 }

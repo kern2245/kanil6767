@@ -88,3 +88,24 @@ create policy "Anyone can read visible webtoons"
   on public.webtoons for select
   to anon, authenticated
   using (is_visible = true);
+
+-- 7) 웹툰 회차 표 — 웹툰마다 1화, 2화… 와 만화 그림들
+--    그림은 images 버킷의 episodes/ 폴더에 저장되고, image_urls 에 위에서 아래 순서로 들어갑니다.
+--    웹툰을 지우면 그 웹툰의 회차도 함께 지워집니다.
+create table if not exists public.episodes (
+  id          uuid primary key default gen_random_uuid(),
+  webtoon_id  uuid not null references public.webtoons (id) on delete cascade,
+  number      integer not null,                    -- 회차 번호 (1, 2, 3 ...)
+  title       text not null,                       -- 회차 제목
+  image_urls  text[] not null default '{}',        -- 만화 그림 주소들 (위→아래 순서)
+  created_at  timestamptz not null default now(),
+  unique (webtoon_id, number)
+);
+
+alter table public.episodes enable row level security;
+
+drop policy if exists "Anyone can read episodes of visible webtoons" on public.episodes;
+create policy "Anyone can read episodes of visible webtoons"
+  on public.episodes for select
+  to anon, authenticated
+  using (exists (select 1 from public.webtoons w where w.id = webtoon_id and w.is_visible = true));

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { ImageIcon } from "lucide-react";
 
 import type { Webtoon, Weekday } from "@/lib/types";
@@ -85,9 +86,16 @@ export function WebtoonBoard({ columns, today }: { columns: Column[]; today: Wee
         <p className="py-16 text-center text-sm text-muted-foreground">준비 중입니다.</p>
       ) : (
         <div className="mt-6 grid grid-cols-3 gap-x-3 gap-y-6 sm:grid-cols-5 lg:grid-cols-7">
-          {current.items.map((w) => (
-            <WebtoonCard key={w.id} webtoon={w} today={today} />
-          ))}
+          {current.items.map((w) =>
+            // 예시 웹툰은 눌러도 이동하지 않음, 실제 웹툰은 웹툰 페이지(회차 목록)로 이동
+            w.id.startsWith("sample-") ? (
+              <WebtoonCard key={w.id} webtoon={w} today={today} />
+            ) : (
+              <Link key={w.id} href={`/webtoon/${w.id}`}>
+                <WebtoonCard webtoon={w} today={today} />
+              </Link>
+            ),
+          )}
         </div>
       )}
     </div>

@@ -38,3 +38,15 @@ export type Webtoon = {
   is_visible: boolean;
   created_at: string;
 };
+
+/** 웹툰 회차 한 개. supabase/schema.sql 의 episodes 테이블과 같습니다. */
+export type Episode = {
+  id: string;
+  webtoon_id: string;
+  /** 회차 번호 (1, 2, 3 ...) */
+  number: number;
+  title: string;
+  /** 만화 그림 주소들 (위에서 아래 순서) */
+  image_urls: string[];
+  created_at: string;
+};

@@ -6,7 +6,7 @@ import { siteConfig } from "@/site.config";
 import { isAdmin, isAdminPasswordSet } from "@/lib/admin-auth";
 import { getAdminClient } from "@/lib/supabase-admin";
 import { getHeroTexts } from "@/lib/data";
-import type { Item, Webtoon } from "@/lib/types";
+import type { Episode, Item, Webtoon } from "@/lib/types";
 import { Container } from "@/components/layout/container";
 import { Button } from "@/components/ui/button";
 import { logout } from "./actions";
@@ -15,6 +15,7 @@ import { ItemForm } from "./_components/item-form";
 import { HeroForm } from "./_components/hero-form";
 import { DeleteButton } from "./_components/delete-button";
 import { DeleteWebtoonButton, WebtoonForm } from "./_components/webtoon-form";
+import { EpisodeManager } from "./_components/episode-manager";
 
 /* 관리자 페이지 (주소: /admin)
    1) 비밀번호가 설정 안 됐으면 → 설정 안내
@@ -149,6 +150,16 @@ export default async function AdminPage(props: PageProps<"/admin">) {
     );
     const dayLabel = (key: string) => siteConfig.webtoons.weekdays.find((d) => d.key === key)?.label ?? key;
 
+    // 웹툰별 회차 목록 (회차 관리용)
+    const { data: episodeRows } = await supabase
+      .from("episodes")
+      .select("id, webtoon_id, number, title, image_urls")
+      .order("number", { ascending: true });
+    const episodesOf = (webtoonId: string) =>
+      ((episodeRows ?? []) as Pick<Episode, "id" | "webtoon_id" | "number" | "title" | "image_urls">[])
+        .filter((ep) => ep.webtoon_id === webtoonId)
+        .map((ep) => ({ id: ep.id, number: ep.number, title: ep.title, imageCount: ep.image_urls.length }));
+
     return (
       <Container className="py-10">
         <AdminTopBar />
@@ -204,6 +215,14 @@ export default async function AdminPage(props: PageProps<"/admin">) {
                       <summary className="cursor-pointer text-sm text-muted-foreground">수정하기</summary>
                       <div className="pt-4">
                         <WebtoonForm webtoon={w} />
+                      </div>
+                    </details>
+                    <details className="border-t px-4 py-3">
+                      <summary className="cursor-pointer text-sm text-muted-foreground">
+                        회차 관리 ({episodesOf(w.id).length}화)
+                      </summary>
+                      <div className="pt-4">
+                        <EpisodeManager webtoonId={w.id} episodes={episodesOf(w.id)} />
                       </div>
                     </details>
                   </li>

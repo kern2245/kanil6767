@@ -5,7 +5,8 @@
    - saveItem            : 카드 추가 또는 수정 (이미지 업로드 포함)
    - deleteItem          : 카드 삭제
    - saveHero            : 첫 화면(히어로) 글자 저장
-   - saveWebtoon / deleteWebtoon : 요일별 웹툰 추가·수정 / 삭제 */
+   - saveWebtoon / deleteWebtoon : 요일별 웹툰 추가·수정 / 삭제
+   - uploadEpisodeImage / saveEpisode / deleteEpisode : 웹툰 회차 그림 올리기 / 회차 저장 / 삭제 */
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -222,4 +223,86 @@ export async function deleteWebtoon(formData: FormData) {
 
   revalidatePath("/");
   revalidatePath("/admin");
+}
+
+/* ---------- 웹툰 회차 ---------- */
+
+// 그림은 한 장씩 따로 올립니다. (인터넷 배포(Vercel)에서는 한 번에 보낼 수 있는 크기가 약 4.5MB라서)
+const MAX_EPISODE_IMAGE_BYTES = 4 * 1024 * 1024; // 4MB
+
+export type UploadResult = { ok: true; url: string } | { ok: false; message: string };
+
+/** 회차 그림 한 장 올리기 → 그림 주소를 돌려줌 */
+export async function uploadEpisodeImage(formData: FormData): Promise<UploadResult> {
+  if (!(await isAdmin())) return { ok: false, message: "로그인이 필요합니다. 새로고침 후 다시 로그인하세요." };
+  const supabase = getAdminClient();
+  if (!supabase) return { ok: false, message: "Supabase가 연결되지 않았습니다." };
+
+  const webtoonId = String(formData.get("webtoon_id") ?? "");
+  const file = formData.get("file");
+  if (!webtoonId) return { ok: false, message: "웹툰 정보가 없습니다." };
+  if (!(file instanceof File) || file.size === 0) return { ok: false, message: "그림 파일이 없습니다." };
+  if (!file.type.startsWith("image/")) return { ok: false, message: `${file.name}: 이미지 파일만 올릴 수 있습니다.` };
+  if (file.size > MAX_EPISODE_IMAGE_BYTES) return { ok: false, message: `${file.name}: 한 장에 4MB 이하만 올릴 수 있습니다.` };
+
+  const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const path = `episodes/${webtoonId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const { error } = await supabase.storage
+    .from(IMAGE_BUCKET)
+    .upload(path, file, { contentType: file.type, upsert: false });
+  if (error) return { ok: false, message: `${file.name} 업로드 실패: ${error.message}` };
+
+  return { ok: true, url: supabase.storage.from(IMAGE_BUCKET).getPublicUrl(path).data.publicUrl };
+}
+
+/** 회차 저장 (그림을 다 올린 뒤 호출) */
+export async function saveEpisode(input: {
+  webtoonId: string;
+  number: number;
+  title: string;
+  imageUrls: string[];
+}): Promise<ActionState> {
+  if (!(await isAdmin())) return { message: "로그인이 필요합니다. 새로고침 후 다시 로그인하세요." };
+  const supabase = getAdminClient();
+  if (!supabase) return { message: "Supabase가 연결되지 않았습니다." };
+
+  const title = input.title.trim();
+  if (!input.webtoonId) return { message: "웹툰 정보가 없습니다." };
+  if (!Number.isInteger(input.number) || input.number < 1) return { message: "회차 번호는 1 이상 숫자로 입력하세요." };
+  if (!title) return { message: "회차 제목을 입력하세요." };
+
+  const { error } = await supabase.from("episodes").insert({
+    webtoon_id: input.webtoonId,
+    number: input.number,
+    title,
+    image_urls: input.imageUrls,
+  });
+  if (error) {
+    if (error.code === "23505") return { message: `${input.number}화는 이미 있습니다. 다른 번호를 쓰세요.` };
+    return { message: `저장 실패: ${error.message}` };
+  }
+
+  revalidatePath("/", "layout");
+  return { ok: true, message: `${input.number}화를 올렸습니다.` };
+}
+
+/** 회차 삭제 (그림 파일도 함께 정리) */
+export async function deleteEpisode(formData: FormData) {
+  if (!(await isAdmin())) return;
+  const supabase = getAdminClient();
+  if (!supabase) return;
+
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+
+  const { data } = await supabase.from("episodes").select("image_urls").eq("id", id).maybeSingle();
+  await supabase.from("episodes").delete().eq("id", id);
+
+  const marker = `/object/public/${IMAGE_BUCKET}/`;
+  const paths = ((data?.image_urls as string[] | undefined) ?? [])
+    .filter((url) => url.includes(marker))
+    .map((url) => url.split(marker)[1]);
+  if (paths.length > 0) await supabase.storage.from(IMAGE_BUCKET).remove(paths);
+
+  revalidatePath("/", "layout");
 }
