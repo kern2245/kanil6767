@@ -22,3 +22,19 @@ export type HeroTexts = {
   primaryLabel: string;
   secondaryLabel: string;
 };
+
+/** 연재 요일 (월~일) */
+export type Weekday = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
+
+/** 요일별 목록에 보이는 웹툰 한 개. supabase/schema.sql 의 webtoons 테이블과 같습니다. */
+export type Webtoon = {
+  id: string;
+  title: string;
+  weekday: Weekday;
+  cover_url: string | null;
+  /** true 면 제목 앞에 UP 표시 */
+  is_up: boolean;
+  sort_order: number;
+  is_visible: boolean;
+  created_at: string;
+};

@@ -45,6 +45,13 @@
 
   --destructive: #dc2626;
 
+  /* 요일별 웹툰 목록: 오늘 요일 줄 배경 / UP 표시 색 */
+  --today: #ddf7e6;
+  --up: #f15f2a;
+  /* 고른 요일 탭 배경 / 글자색 */
+  --tab-active: #00dc64;
+  --tab-active-foreground: #ffffff;
+
   --border: #e5e5e5;
   --input: #e5e5e5;
   --ring: #a3a3a3;
@@ -71,6 +78,10 @@
   --accent: #1f1f1f;
   --accent-foreground: #fafafa;
   --destructive: #ef4444;
+  --today: #10391f;
+  --up: #ff7a45;
+  --tab-active: #00dc64;
+  --tab-active-foreground: #ffffff;
   --border: #2a2a2a;
   --input: #2a2a2a;
   --ring: #525252;
@@ -93,6 +104,10 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-today: var(--today);
+  --color-up: var(--up);
+  --color-tab-active: var(--tab-active);
+  --color-tab-active-foreground: var(--tab-active-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);

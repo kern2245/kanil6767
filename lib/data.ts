@@ -1,6 +1,6 @@
-import { sampleItems, siteConfig } from "@/site.config";
+import { sampleItems, sampleWebtoons, siteConfig } from "@/site.config";
 import { getPublicClient } from "@/lib/supabase";
-import type { HeroTexts, Item } from "@/lib/types";
+import type { HeroTexts, Item, Webtoon } from "@/lib/types";
 
 /**
  * 특정 섹션의 카드 목록을 가져옵니다.
@@ -58,4 +58,27 @@ export async function getHeroTexts(): Promise<HeroTexts> {
     primaryLabel: data?.primary_label || fallback.primaryLabel,
     secondaryLabel: data?.secondary_label || fallback.secondaryLabel,
   };
+}
+
+/**
+ * 요일별 웹툰 목록을 가져옵니다.
+ * - Supabase가 연결 안 됐거나, 웹툰이 하나도 없으면: site.config.ts 의 예시 웹툰을 보여줌
+ * - 있으면: '보이기'로 설정된 웹툰만 순서대로 가져옴
+ */
+export async function getWebtoons(): Promise<Webtoon[]> {
+  const supabase = getPublicClient();
+  if (!supabase) return sampleWebtoons;
+
+  const { data, error } = await supabase
+    .from("webtoons")
+    .select("*")
+    .eq("is_visible", true)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("[getWebtoons] Supabase 읽기 실패:", error.message);
+    return sampleWebtoons;
+  }
+  return data && data.length > 0 ? (data as Webtoon[]) : sampleWebtoons;
 }

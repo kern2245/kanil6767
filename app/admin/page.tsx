@@ -6,7 +6,7 @@ import { siteConfig } from "@/site.config";
 import { isAdmin, isAdminPasswordSet } from "@/lib/admin-auth";
 import { getAdminClient } from "@/lib/supabase-admin";
 import { getHeroTexts } from "@/lib/data";
-import type { Item } from "@/lib/types";
+import type { Item, Webtoon } from "@/lib/types";
 import { Container } from "@/components/layout/container";
 import { Button } from "@/components/ui/button";
 import { logout } from "./actions";
@@ -14,12 +14,13 @@ import { LoginForm } from "./_components/login-form";
 import { ItemForm } from "./_components/item-form";
 import { HeroForm } from "./_components/hero-form";
 import { DeleteButton } from "./_components/delete-button";
+import { DeleteWebtoonButton, WebtoonForm } from "./_components/webtoon-form";
 
 /* 관리자 페이지 (주소: /admin)
    1) 비밀번호가 설정 안 됐으면 → 설정 안내
    2) 로그인 안 했으면 → 로그인 화면
    3) Supabase 연결 안 됐으면 → 연결 안내
-   4) 모두 준비됐으면 → "히어로" 탭(첫 화면 글자) + 섹션별 카드(항목) 관리 */
+   4) 모두 준비됐으면 → "히어로" 탭(첫 화면 글자) + "웹툰" 탭(요일별 웹툰) + 섹션별 카드(항목) 관리 */
 
 export const metadata = { title: "관리자" };
 
@@ -55,7 +56,11 @@ function AdminTopBar() {
 
 /** 탭: 맨 앞 "히어로" + site.config.ts 의 adminSections */
 function SectionTabs({ current }: { current: string }) {
-  const tabs = [{ key: "hero", label: "히어로" }, ...siteConfig.adminSections];
+  const tabs = [
+    { key: "hero", label: "히어로" },
+    { key: "webtoons", label: "웹툰" },
+    ...siteConfig.adminSections,
+  ];
   return (
     <nav className="mt-8 flex flex-wrap gap-2">
       {tabs.map((s) => (
@@ -126,6 +131,87 @@ export default async function AdminPage(props: PageProps<"/admin">) {
           <h2 className="mb-5 text-lg font-semibold">첫 화면(히어로) 글자</h2>
           <HeroForm texts={heroTexts} />
         </section>
+      </Container>
+    );
+  }
+
+  // "웹툰" 탭: 요일별 웹툰 추가·수정·삭제
+  if (requested === "webtoons") {
+    const { data: webtoonRows, error: webtoonError } = await supabase
+      .from("webtoons")
+      .select("*")
+      .order("weekday", { ascending: true })
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true });
+    const dayOrder = siteConfig.webtoons.weekdays.map((d) => d.key);
+    const webtoons = ((webtoonRows ?? []) as Webtoon[]).sort(
+      (a, b) => dayOrder.indexOf(a.weekday) - dayOrder.indexOf(b.weekday) || a.sort_order - b.sort_order,
+    );
+    const dayLabel = (key: string) => siteConfig.webtoons.weekdays.find((d) => d.key === key)?.label ?? key;
+
+    return (
+      <Container className="py-10">
+        <AdminTopBar />
+        <SectionTabs current="webtoons" />
+
+        {webtoonError ? (
+          <p className="mt-6 rounded-lg border border-destructive/40 p-4 text-sm text-destructive">
+            웹툰을 불러오지 못했습니다: {webtoonError.message}
+            <br />
+            supabase/schema.sql 을 Supabase SQL Editor 에서 다시 실행했는지 확인하세요.
+          </p>
+        ) : null}
+
+        <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+          <section className="h-fit rounded-xl border p-6">
+            <h2 className="mb-5 text-lg font-semibold">웹툰 추가</h2>
+            <WebtoonForm />
+          </section>
+
+          <section>
+            <h2 className="mb-5 text-lg font-semibold">
+              등록된 웹툰 <span className="text-muted-foreground">({webtoons.length})</span>
+            </h2>
+            {webtoons.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                아직 없습니다. 왼쪽에서 추가해 보세요. (지금 사이트에는 예시 웹툰이 보입니다)
+              </p>
+            ) : (
+              <ul className="space-y-3">
+                {webtoons.map((w) => (
+                  <li key={w.id} className="rounded-xl border">
+                    <div className="flex items-center gap-4 p-4">
+                      <div className="relative h-16 w-12 shrink-0 overflow-hidden rounded-md bg-muted">
+                        {w.cover_url ? (
+                          <Image src={w.cover_url} alt="" fill sizes="48px" className="object-cover" />
+                        ) : null}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="flex items-center gap-2 font-medium">
+                          {w.is_up ? <span className="text-xs font-bold text-up">UP</span> : null}
+                          <span className="truncate">{w.title}</span>
+                          {!w.is_visible ? (
+                            <EyeOff className="size-4 shrink-0 text-muted-foreground" aria-label="숨김" />
+                          ) : null}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {dayLabel(w.weekday)}요일
+                        </p>
+                      </div>
+                      <DeleteWebtoonButton id={w.id} coverUrl={w.cover_url} />
+                    </div>
+                    <details className="border-t px-4 py-3">
+                      <summary className="cursor-pointer text-sm text-muted-foreground">수정하기</summary>
+                      <div className="pt-4">
+                        <WebtoonForm webtoon={w} />
+                      </div>
+                    </details>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
       </Container>
     );
   }

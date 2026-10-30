@@ -6,7 +6,7 @@
    (따옴표, 쉼표, 중괄호 { } 는 지우지 않도록 조심!)
    ========================================================================== */
 
-import type { Item } from "@/lib/types";
+import type { Item, Webtoon, Weekday } from "@/lib/types";
 
 export const siteConfig = {
   /* 브라우저 탭 제목과 검색 결과에 보이는 정보 */
@@ -49,6 +49,22 @@ export const siteConfig = {
     eyebrow: "Features",
     title: "기능",
     description: "관리자 페이지에서 카드를 추가·수정·삭제할 수 있는 영역입니다.",
+  },
+
+  /* 요일별 웹툰 목록 섹션 — 웹툰 자체는 관리자 페이지(/admin)의 "웹툰" 탭에서 관리 */
+  webtoons: {
+    eyebrow: "Weekly",
+    title: "요일별 웹툰",
+    /* 요일 이름 (key 는 데이터베이스에 저장되는 값이라 바꾸지 마세요) */
+    weekdays: [
+      { key: "mon", label: "월" },
+      { key: "tue", label: "화" },
+      { key: "wed", label: "수" },
+      { key: "thu", label: "목" },
+      { key: "fri", label: "금" },
+      { key: "sat", label: "토" },
+      { key: "sun", label: "일" },
+    ] as { key: Weekday; label: string }[],
   },
 
   /* 연락처 섹션 */
@@ -112,3 +128,18 @@ export const sampleItems: Item[] = [
     created_at: "2026-01-01T00:00:00Z",
   },
 ];
+
+/* Supabase에 웹툰을 아직 올리지 않았을 때 대신 보여줄 예시 웹툰 (요일마다 3개, 표지 없음).
+   관리자 페이지 "웹툰" 탭에서 웹툰을 올리면 이 예시 대신 올린 웹툰이 보입니다. */
+export const sampleWebtoons: Webtoon[] = siteConfig.webtoons.weekdays.flatMap((day) =>
+  [1, 2, 3].map((n) => ({
+    id: `sample-${day.key}-${n}`,
+    title: `${day.label}요 예시 웹툰 ${n}`,
+    weekday: day.key,
+    cover_url: null,
+    is_up: false, // UP 은 오늘 요일 웹툰에 자동으로 붙음
+    sort_order: n,
+    is_visible: true,
+    created_at: "2026-01-01T00:00:00Z",
+  })),
+);

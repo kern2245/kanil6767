@@ -64,3 +64,27 @@ create policy "Anyone can read hero"
   on public.hero for select
   to anon, authenticated
   using (true);
+
+-- 6) 웹툰 목록 표 — 요일별 웹툰 목록(첫 화면)에 보이는 웹툰
+--    표지 그림은 3) 에서 만든 images 버킷의 webtoons/ 폴더에 저장됩니다.
+create table if not exists public.webtoons (
+  id          uuid primary key default gen_random_uuid(),
+  title       text not null,                       -- 웹툰 제목
+  weekday     text not null default 'mon'          -- 연재 요일
+              check (weekday in ('mon','tue','wed','thu','fri','sat','sun')),
+  cover_url   text,                                -- 표지 그림 주소
+  is_up       boolean not null default false,      -- UP 표시 (새 회차 올라옴)
+  sort_order  integer not null default 0,          -- 순서 (작을수록 위)
+  is_visible  boolean not null default true,       -- 사이트에 보이기
+  created_at  timestamptz not null default now()
+);
+
+create index if not exists webtoons_weekday_order_idx on public.webtoons (weekday, sort_order);
+
+alter table public.webtoons enable row level security;
+
+drop policy if exists "Anyone can read visible webtoons" on public.webtoons;
+create policy "Anyone can read visible webtoons"
+  on public.webtoons for select
+  to anon, authenticated
+  using (is_visible = true);

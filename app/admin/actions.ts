@@ -4,7 +4,8 @@
    - login / logout      : 로그인, 로그아웃
    - saveItem            : 카드 추가 또는 수정 (이미지 업로드 포함)
    - deleteItem          : 카드 삭제
-   - saveHero            : 첫 화면(히어로) 글자 저장 */
+   - saveHero            : 첫 화면(히어로) 글자 저장
+   - saveWebtoon / deleteWebtoon : 요일별 웹툰 추가·수정 / 삭제 */
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -142,4 +143,83 @@ export async function saveHero(_prev: ActionState, formData: FormData): Promise<
   revalidatePath("/");
   revalidatePath("/admin");
   return { ok: true, message: "저장했습니다." };
+}
+
+/* ---------- 웹툰 저장 (추가 / 수정) ---------- */
+
+const WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+
+export async function saveWebtoon(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  if (!(await isAdmin())) return { message: "로그인이 필요합니다. 새로고침 후 다시 로그인하세요." };
+
+  const supabase = getAdminClient();
+  if (!supabase) return { message: "Supabase가 연결되지 않았습니다. .env.local 을 확인하세요." };
+
+  const id = String(formData.get("id") ?? "");
+  const title = String(formData.get("title") ?? "").trim();
+  const weekday = String(formData.get("weekday") ?? "");
+  const isUp = formData.get("is_up") === "on";
+  const isVisible = formData.get("is_visible") === "on";
+  const removeCover = formData.get("remove_cover") === "on";
+  const cover = formData.get("cover");
+
+  if (!title) return { message: "제목을 입력하세요." };
+  if (!WEEKDAYS.includes(weekday)) return { message: "요일을 골라 주세요." };
+
+  const row: Record<string, unknown> = {
+    title,
+    weekday,
+    is_up: isUp,
+    is_visible: isVisible,
+  };
+
+  // 새 표지를 올린 경우 → Supabase 저장소의 webtoons/ 폴더에 업로드
+  if (cover instanceof File && cover.size > 0) {
+    if (!cover.type.startsWith("image/")) return { message: "이미지 파일만 올릴 수 있습니다." };
+    if (cover.size > MAX_IMAGE_BYTES) return { message: "이미지는 5MB 이하만 올릴 수 있습니다." };
+
+    const ext = (cover.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const path = `webtoons/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const { error: uploadError } = await supabase.storage
+      .from(IMAGE_BUCKET)
+      .upload(path, cover, { contentType: cover.type, upsert: false });
+    if (uploadError) return { message: `표지 업로드 실패: ${uploadError.message}` };
+
+    row.cover_url = supabase.storage.from(IMAGE_BUCKET).getPublicUrl(path).data.publicUrl;
+  } else if (removeCover) {
+    row.cover_url = null;
+  }
+
+  const { error } = id
+    ? await supabase.from("webtoons").update(row).eq("id", id)
+    : await supabase.from("webtoons").insert(row);
+
+  if (error) return { message: `저장 실패: ${error.message}` };
+
+  revalidatePath("/");
+  revalidatePath("/admin");
+  return { ok: true, message: id ? "수정했습니다." : "추가했습니다." };
+}
+
+/* ---------- 웹툰 삭제 ---------- */
+
+export async function deleteWebtoon(formData: FormData) {
+  if (!(await isAdmin())) return;
+  const supabase = getAdminClient();
+  if (!supabase) return;
+
+  const id = String(formData.get("id") ?? "");
+  const coverUrl = String(formData.get("cover_url") ?? "");
+  if (!id) return;
+
+  await supabase.from("webtoons").delete().eq("id", id);
+
+  // 연결된 표지 파일도 저장소에서 정리
+  const marker = `/object/public/${IMAGE_BUCKET}/`;
+  if (coverUrl.includes(marker)) {
+    await supabase.storage.from(IMAGE_BUCKET).remove([coverUrl.split(marker)[1]]);
+  }
+
+  revalidatePath("/");
+  revalidatePath("/admin");
 }
