@@ -137,3 +137,21 @@ alter table public.artists enable row level security;
 -- 웹툰에 "누가 올렸는지" 칸 추가 (작가가 지워지면 비워짐 → 회장만 관리)
 alter table public.webtoons add column if not exists artist_id uuid references public.artists (id) on delete set null;
 create index if not exists webtoons_artist_idx on public.webtoons (artist_id);
+
+-- 10) TEA TIME(연락처) 칸 글자 표 — 한 줄(id = 1)만 사용, 회장 페이지 "TEA TIME" 탭에서 수정
+--     비어 있는 칸은 site.config.ts 의 contact 글자가 대신 보입니다.
+create table if not exists public.contact_texts (
+  id          integer primary key default 1 check (id = 1),
+  eyebrow     text,   -- 작은 윗글씨 (예: tea time)
+  title       text,   -- 제목
+  description text,   -- 안내 문장
+  updated_at  timestamptz not null default now()
+);
+
+alter table public.contact_texts enable row level security;
+
+drop policy if exists "Anyone can read contact texts" on public.contact_texts;
+create policy "Anyone can read contact texts"
+  on public.contact_texts for select
+  to anon, authenticated
+  using (true);

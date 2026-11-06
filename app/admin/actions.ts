@@ -5,6 +5,7 @@
    - artistSignup / artistLogin / artistLogout / changeArtistPassword : 작가 가입·로그인·로그아웃·비밀번호 바꾸기
    - saveItem / deleteItem : 카드 추가·수정 / 삭제 (회장만)
    - saveHero            : 첫 화면(히어로) 글자 저장 (회장만)
+   - saveContactTexts    : TEA TIME(연락처) 칸 글자 저장 (회장만)
    - saveWebtoon / deleteWebtoon : 웹툰 추가·수정 / 삭제 (회장 또는 그 웹툰을 올린 작가)
    - uploadEpisodeImage / saveEpisode / deleteEpisode : 회차 그림 올리기 / 저장 / 삭제 (회장 또는 그 웹툰의 작가)
    - approveArtist / blockArtist / deleteArtist : 작가 계정 승인 / 막기 / 삭제 (회장만) */
@@ -231,6 +232,32 @@ export async function saveHero(_prev: ActionState, formData: FormData): Promise<
     description: text("description"),
     primary_label: text("primary_label"),
     secondary_label: text("secondary_label"),
+    updated_at: new Date().toISOString(),
+  });
+
+  if (error) return { message: `저장 실패: ${error.message}` };
+
+  revalidatePath("/");
+  revalidatePath("/admin");
+  return { ok: true, message: "저장했습니다." };
+}
+
+/* ---------- TEA TIME(연락처) 칸 글자 저장 (회장만) ---------- */
+
+export async function saveContactTexts(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  if (!(await isAdmin())) return { message: "로그인이 필요합니다. 새로고침 후 다시 로그인하세요." };
+
+  const supabase = getAdminClient();
+  if (!supabase) return { message: "Supabase가 연결되지 않았습니다. .env.local 을 확인하세요." };
+
+  // 빈 칸은 null 로 저장 → 사이트에는 site.config.ts 의 기본 글자가 보임
+  const text = (name: string) => String(formData.get(name) ?? "").trim() || null;
+
+  const { error } = await supabase.from("contact_texts").upsert({
+    id: 1,
+    eyebrow: text("eyebrow"),
+    title: text("title"),
+    description: text("description"),
     updated_at: new Date().toISOString(),
   });
 

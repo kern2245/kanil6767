@@ -64,3 +64,10 @@ export type Artist = {
   status: ArtistStatus;
   created_at: string;
 };
+
+/** 회장 페이지에서 바꿀 수 있는 TEA TIME(연락처) 칸 글자. supabase/schema.sql 의 contact_texts 테이블과 같습니다. */
+export type ContactTexts = {
+  eyebrow: string;
+  title: string;
+  description: string;
+};

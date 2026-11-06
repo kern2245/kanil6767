@@ -1,6 +1,6 @@
 import { sampleItems, sampleWebtoons, siteConfig } from "@/site.config";
 import { getPublicClient } from "@/lib/supabase";
-import type { Episode, HeroTexts, Item, Webtoon } from "@/lib/types";
+import type { ContactTexts, Episode, HeroTexts, Item, Webtoon } from "@/lib/types";
 
 /**
  * 특정 섹션의 카드 목록을 가져옵니다.
@@ -154,4 +154,33 @@ export async function searchWebtoons(query: string): Promise<Webtoon[]> {
     return [];
   }
   return (data ?? []) as Webtoon[];
+}
+
+/**
+ * TEA TIME(연락처) 칸 글자를 가져옵니다.
+ * - Supabase가 연결 안 됐거나 비어 있는 칸은: site.config.ts 의 contact 글자를 그대로 씀
+ * - 회장 페이지 "TEA TIME" 탭에서 저장한 칸은: 그 글자로 바꿔서 보여줌
+ */
+export async function getContactTexts(): Promise<ContactTexts> {
+  const { contact } = siteConfig;
+  const fallback: ContactTexts = {
+    eyebrow: contact.eyebrow,
+    title: contact.title,
+    description: contact.description,
+  };
+
+  const supabase = getPublicClient();
+  if (!supabase) return fallback;
+
+  const { data, error } = await supabase.from("contact_texts").select("*").eq("id", 1).maybeSingle();
+  if (error) {
+    console.error("[getContactTexts] Supabase 읽기 실패:", error.message);
+    return fallback;
+  }
+
+  return {
+    eyebrow: data?.eyebrow || fallback.eyebrow,
+    title: data?.title || fallback.title,
+    description: data?.description || fallback.description,
+  };
 }

@@ -5,13 +5,14 @@ import { ArrowLeft, EyeOff, LogIn } from "lucide-react";
 import { siteConfig } from "@/site.config";
 import { isAdmin, isAdminPasswordSet } from "@/lib/admin-auth";
 import { getAdminClient } from "@/lib/supabase-admin";
-import { getHeroTexts } from "@/lib/data";
+import { getContactTexts, getHeroTexts } from "@/lib/data";
 import type { Item } from "@/lib/types";
 import { Container } from "@/components/layout/container";
 import { Button } from "@/components/ui/button";
 import { logout, startGithubLogin } from "./actions";
 import { ItemForm } from "./_components/item-form";
 import { HeroForm } from "./_components/hero-form";
+import { ContactForm } from "./_components/contact-form";
 import { DeleteButton } from "./_components/delete-button";
 import { WebtoonManager } from "./_components/webtoon-manager";
 import { ArtistList } from "./_components/artist-list";
@@ -20,7 +21,7 @@ import { ArtistList } from "./_components/artist-list";
    1) 비밀번호가 설정 안 됐으면 → 설정 안내
    2) 로그인 안 했으면 → 로그인 화면
    3) Supabase 연결 안 됐으면 → 연결 안내
-   4) 모두 준비됐으면 → "히어로" 탭(첫 화면 글자) + "웹툰" 탭(요일별 웹툰) + 섹션별 카드(항목) 관리 */
+   4) 모두 준비됐으면 → "히어로" / "TEA TIME" 탭(글자) + "웹툰" 탭(요일별 웹툰) + "작가" 탭 + 섹션별 카드(항목) 관리 */
 
 export const metadata = { title: "관리자" };
 
@@ -58,6 +59,7 @@ function AdminTopBar() {
 function SectionTabs({ current }: { current: string }) {
   const tabs = [
     { key: "hero", label: "히어로" },
+    { key: "contact", label: "TEA TIME" },
     { key: "webtoons", label: "웹툰" },
     { key: "artist", label: "작가" },
     ...siteConfig.adminSections,
@@ -151,6 +153,21 @@ export default async function AdminPage(props: PageProps<"/admin">) {
         <section className="mt-8 max-w-2xl rounded-xl border p-6">
           <h2 className="mb-5 text-lg font-semibold">첫 화면(히어로) 글자</h2>
           <HeroForm texts={heroTexts} />
+        </section>
+      </Container>
+    );
+  }
+
+  // "TEA TIME" 탭: 연락처 칸 글자 수정
+  if (requested === "contact") {
+    const contactTexts = await getContactTexts();
+    return (
+      <Container className="py-10">
+        <AdminTopBar />
+        <SectionTabs current="contact" />
+        <section className="mt-8 max-w-2xl rounded-xl border p-6">
+          <h2 className="mb-5 text-lg font-semibold">TEA TIME 칸 글자</h2>
+          <ContactForm texts={contactTexts} />
         </section>
       </Container>
     );
