@@ -18,8 +18,8 @@ export const siteConfig = {
      지금은 비어 있음. 다시 넣으려면 예) { label: "웹툰", href: "#webtoons" } */
   nav: [] as { label: string; href: string }[],
 
-  /* 상단 메뉴 오른쪽 버튼 (누르면 새 탭에서 관리자 페이지가 열림) */
-  secretButton: { label: "비밀 버튼", href: "/admin" },
+  /* 맨 아래(푸터)의 관리자 버튼 (누르면 새 탭에서 관리자 페이지가 열림) */
+  secretButton: { label: "회장", href: "/admin" },
 
   /* 첫 화면(히어로) */
   hero: {
