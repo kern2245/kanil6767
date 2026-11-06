@@ -5,14 +5,14 @@ import { ArrowLeft, EyeOff, LogIn } from "lucide-react";
 import { siteConfig } from "@/site.config";
 import { isAdmin, isAdminPasswordSet } from "@/lib/admin-auth";
 import { getAdminClient } from "@/lib/supabase-admin";
-import { getContactTexts, getHeroTexts } from "@/lib/data";
-import type { Item } from "@/lib/types";
+import { getHeroTexts } from "@/lib/data";
+import type { Ad, Item } from "@/lib/types";
 import { Container } from "@/components/layout/container";
 import { Button } from "@/components/ui/button";
 import { logout, startGithubLogin } from "./actions";
 import { ItemForm } from "./_components/item-form";
 import { HeroForm } from "./_components/hero-form";
-import { ContactForm } from "./_components/contact-form";
+import { AdForm, DeleteAdButton } from "./_components/ad-form";
 import { DeleteButton } from "./_components/delete-button";
 import { WebtoonManager } from "./_components/webtoon-manager";
 import { ArtistList } from "./_components/artist-list";
@@ -21,7 +21,7 @@ import { ArtistList } from "./_components/artist-list";
    1) 비밀번호가 설정 안 됐으면 → 설정 안내
    2) 로그인 안 했으면 → 로그인 화면
    3) Supabase 연결 안 됐으면 → 연결 안내
-   4) 모두 준비됐으면 → "히어로" / "TEA TIME" 탭(글자) + "웹툰" 탭(요일별 웹툰) + "작가" 탭 + 섹션별 카드(항목) 관리 */
+   4) 모두 준비됐으면 → "히어로" 탭(글자) + "광고판" 탭(자동 슬라이드) + "웹툰" + "작가" + 섹션별 카드(항목) 관리 */
 
 export const metadata = { title: "관리자" };
 
@@ -158,17 +158,71 @@ export default async function AdminPage(props: PageProps<"/admin">) {
     );
   }
 
-  // "광고판" 탭: TEA TIME(연락처) 칸 글자 수정
+  // "광고판" 탭: 메인 화면 자동 슬라이드 광고판 추가·수정·삭제 (예전 TEA TIME 칸)
   if (requested === "contact") {
-    const contactTexts = await getContactTexts();
+    const { data: adRows, error: adError } = await supabase
+      .from("ads")
+      .select("*")
+      .order("created_at", { ascending: true });
+    const ads = (adRows ?? []) as Ad[];
     return (
       <Container className="py-10">
         <AdminTopBar />
         <SectionTabs current="contact" />
-        <section className="mt-8 max-w-2xl rounded-xl border p-6">
-          <h2 className="mb-5 text-lg font-semibold">광고판</h2>
-          <ContactForm texts={contactTexts} />
-        </section>
+
+        {adError ? (
+          <p className="mt-6 rounded-lg border border-destructive/40 p-4 text-sm text-destructive">
+            광고판을 불러오지 못했습니다: {adError.message}
+          </p>
+        ) : null}
+
+        <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+          <section className="h-fit rounded-xl border p-6">
+            <h2 className="mb-5 text-lg font-semibold">광고판 추가</h2>
+            <AdForm />
+          </section>
+
+          <section>
+            <h2 className="mb-1 text-lg font-semibold">
+              광고판 <span className="text-muted-foreground">({ads.length})</span>
+            </h2>
+            <p className="mb-5 text-sm text-muted-foreground">
+              메인 화면에서 위에서부터 순서대로 5초마다 넘어가요. (먼저 만든 광고판이 먼저)
+            </p>
+            {ads.length === 0 ? (
+              <p className="text-sm text-muted-foreground">아직 없습니다. 왼쪽에서 추가해 보세요.</p>
+            ) : (
+              <ul className="space-y-3">
+                {ads.map((ad, i) => (
+                  <li key={ad.id} className="rounded-xl border">
+                    <div className="flex items-center gap-3 p-4">
+                      <span className="w-6 shrink-0 text-sm text-muted-foreground">{i + 1}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="flex items-center gap-2 font-medium">
+                          <span className="truncate">{ad.title}</span>
+                          {!ad.is_visible ? (
+                            <EyeOff className="size-4 shrink-0 text-muted-foreground" aria-label="숨김" />
+                          ) : null}
+                        </p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {ad.eyebrow ?? ""}
+                          {ad.link_url ? ` · 링크: ${ad.link_url}` : ""}
+                        </p>
+                      </div>
+                      <DeleteAdButton id={ad.id} title={ad.title} />
+                    </div>
+                    <details className="border-t px-4 py-3">
+                      <summary className="cursor-pointer text-sm text-muted-foreground">수정하기</summary>
+                      <div className="pt-4">
+                        <AdForm ad={ad} />
+                      </div>
+                    </details>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
       </Container>
     );
   }

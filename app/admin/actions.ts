@@ -5,7 +5,8 @@
    - artistSignup / artistLogin / artistLogout / changeArtistPassword : 작가 가입·로그인·로그아웃·비밀번호 바꾸기
    - saveItem / deleteItem : 카드 추가·수정 / 삭제 (회장만)
    - saveHero            : 첫 화면(히어로) 글자 저장 (회장만)
-   - saveContactTexts    : TEA TIME(연락처) 칸 글자 저장 (회장만)
+   - saveContactTexts    : (예전) TEA TIME 칸 글자 저장 — 지금은 광고판으로 바뀌어 안 씀
+   - saveAd / deleteAd   : 광고판 추가·수정 / 삭제 (회장만)
    - saveWebtoon / deleteWebtoon : 웹툰 추가·수정 / 삭제 (회장 또는 그 웹툰을 올린 작가)
    - uploadEpisodeImage / saveEpisode / deleteEpisode : 회차 그림 올리기 / 저장 / 삭제 (회장 또는 그 웹툰의 작가)
    - approveArtist / blockArtist / deleteArtist : 작가 계정 승인 / 막기 / 삭제 (회장만) */
@@ -476,5 +477,51 @@ export async function deleteArtist(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   await supabase.from("artists").delete().eq("id", id);
+  revalidatePath("/admin");
+}
+
+/* ---------- 광고판 추가·수정 / 삭제 (회장만) ---------- */
+
+export async function saveAd(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  if (!(await isAdmin())) return { message: "로그인이 필요합니다. 새로고침 후 다시 로그인하세요." };
+  const supabase = getAdminClient();
+  if (!supabase) return { message: "Supabase가 연결되지 않았습니다. .env.local 을 확인하세요." };
+
+  const id = String(formData.get("id") ?? "");
+  const text = (name: string) => String(formData.get(name) ?? "").trim();
+  const title = text("title");
+  const linkUrl = text("link_url");
+  if (!title) return { message: "제목을 입력하세요." };
+  // 링크는 https:// 로 시작하는 주소나, 사이트 안 주소(/webtoon/... 등)만
+  if (linkUrl && !/^https?:\/\//.test(linkUrl) && !linkUrl.startsWith("/")) {
+    return { message: "링크는 https:// 로 시작하거나 / 로 시작해야 해요." };
+  }
+
+  const row = {
+    eyebrow: text("eyebrow") || null,
+    title,
+    description: text("description") || null,
+    link_url: linkUrl || null,
+    is_visible: formData.get("is_visible") === "on",
+  };
+
+  const { error } = id
+    ? await supabase.from("ads").update(row).eq("id", id)
+    : await supabase.from("ads").insert(row);
+  if (error) return { message: `저장 실패: ${error.message}` };
+
+  revalidatePath("/");
+  revalidatePath("/admin");
+  return { ok: true, message: id ? "수정했습니다." : "추가했습니다." };
+}
+
+export async function deleteAd(formData: FormData) {
+  if (!(await isAdmin())) return;
+  const supabase = getAdminClient();
+  if (!supabase) return;
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+  await supabase.from("ads").delete().eq("id", id);
+  revalidatePath("/");
   revalidatePath("/admin");
 }

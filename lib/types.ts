@@ -71,3 +71,15 @@ export type ContactTexts = {
   title: string;
   description: string;
 };
+
+/** 광고판 한 장. supabase/schema.sql 의 ads 테이블과 같습니다. */
+export type Ad = {
+  id: string;
+  eyebrow: string | null;
+  title: string;
+  description: string | null;
+  /** 넣으면 "자세히 보기" 버튼이 생김 */
+  link_url: string | null;
+  is_visible: boolean;
+  created_at: string;
+};

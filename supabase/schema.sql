@@ -155,3 +155,31 @@ create policy "Anyone can read contact texts"
   on public.contact_texts for select
   to anon, authenticated
   using (true);
+
+-- 11) 광고판 표 — 메인 화면에서 5초마다 자동으로 넘어가는 광고판들 (회장 페이지 "광고판" 탭에서 관리)
+create table if not exists public.ads (
+  id          uuid primary key default gen_random_uuid(),
+  eyebrow     text,                                -- 작은 윗글씨 (예: tea time)
+  title       text not null,                       -- 제목
+  description text,                                -- 안내 문장
+  link_url    text,                                -- 링크 (넣으면 "자세히 보기" 버튼)
+  is_visible  boolean not null default true,       -- 사이트에 보이기
+  created_at  timestamptz not null default now()   -- 먼저 만든 광고판이 먼저 나옴
+);
+
+alter table public.ads enable row level security;
+
+drop policy if exists "Anyone can read visible ads" on public.ads;
+create policy "Anyone can read visible ads"
+  on public.ads for select
+  to anon, authenticated
+  using (is_visible = true);
+
+-- 지금 TEA TIME 칸 글자를 첫 번째 광고판으로 옮김 (광고판이 하나도 없을 때만)
+insert into public.ads (eyebrow, title, description)
+select coalesce(c.eyebrow, 'tea time'),
+       coalesce(c.title, '나하고 tea타임 할래요?'),
+       coalesce(c.description, '궁금한 점이 있다면 언제든 연락 주세요.')
+from (select 1) as one
+left join public.contact_texts c on c.id = 1
+where not exists (select 1 from public.ads);

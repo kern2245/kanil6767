@@ -2,7 +2,7 @@ import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { Hero } from "@/components/sections/hero";
 import { WebtoonWeekly } from "@/components/sections/webtoon-weekly";
-import { Contact } from "@/components/sections/contact";
+import { AdBoard } from "@/components/sections/ad-board";
 
 /* 메인 페이지 = 섹션 블록을 위에서 아래로 쌓아 놓은 것.
    - 섹션 순서 바꾸기: 아래 줄의 순서를 바꾸면 됩니다.
@@ -19,7 +19,7 @@ export default function HomePage() {
       <main className="flex-1">
         <Hero />
         <WebtoonWeekly />
-        <Contact />
+        <AdBoard />
       </main>
       <Footer />
     </>

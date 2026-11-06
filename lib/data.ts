@@ -1,6 +1,6 @@
 import { sampleItems, sampleWebtoons, siteConfig } from "@/site.config";
 import { getPublicClient } from "@/lib/supabase";
-import type { ContactTexts, Episode, HeroTexts, Item, Webtoon } from "@/lib/types";
+import type { Ad, ContactTexts, Episode, HeroTexts, Item, Webtoon } from "@/lib/types";
 
 /**
  * 특정 섹션의 카드 목록을 가져옵니다.
@@ -183,4 +183,38 @@ export async function getContactTexts(): Promise<ContactTexts> {
     title: data?.title || fallback.title,
     description: data?.description || fallback.description,
   };
+}
+
+/**
+ * 광고판 목록 (메인 화면 자동 슬라이드용).
+ * - Supabase가 연결 안 됐거나 하나도 없으면: site.config.ts 의 contact 글자로 광고판 1장
+ * - 있으면: '보이기'로 설정된 광고판을 먼저 만든 순서대로
+ */
+export async function getAds(): Promise<Ad[]> {
+  const { contact } = siteConfig;
+  const fallback: Ad[] = [
+    {
+      id: "sample-ad",
+      eyebrow: contact.eyebrow,
+      title: contact.title,
+      description: contact.description,
+      link_url: null,
+      is_visible: true,
+      created_at: "2026-01-01T00:00:00Z",
+    },
+  ];
+
+  const supabase = getPublicClient();
+  if (!supabase) return fallback;
+
+  const { data, error } = await supabase
+    .from("ads")
+    .select("*")
+    .eq("is_visible", true)
+    .order("created_at", { ascending: true });
+  if (error) {
+    console.error("[getAds] Supabase 읽기 실패:", error.message);
+    return fallback;
+  }
+  return data && data.length > 0 ? (data as Ad[]) : fallback;
 }
