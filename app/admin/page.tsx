@@ -166,7 +166,7 @@ export default async function AdminPage(props: PageProps<"/admin">) {
         <AdminTopBar />
         <SectionTabs current="contact" />
         <section className="mt-8 max-w-2xl rounded-xl border p-6">
-          <h2 className="mb-5 text-lg font-semibold">TEA TIME 칸 글자</h2>
+          <h2 className="mb-5 text-lg font-semibold">광고판</h2>
           <ContactForm texts={contactTexts} />
         </section>
       </Container>
