@@ -1,7 +1,7 @@
 "use server";
 
 /* 관리자·작가 페이지의 버튼들이 실제로 하는 일 (서버에서 실행됨)
-   - login / logout      : 회장 로그인, 로그아웃
+   - startGithubLogin / logout : 회장 GitHub 로그인 시작, 로그아웃
    - artistSignup / artistLogin / artistLogout / changeArtistPassword : 작가 가입·로그인·로그아웃·비밀번호 바꾸기
    - saveItem / deleteItem : 카드 추가·수정 / 삭제 (회장만)
    - saveHero            : 첫 화면(히어로) 글자 저장 (회장만)
@@ -10,12 +10,13 @@
    - approveArtist / blockArtist / deleteArtist : 작가 계정 승인 / 막기 / 삭제 (회장만) */
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { siteConfig } from "@/site.config";
+import { getAuthClient } from "@/lib/supabase-auth";
 import {
   changeOwnArtistPassword,
-  checkPassword,
   endAdminSession,
   endArtistSession,
   getApprovedArtistId,
@@ -23,7 +24,6 @@ import {
   isAdmin,
   loginArtist,
   registerArtist,
-  startAdminSession,
 } from "@/lib/admin-auth";
 import { getAdminClient, IMAGE_BUCKET } from "@/lib/supabase-admin";
 
@@ -31,15 +31,25 @@ export type ActionState = { ok?: boolean; message?: string };
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5MB
 
-/* ---------- 로그인 / 로그아웃 ---------- */
+/* ---------- 회장 로그인 (GitHub) / 로그아웃 ----------
+   회장 비밀번호로는 더 이상 들어갈 수 없고, site.config.ts 의 ownerGithubLogin 계정으로
+   "GitHub로 로그인" 했을 때만 회장이 됩니다. 확인은 app/auth/callback/route.ts 에서. */
 
-export async function login(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const password = String(formData.get("password") ?? "");
-  if (!checkPassword(password)) {
-    return { message: "비밀번호가 올바르지 않습니다." };
-  }
-  await startAdminSession();
-  redirect("/admin");
+export async function startGithubLogin() {
+  const supabase = await getAuthClient();
+  if (!supabase) redirect("/admin?error=supabase");
+
+  // 지금 접속한 주소(내 컴퓨터 / 인터넷 사이트)로 다시 돌아오게
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host");
+  const proto = h.get("x-forwarded-proto") ?? (host?.startsWith("localhost") ? "http" : "https");
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "github",
+    options: { redirectTo: `${proto}://${host}/auth/callback`, skipBrowserRedirect: true },
+  });
+  if (error || !data.url) redirect("/admin?error=github");
+  redirect(data.url);
 }
 
 export async function logout() {

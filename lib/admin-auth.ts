@@ -2,11 +2,15 @@ import "server-only";
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
 
+import { siteConfig } from "@/site.config";
 import { getAdminClient } from "@/lib/supabase-admin";
 import type { Artist } from "@/lib/types";
 
-/* 간단한 관리자 로그인
-   - 비밀번호는 .env.local 의 ADMIN_PASSWORD 값
+/* 회장(관리자) 로그인
+   - 회장은 "GitHub로 로그인"으로만 들어옵니다. site.config.ts 의 ownerGithubLogin 계정만 통과.
+     (GitHub 계정 확인은 app/auth/callback/route.ts 에서 하고, 통과하면 startAdminSession 호출)
+   - 회장 비밀번호로 들어가는 방법은 없앴습니다. .env.local 의 ADMIN_PASSWORD 는
+     '로그인 기억 쿠키'를 다른 사람이 흉내 내지 못하게 하는 서버 비밀값으로만 씁니다.
    - 로그인하면 8시간 동안 유지되는 쿠키를 저장
    - 아래쪽에 작가 계정(작가마다 이메일+비밀번호, 회장 승인)도 따로 있음 */
 
@@ -17,21 +21,15 @@ function hash(value: string) {
   return createHash("sha256").update(`vibe-starter:${value}`).digest();
 }
 
-/** 관리자 비밀번호가 .env.local 에 설정되어 있는지 */
+/** 서버 비밀값(ADMIN_PASSWORD)이 .env.local / Vercel 에 설정되어 있는지 */
 export function isAdminPasswordSet() {
   return Boolean(process.env.ADMIN_PASSWORD);
 }
 
-/** 입력한 비밀번호가 맞는지 */
-export function checkPassword(input: string) {
-  const password = process.env.ADMIN_PASSWORD;
-  if (!password) return false;
-  return timingSafeEqual(hash(input), hash(password));
-}
-
+/** 회장 로그인 기억 값 — GitHub 회장 계정 + 서버 비밀값으로 만듦 (예전 비밀번호 로그인 쿠키는 더 이상 안 통함) */
 function sessionToken() {
-  const password = process.env.ADMIN_PASSWORD;
-  return password ? hash(`session:${password}`).toString("hex") : null;
+  const secret = process.env.ADMIN_PASSWORD;
+  return secret ? hash(`owner-session:github:${siteConfig.ownerGithubLogin.toLowerCase()}:${secret}`).toString("hex") : null;
 }
 
 /** 지금 접속한 사람이 로그인한 관리자인지 */

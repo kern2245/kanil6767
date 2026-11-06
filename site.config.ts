@@ -21,7 +21,10 @@ export const siteConfig = {
   /* 맨 아래(푸터)의 관리자 버튼 (누르면 새 탭에서 관리자 페이지가 열림) */
   secretButton: { label: "회장", href: "/admin" },
 
-  /* 맨 아래(푸터) "회장" 옆 작가 버튼 (작가 비밀번호로 웹툰·회차를 올리는 페이지) */
+  /* 회장(관리자)으로 들어올 수 있는 GitHub 아이디 — 이 계정으로 "GitHub로 로그인" 했을 때만 회장 페이지가 열림 */
+  ownerGithubLogin: "kern2245",
+
+  /* 맨 아래(푸터) "회장" 옆 작가 버튼 (작가가 이메일로 가입·로그인하는 페이지) */
   artistButton: { label: "작가", href: "/artist" },
 
   /* 첫 화면(히어로) */

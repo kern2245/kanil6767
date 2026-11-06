@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, EyeOff } from "lucide-react";
+import { ArrowLeft, EyeOff, LogIn } from "lucide-react";
 
 import { siteConfig } from "@/site.config";
 import { isAdmin, isAdminPasswordSet } from "@/lib/admin-auth";
@@ -9,8 +9,7 @@ import { getHeroTexts } from "@/lib/data";
 import type { Item } from "@/lib/types";
 import { Container } from "@/components/layout/container";
 import { Button } from "@/components/ui/button";
-import { logout } from "./actions";
-import { LoginForm } from "./_components/login-form";
+import { logout, startGithubLogin } from "./actions";
 import { ItemForm } from "./_components/item-form";
 import { HeroForm } from "./_components/hero-form";
 import { DeleteButton } from "./_components/delete-button";
@@ -94,10 +93,30 @@ export default async function AdminPage(props: PageProps<"/admin">) {
     );
   }
 
+  // 회장 로그인: GitHub(site.config.ts 의 ownerGithubLogin) 계정으로만
   if (!(await isAdmin())) {
+    const error = typeof searchParams.error === "string" ? searchParams.error : undefined;
+    const errorMessage =
+      error === "not-owner"
+        ? "회장 계정이 아니에요. 회장 GitHub 계정으로 로그인해 주세요."
+        : error === "github"
+          ? "GitHub 로그인에 실패했어요. 다시 시도해 주세요. (계속 안 되면 Supabase의 GitHub 연결 설정을 확인하세요)"
+          : error === "supabase"
+            ? "Supabase가 연결되지 않았습니다. .env.local 을 확인하세요."
+            : null;
     return (
       <Container>
-        <LoginForm />
+        <div className="mx-auto mt-16 w-full max-w-sm space-y-4">
+          <h1 className="text-2xl font-semibold">회장 로그인</h1>
+          <p className="text-sm text-muted-foreground">회장 GitHub 계정으로만 들어갈 수 있어요.</p>
+          <form action={startGithubLogin}>
+            <Button type="submit" className="w-full">
+              <LogIn />
+              GitHub로 로그인
+            </Button>
+          </form>
+          {errorMessage ? <p className="text-sm text-destructive">{errorMessage}</p> : null}
+        </div>
       </Container>
     );
   }

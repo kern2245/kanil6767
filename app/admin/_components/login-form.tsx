@@ -2,16 +2,17 @@
 
 import { useActionState } from "react";
 
-import { login, type ActionState } from "@/app/admin/actions";
+import type { ActionState } from "@/app/admin/actions";
 import { Button } from "@/components/ui/button";
 
-/** 비밀번호 로그인 칸. 기본은 관리자(회장) 로그인, 작가 페이지는 title·onLogin 을 바꿔서 씁니다. */
+/** 비밀번호 한 칸짜리 로그인 칸 (지금은 쓰는 곳 없음 — 회장은 GitHub 로그인, 작가는 이메일 로그인).
+    쓰려면 title 과 onLogin(서버 액션)을 꼭 넘겨야 합니다. */
 export function LoginForm({
-  title = "관리자 로그인",
-  onLogin = login,
+  title,
+  onLogin,
 }: {
-  title?: string;
-  onLogin?: (prev: ActionState, formData: FormData) => Promise<ActionState>;
+  title: string;
+  onLogin: (prev: ActionState, formData: FormData) => Promise<ActionState>;
 }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(onLogin, {});
 
