@@ -132,3 +132,26 @@ export async function getEpisode(webtoonId: string, number: number): Promise<Epi
   }
   return (data as Episode) ?? null;
 }
+
+/** 웹툰 제목 검색 (검색 페이지용). 대소문자 구분 없이 제목에 검색어가 들어간 웹툰. */
+export async function searchWebtoons(query: string): Promise<Webtoon[]> {
+  const q = query.trim();
+  const supabase = getPublicClient();
+  if (!q || !supabase) return [];
+
+  // % 와 _ 는 검색 기호라서 글자 그대로 찾도록 앞에 \ 를 붙임
+  const escaped = q.replace(/[\\%_]/g, (c) => "\\" + c);
+  const { data, error } = await supabase
+    .from("webtoons")
+    .select("*")
+    .eq("is_visible", true)
+    .ilike("title", `%${escaped}%`)
+    .order("title", { ascending: true })
+    .limit(60);
+
+  if (error) {
+    console.error("[searchWebtoons] Supabase 읽기 실패:", error.message);
+    return [];
+  }
+  return (data ?? []) as Webtoon[];
+}

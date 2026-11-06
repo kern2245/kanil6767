@@ -13,7 +13,7 @@ import { WebtoonBoard } from "@/components/sections/webtoon-board";
 const WEEKDAY_BY_JS_DAY: Weekday[] = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 
 /** 한국 시간 기준 오늘 요일 */
-function todayInKorea(): Weekday {
+export function todayInKorea(): Weekday {
   const name = new Intl.DateTimeFormat("en-US", { weekday: "short", timeZone: "Asia/Seoul" })
     .format(new Date())
     .toLowerCase()

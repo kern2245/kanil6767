@@ -13,7 +13,7 @@ type Column = { key: Weekday; label: string; items: Webtoon[] };
 /** 웹툰 카드 한 개: 표지 + (UP) 제목
     UP 표시: 오늘(한국 시간) 연재 요일인 웹툰은 자동으로 붙고, 날짜가 바뀌면 다음 요일로 넘어갑니다.
     관리자에서 "UP 항상 표시"를 켠 웹툰은 요일과 상관없이 붙습니다. */
-function WebtoonCard({ webtoon, today }: { webtoon: Webtoon; today: Weekday }) {
+export function WebtoonCard({ webtoon, today }: { webtoon: Webtoon; today: Weekday }) {
   const showUp = webtoon.is_up || webtoon.weekday === today;
   return (
     <article className="group">
