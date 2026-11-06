@@ -59,7 +59,7 @@ function AdminTopBar() {
 function SectionTabs({ current }: { current: string }) {
   const tabs = [
     { key: "hero", label: "히어로" },
-    { key: "contact", label: "TEA TIME" },
+    { key: "contact", label: "광고판" },
     { key: "webtoons", label: "웹툰" },
     { key: "artist", label: "작가" },
     ...siteConfig.adminSections,
@@ -158,7 +158,7 @@ export default async function AdminPage(props: PageProps<"/admin">) {
     );
   }
 
-  // "TEA TIME" 탭: 연락처 칸 글자 수정
+  // "광고판" 탭: TEA TIME(연락처) 칸 글자 수정
   if (requested === "contact") {
     const contactTexts = await getContactTexts();
     return (
