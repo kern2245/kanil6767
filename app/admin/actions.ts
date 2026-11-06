@@ -3,6 +3,7 @@
 /* 관리자 페이지의 버튼들이 실제로 하는 일 (서버에서 실행됨)
    - login / logout      : 로그인, 로그아웃
    - artistLogin / artistLogout : 작가 로그인, 로그아웃 (작가는 웹툰·회차만 다룰 수 있음)
+   - saveArtistPassword  : 작가 비밀번호 정하기 (회장만)
    - saveItem            : 카드 추가 또는 수정 (이미지 업로드 포함)
    - deleteItem          : 카드 삭제
    - saveHero            : 첫 화면(히어로) 글자 저장
@@ -20,6 +21,7 @@ import {
   endArtistSession,
   isAdmin,
   isArtist,
+  saveArtistPasswordToStore,
   startAdminSession,
   startArtistSession,
 } from "@/lib/admin-auth";
@@ -49,7 +51,7 @@ export async function logout() {
 
 export async function artistLogin(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const password = String(formData.get("password") ?? "");
-  if (!checkArtistPassword(password)) {
+  if (!(await checkArtistPassword(password))) {
     return { message: "비밀번호가 올바르지 않습니다." };
   }
   await startArtistSession();
@@ -331,4 +333,22 @@ export async function deleteEpisode(formData: FormData) {
   if (paths.length > 0) await supabase.storage.from(IMAGE_BUCKET).remove(paths);
 
   revalidatePath("/", "layout");
+}
+
+/* ---------- 작가 비밀번호 정하기 (회장만) ---------- */
+
+export async function saveArtistPassword(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  if (!(await isAdmin())) return { message: "로그인이 필요합니다. 새로고침 후 다시 로그인하세요." };
+
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirm") ?? "");
+  if (password.length < 4) return { message: "비밀번호는 4글자 이상으로 정해 주세요." };
+  if (password !== confirm) return { message: "두 칸의 비밀번호가 서로 다릅니다." };
+
+  const result = await saveArtistPasswordToStore(password);
+  if (!result.ok) return { message: result.message };
+
+  revalidatePath("/admin");
+  revalidatePath("/artist");
+  return { ok: true, message: "작가 비밀번호를 저장했습니다. 작가들에게 알려 주세요." };
 }

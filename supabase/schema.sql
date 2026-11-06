@@ -109,3 +109,13 @@ create policy "Anyone can read episodes of visible webtoons"
   on public.episodes for select
   to anon, authenticated
   using (exists (select 1 from public.webtoons w where w.id = webtoon_id and w.is_visible = true));
+
+-- 8) 비밀 설정 표 — 회장 페이지 "작가" 탭에서 정한 작가 비밀번호(암호화된 형태)를 보관
+--    읽기 규칙(policy)을 일부러 만들지 않음 → 방문자는 절대 못 읽고, 서버의 비밀 키로만 읽고 씀
+create table if not exists public.site_secrets (
+  key         text primary key,                    -- 예: 'artist_password'
+  value       text not null,                       -- 암호화된 값 (원래 비밀번호 아님)
+  updated_at  timestamptz not null default now()
+);
+
+alter table public.site_secrets enable row level security;

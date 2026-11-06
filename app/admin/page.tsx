@@ -3,7 +3,7 @@ import Image from "next/image";
 import { ArrowLeft, EyeOff } from "lucide-react";
 
 import { siteConfig } from "@/site.config";
-import { isAdmin, isAdminPasswordSet } from "@/lib/admin-auth";
+import { isAdmin, isAdminPasswordSet, isArtistPasswordSet } from "@/lib/admin-auth";
 import { getAdminClient } from "@/lib/supabase-admin";
 import { getHeroTexts } from "@/lib/data";
 import type { Item } from "@/lib/types";
@@ -15,6 +15,7 @@ import { ItemForm } from "./_components/item-form";
 import { HeroForm } from "./_components/hero-form";
 import { DeleteButton } from "./_components/delete-button";
 import { WebtoonManager } from "./_components/webtoon-manager";
+import { ArtistPasswordForm } from "./_components/artist-password-form";
 
 /* 관리자 페이지 (주소: /admin)
    1) 비밀번호가 설정 안 됐으면 → 설정 안내
@@ -59,6 +60,7 @@ function SectionTabs({ current }: { current: string }) {
   const tabs = [
     { key: "hero", label: "히어로" },
     { key: "webtoons", label: "웹툰" },
+    { key: "artist", label: "작가" },
     ...siteConfig.adminSections,
   ];
   return (
@@ -130,6 +132,25 @@ export default async function AdminPage(props: PageProps<"/admin">) {
         <section className="mt-8 max-w-2xl rounded-xl border p-6">
           <h2 className="mb-5 text-lg font-semibold">첫 화면(히어로) 글자</h2>
           <HeroForm texts={heroTexts} />
+        </section>
+      </Container>
+    );
+  }
+
+  // "작가" 탭: 작가 비밀번호 정하기 (작가 페이지 /artist 에 들어갈 때 씀)
+  if (requested === "artist") {
+    const artistPasswordSet = await isArtistPasswordSet();
+    return (
+      <Container className="py-10">
+        <AdminTopBar />
+        <SectionTabs current="artist" />
+        <section className="mt-8 max-w-xl rounded-xl border p-6">
+          <h2 className="text-lg font-semibold">작가 비밀번호</h2>
+          <p className="mt-1 mb-5 text-sm text-muted-foreground">
+            맨 아래 &lsquo;{siteConfig.artistButton.label}&rsquo; 버튼으로 들어가는 작가 페이지의 비밀번호예요. 웹툰
+            그리는 분들에게만 알려 주세요.
+          </p>
+          <ArtistPasswordForm isSet={artistPasswordSet} />
         </section>
       </Container>
     );
