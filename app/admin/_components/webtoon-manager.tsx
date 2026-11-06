@@ -9,8 +9,9 @@ import { EpisodeManager } from "./episode-manager";
 
 /** 웹툰 관리 화면 (웹툰 추가 + 등록된 웹툰 목록 + 수정하기 + 회차 관리)
     관리자 페이지(/admin "웹툰" 탭)와 작가 페이지(/artist)가 같이 씁니다.
-    로그인 확인은 이 화면을 부르는 페이지에서 먼저 합니다. */
-export async function WebtoonManager() {
+    로그인 확인은 이 화면을 부르는 페이지에서 먼저 합니다.
+    canDelete=false (작가) 면 웹툰·회차 삭제 버튼을 숨깁니다. 삭제는 서버에서도 회장만 가능. */
+export async function WebtoonManager({ canDelete = true }: { canDelete?: boolean }) {
   const supabase = getAdminClient();
   if (!supabase) {
     return (
@@ -86,7 +87,7 @@ export async function WebtoonManager() {
                       </p>
                       <p className="text-xs text-muted-foreground">{dayLabel(w.weekday)}요일</p>
                     </div>
-                    <DeleteWebtoonButton id={w.id} coverUrl={w.cover_url} />
+                    {canDelete ? <DeleteWebtoonButton id={w.id} coverUrl={w.cover_url} /> : null}
                   </div>
                   <details className="border-t px-4 py-3">
                     <summary className="cursor-pointer text-sm text-muted-foreground">수정하기</summary>
@@ -99,7 +100,7 @@ export async function WebtoonManager() {
                       회차 관리 ({episodesOf(w.id).length}화)
                     </summary>
                     <div className="pt-4">
-                      <EpisodeManager webtoonId={w.id} episodes={episodesOf(w.id)} />
+                      <EpisodeManager webtoonId={w.id} episodes={episodesOf(w.id)} canDelete={canDelete} />
                     </div>
                   </details>
                 </li>

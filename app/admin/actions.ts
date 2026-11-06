@@ -235,7 +235,8 @@ export async function saveWebtoon(_prev: ActionState, formData: FormData): Promi
 /* ---------- 웹툰 삭제 ---------- */
 
 export async function deleteWebtoon(formData: FormData) {
-  if (!(await isAdmin()) && !(await isArtist())) return;
+  // 삭제는 회장만 (작가들은 비밀번호를 같이 써서 누가 올렸는지 구별할 수 없으므로)
+  if (!(await isAdmin())) return;
   const supabase = getAdminClient();
   if (!supabase) return;
 
@@ -318,7 +319,8 @@ export async function saveEpisode(input: {
 
 /** 회차 삭제 (그림 파일도 함께 정리) */
 export async function deleteEpisode(formData: FormData) {
-  if (!(await isAdmin()) && !(await isArtist())) return;
+  // 삭제는 회장만 (작가들은 비밀번호를 같이 써서 누가 올렸는지 구별할 수 없으므로)
+  if (!(await isAdmin())) return;
   const supabase = getAdminClient();
   if (!supabase) return;
 

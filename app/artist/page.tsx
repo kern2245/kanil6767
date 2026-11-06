@@ -65,7 +65,11 @@ export default async function ArtistPage() {
       </div>
       <p className="mt-2 text-sm text-muted-foreground">웹툰을 추가하고, 회차(만화 그림·PDF)를 올릴 수 있어요.</p>
 
-      <WebtoonManager />
+      {/* 삭제는 회장만: 작가로 들어오면 삭제 버튼이 보이지 않음 (회장으로 들어오면 보임) */}
+      <WebtoonManager canDelete={admin} />
+      {!admin ? (
+        <p className="mt-4 text-xs text-muted-foreground">웹툰·회차 삭제는 회장만 할 수 있어요.</p>
+      ) : null}
 
       {/* 작가 비밀번호 바꾸기 */}
       <details className="mt-10 max-w-xl rounded-xl border px-6 py-4">

@@ -16,7 +16,16 @@ type EpisodeRow = { id: string; number: number; title: string; imageCount: numbe
 /** 웹툰 한 개의 회차 관리: 회차 추가(그림 여러 장 또는 PDF) + 올린 회차 목록·삭제
     그림은 파일 이름 순서대로(001, 002 …) 위에서 아래로 붙습니다.
     PDF 는 브라우저에서 쪽마다 JPG 로 바꾼 뒤 한 장씩 올립니다. (lib/pdf-to-images.ts) */
-export function EpisodeManager({ webtoonId, episodes }: { webtoonId: string; episodes: EpisodeRow[] }) {
+export function EpisodeManager({
+  webtoonId,
+  episodes,
+  canDelete = true,
+}: {
+  webtoonId: string;
+  episodes: EpisodeRow[];
+  /** false 면 회차 삭제 버튼을 숨김 (작가 페이지). 삭제는 서버에서도 회장만 가능 */
+  canDelete?: boolean;
+}) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [pending, setPending] = useState(false);
@@ -144,6 +153,7 @@ export function EpisodeManager({ webtoonId, episodes }: { webtoonId: string; epi
                 <span className="w-10 shrink-0 text-muted-foreground">{ep.number}화</span>
                 <span className="min-w-0 flex-1 truncate">{ep.title}</span>
                 <span className="shrink-0 text-xs text-muted-foreground">그림 {ep.imageCount}장</span>
+                {canDelete ? (
                 <form
                   action={async (fd) => {
                     await deleteEpisode(fd);
@@ -160,6 +170,7 @@ export function EpisodeManager({ webtoonId, episodes }: { webtoonId: string; epi
                     삭제
                   </Button>
                 </form>
+                ) : null}
               </li>
             ))}
           </ul>
