@@ -21,6 +21,9 @@ export const siteConfig = {
   /* 맨 아래(푸터)의 관리자 버튼 (누르면 새 탭에서 관리자 페이지가 열림) */
   secretButton: { label: "회장", href: "/admin" },
 
+  /* 맨 아래(푸터) "회장" 옆 작가 버튼 (작가 비밀번호로 웹툰·회차를 올리는 페이지) */
+  artistButton: { label: "작가", href: "/artist" },
+
   /* 첫 화면(히어로) */
   hero: {
     eyebrow: "Hello, World",

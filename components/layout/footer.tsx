@@ -24,6 +24,15 @@ export function Footer() {
           >
             {siteConfig.secretButton.label}
           </a>
+          {/* 작가 버튼: 새 탭에서 작가 페이지 열기 (글자·주소는 site.config.ts 의 artistButton) */}
+          <a
+            href={siteConfig.artistButton.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-foreground"
+          >
+            {siteConfig.artistButton.label}
+          </a>
           {/* 숨은 관리자 버튼 */}
           <Link
             href="/admin"

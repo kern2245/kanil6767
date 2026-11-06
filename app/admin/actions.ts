@@ -2,6 +2,7 @@
 
 /* 관리자 페이지의 버튼들이 실제로 하는 일 (서버에서 실행됨)
    - login / logout      : 로그인, 로그아웃
+   - artistLogin / artistLogout : 작가 로그인, 로그아웃 (작가는 웹툰·회차만 다룰 수 있음)
    - saveItem            : 카드 추가 또는 수정 (이미지 업로드 포함)
    - deleteItem          : 카드 삭제
    - saveHero            : 첫 화면(히어로) 글자 저장
@@ -12,7 +13,16 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { siteConfig } from "@/site.config";
-import { checkPassword, endAdminSession, isAdmin, startAdminSession } from "@/lib/admin-auth";
+import {
+  checkArtistPassword,
+  checkPassword,
+  endAdminSession,
+  endArtistSession,
+  isAdmin,
+  isArtist,
+  startAdminSession,
+  startArtistSession,
+} from "@/lib/admin-auth";
 import { getAdminClient, IMAGE_BUCKET } from "@/lib/supabase-admin";
 
 export type ActionState = { ok?: boolean; message?: string };
@@ -33,6 +43,22 @@ export async function login(_prev: ActionState, formData: FormData): Promise<Act
 export async function logout() {
   await endAdminSession();
   redirect("/admin");
+}
+
+/* ---------- 작가 로그인 / 로그아웃 ---------- */
+
+export async function artistLogin(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const password = String(formData.get("password") ?? "");
+  if (!checkArtistPassword(password)) {
+    return { message: "비밀번호가 올바르지 않습니다." };
+  }
+  await startArtistSession();
+  redirect("/artist");
+}
+
+export async function artistLogout() {
+  await endArtistSession();
+  redirect("/artist");
 }
 
 /* ---------- 카드 저장 (추가 / 수정) ---------- */
@@ -151,7 +177,7 @@ export async function saveHero(_prev: ActionState, formData: FormData): Promise<
 const WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
 export async function saveWebtoon(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  if (!(await isAdmin())) return { message: "로그인이 필요합니다. 새로고침 후 다시 로그인하세요." };
+  if (!(await isAdmin()) && !(await isArtist())) return { message: "로그인이 필요합니다. 새로고침 후 다시 로그인하세요." };
 
   const supabase = getAdminClient();
   if (!supabase) return { message: "Supabase가 연결되지 않았습니다. .env.local 을 확인하세요." };
@@ -205,7 +231,7 @@ export async function saveWebtoon(_prev: ActionState, formData: FormData): Promi
 /* ---------- 웹툰 삭제 ---------- */
 
 export async function deleteWebtoon(formData: FormData) {
-  if (!(await isAdmin())) return;
+  if (!(await isAdmin()) && !(await isArtist())) return;
   const supabase = getAdminClient();
   if (!supabase) return;
 
@@ -234,7 +260,7 @@ export type UploadResult = { ok: true; url: string } | { ok: false; message: str
 
 /** 회차 그림 한 장 올리기 → 그림 주소를 돌려줌 */
 export async function uploadEpisodeImage(formData: FormData): Promise<UploadResult> {
-  if (!(await isAdmin())) return { ok: false, message: "로그인이 필요합니다. 새로고침 후 다시 로그인하세요." };
+  if (!(await isAdmin()) && !(await isArtist())) return { ok: false, message: "로그인이 필요합니다. 새로고침 후 다시 로그인하세요." };
   const supabase = getAdminClient();
   if (!supabase) return { ok: false, message: "Supabase가 연결되지 않았습니다." };
 
@@ -262,7 +288,7 @@ export async function saveEpisode(input: {
   title: string;
   imageUrls: string[];
 }): Promise<ActionState> {
-  if (!(await isAdmin())) return { message: "로그인이 필요합니다. 새로고침 후 다시 로그인하세요." };
+  if (!(await isAdmin()) && !(await isArtist())) return { message: "로그인이 필요합니다. 새로고침 후 다시 로그인하세요." };
   const supabase = getAdminClient();
   if (!supabase) return { message: "Supabase가 연결되지 않았습니다." };
 
@@ -288,7 +314,7 @@ export async function saveEpisode(input: {
 
 /** 회차 삭제 (그림 파일도 함께 정리) */
 export async function deleteEpisode(formData: FormData) {
-  if (!(await isAdmin())) return;
+  if (!(await isAdmin()) && !(await isArtist())) return;
   const supabase = getAdminClient();
   if (!supabase) return;
 
