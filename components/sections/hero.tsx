@@ -11,7 +11,7 @@ export async function Hero() {
   return (
     <section id="top" className="relative overflow-hidden">
       <Container className="flex min-h-[80svh] flex-col justify-center py-24">
-        <p className="text-sm font-medium uppercase tracking-[0.2em] text-muted-foreground">
+        <p className="text-sm font-medium uppercase tracking-[0.2em] text-primary">
           {texts.eyebrow}
         </p>
         <h1 className="title-gradient mt-5 max-w-4xl whitespace-pre-line text-5xl font-semibold leading-[1.1] tracking-tight sm:text-6xl lg:text-7xl">

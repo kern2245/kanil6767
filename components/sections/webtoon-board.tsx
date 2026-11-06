@@ -17,7 +17,7 @@ export function WebtoonCard({ webtoon, today }: { webtoon: Webtoon; today: Weekd
   const showUp = webtoon.is_up || webtoon.weekday === today;
   return (
     <article className="group">
-      <div className="relative aspect-[160/207] overflow-hidden rounded-md bg-muted">
+      <div className="relative aspect-[160/207] overflow-hidden rounded-xl bg-muted">
         {webtoon.cover_url ? (
           <Image
             src={webtoon.cover_url}
@@ -34,7 +34,7 @@ export function WebtoonCard({ webtoon, today }: { webtoon: Webtoon; today: Weekd
       </div>
       <h3 className="mt-2 flex items-center gap-1 text-sm font-medium leading-snug">
         {showUp ? (
-          <span className="shrink-0 rounded-sm border border-up px-1 text-[10px] font-bold leading-4 text-up">
+          <span className="shrink-0 rounded-full border border-up px-1.5 text-[10px] font-bold leading-4 text-up">
             UP
           </span>
         ) : null}
@@ -46,7 +46,7 @@ export function WebtoonCard({ webtoon, today }: { webtoon: Webtoon; today: Weekd
 
 /** 요일별 웹툰 판.
     - 위쪽 요일 탭(월~일)을 누르면 그 요일 웹툰만 아래에 보입니다. 처음엔 오늘 요일이 골라져 있음
-    - 고른 요일 탭은 초록 배경 (색: app/globals.css 의 --tab-active)
+    - 요일 탭은 둥근 알약 모양, 고른 요일은 보라 배경 (색: app/globals.css 의 --tab-active)
     - 웹툰 칸 수: 휴대폰 3칸 → 태블릿 5칸 → 데스크톱 7칸 */
 export function WebtoonBoard({ columns, today }: { columns: Column[]; today: Weekday }) {
   const [selected, setSelected] = useState<Weekday>(today);
@@ -55,7 +55,7 @@ export function WebtoonBoard({ columns, today }: { columns: Column[]; today: Wee
   return (
     <div className="mt-8">
       {/* 요일 탭 */}
-      <div className="grid grid-cols-7 border" role="tablist" aria-label="요일 선택">
+      <div className="grid grid-cols-7 gap-1.5 sm:gap-2" role="tablist" aria-label="요일 선택">
         {columns.map((col) => (
           <button
             key={col.key}
@@ -64,10 +64,10 @@ export function WebtoonBoard({ columns, today }: { columns: Column[]; today: Wee
             aria-selected={col.key === selected}
             onClick={() => setSelected(col.key)}
             className={cn(
-              "border-r py-3 text-sm font-semibold transition-colors last:border-r-0",
+              "rounded-full py-2 text-sm font-semibold transition-colors",
               col.key === selected
                 ? "bg-tab-active text-tab-active-foreground"
-                : "text-muted-foreground hover:text-foreground",
+                : "bg-muted text-muted-foreground hover:text-foreground",
             )}
           >
             {col.label}

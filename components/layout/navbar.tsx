@@ -35,7 +35,7 @@ export function Navbar() {
               name="q"
               placeholder="웹툰 검색"
               aria-label="웹툰 검색"
-              className="h-9 w-40 rounded-full border bg-muted/50 pr-3 pl-9 text-sm outline-none transition-[width] focus:w-52 focus:ring-2 focus:ring-ring/50 sm:w-56 sm:focus:w-64"
+              className="h-9 w-40 rounded-full bg-muted pr-3 pl-9 text-sm outline-none transition-[width] focus:w-52 focus:ring-2 focus:ring-ring/50 sm:w-56 sm:focus:w-64"
             />
           </form>
         </div>
