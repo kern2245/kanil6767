@@ -3,7 +3,8 @@
 /* 관리자 페이지의 버튼들이 실제로 하는 일 (서버에서 실행됨)
    - login / logout      : 로그인, 로그아웃
    - artistLogin / artistLogout : 작가 로그인, 로그아웃 (작가는 웹툰·회차만 다룰 수 있음)
-   - saveArtistPassword  : 작가 비밀번호 정하기 (회장만)
+   - saveArtistPassword  : 작가 비밀번호 정하기 (회장 페이지)
+   - createArtistPassword / changeArtistPassword : 작가 페이지에서 작가가 직접 만들기 / 바꾸기
    - saveItem            : 카드 추가 또는 수정 (이미지 업로드 포함)
    - deleteItem          : 카드 삭제
    - saveHero            : 첫 화면(히어로) 글자 저장
@@ -21,6 +22,7 @@ import {
   endArtistSession,
   isAdmin,
   isArtist,
+  isArtistPasswordSet,
   saveArtistPasswordToStore,
   startAdminSession,
   startArtistSession,
@@ -351,4 +353,46 @@ export async function saveArtistPassword(_prev: ActionState, formData: FormData)
   revalidatePath("/admin");
   revalidatePath("/artist");
   return { ok: true, message: "작가 비밀번호를 저장했습니다. 작가들에게 알려 주세요." };
+}
+
+/* ---------- 작가 페이지에서 작가가 직접 비밀번호 만들기 / 바꾸기 ---------- */
+
+function readNewPassword(formData: FormData): { password?: string; message?: string } {
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirm") ?? "");
+  if (password.length < 4) return { message: "비밀번호는 4글자 이상으로 정해 주세요." };
+  if (password !== confirm) return { message: "두 칸의 비밀번호가 서로 다릅니다." };
+  return { password };
+}
+
+/** 처음 만들기: 아직 작가 비밀번호가 하나도 없을 때만 가능. 만들면 바로 작가로 로그인됩니다. */
+export async function createArtistPassword(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  if (await isArtistPasswordSet()) {
+    return { message: "이미 작가 비밀번호가 있어요. 새로고침 후 로그인해 주세요." };
+  }
+  const { password, message } = readNewPassword(formData);
+  if (!password) return { message };
+
+  const result = await saveArtistPasswordToStore(password);
+  if (!result.ok) return { message: result.message };
+
+  await startArtistSession();
+  redirect("/artist");
+}
+
+/** 바꾸기: 작가(또는 회장)로 로그인한 사람만. 바꾸면 다른 작가들은 새 비밀번호로 다시 로그인해야 합니다. */
+export async function changeArtistPassword(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  if (!(await isArtist()) && !(await isAdmin())) {
+    return { message: "로그인이 필요합니다. 새로고침 후 다시 로그인하세요." };
+  }
+  const { password, message } = readNewPassword(formData);
+  if (!password) return { message };
+
+  const result = await saveArtistPasswordToStore(password);
+  if (!result.ok) return { message: result.message };
+
+  // 비밀번호가 바뀌면 로그인 기억 값도 바뀌므로, 바꾼 사람은 새 값으로 다시 기억
+  await startArtistSession();
+  revalidatePath("/artist");
+  return { ok: true, message: "작가 비밀번호를 바꿨습니다. 다른 작가들에게도 알려 주세요." };
 }
