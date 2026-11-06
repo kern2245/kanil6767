@@ -3,7 +3,7 @@ import Image from "next/image";
 import { ArrowLeft, EyeOff } from "lucide-react";
 
 import { siteConfig } from "@/site.config";
-import { isAdmin, isAdminPasswordSet, isArtistPasswordSet } from "@/lib/admin-auth";
+import { isAdmin, isAdminPasswordSet } from "@/lib/admin-auth";
 import { getAdminClient } from "@/lib/supabase-admin";
 import { getHeroTexts } from "@/lib/data";
 import type { Item } from "@/lib/types";
@@ -15,7 +15,7 @@ import { ItemForm } from "./_components/item-form";
 import { HeroForm } from "./_components/hero-form";
 import { DeleteButton } from "./_components/delete-button";
 import { WebtoonManager } from "./_components/webtoon-manager";
-import { ArtistPasswordForm } from "./_components/artist-password-form";
+import { ArtistList } from "./_components/artist-list";
 
 /* 관리자 페이지 (주소: /admin)
    1) 비밀번호가 설정 안 됐으면 → 설정 안내
@@ -137,20 +137,19 @@ export default async function AdminPage(props: PageProps<"/admin">) {
     );
   }
 
-  // "작가" 탭: 작가 비밀번호 정하기 (작가 페이지 /artist 에 들어갈 때 씀)
+  // "작가" 탭: 가입한 작가 목록 — 승인 / 막기 / 삭제
   if (requested === "artist") {
-    const artistPasswordSet = await isArtistPasswordSet();
     return (
       <Container className="py-10">
         <AdminTopBar />
         <SectionTabs current="artist" />
-        <section className="mt-8 max-w-xl rounded-xl border p-6">
-          <h2 className="text-lg font-semibold">작가 비밀번호</h2>
+        <section className="mt-8 max-w-3xl">
+          <h2 className="text-lg font-semibold">작가 목록</h2>
           <p className="mt-1 mb-5 text-sm text-muted-foreground">
-            맨 아래 &lsquo;{siteConfig.artistButton.label}&rsquo; 버튼으로 들어가는 작가 페이지의 비밀번호예요. 웹툰
-            그리는 분들에게만 알려 주세요.
+            작가는 맨 아래 &lsquo;{siteConfig.artistButton.label}&rsquo; 버튼에서 이메일로 직접 가입해요. 승인한 작가만
+            자기 웹툰을 올릴 수 있어요.
           </p>
-          <ArtistPasswordForm isSet={artistPasswordSet} />
+          <ArtistList />
         </section>
       </Container>
     );

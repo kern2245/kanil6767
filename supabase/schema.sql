@@ -119,3 +119,21 @@ create table if not exists public.site_secrets (
 );
 
 alter table public.site_secrets enable row level security;
+
+-- 9) 작가 계정 표 — 작가가 이메일+비밀번호로 직접 가입, 회장이 승인
+--    비밀번호는 알아볼 수 없게 바꾼 형태(scrypt)로만 저장. 읽기 규칙이 없어서 방문자는 못 읽음.
+create table if not exists public.artists (
+  id             uuid primary key default gen_random_uuid(),
+  email          text not null unique,               -- 로그인 아이디 (소문자로 저장)
+  name           text not null,                      -- 작가 이름
+  password_hash  text not null,                      -- 암호화된 비밀번호
+  status         text not null default 'pending'     -- pending(승인 대기) / approved(승인됨) / blocked(막힘)
+                 check (status in ('pending','approved','blocked')),
+  created_at     timestamptz not null default now()
+);
+
+alter table public.artists enable row level security;
+
+-- 웹툰에 "누가 올렸는지" 칸 추가 (작가가 지워지면 비워짐 → 회장만 관리)
+alter table public.webtoons add column if not exists artist_id uuid references public.artists (id) on delete set null;
+create index if not exists webtoons_artist_idx on public.webtoons (artist_id);

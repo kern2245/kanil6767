@@ -1,31 +1,29 @@
 "use server";
 
-/* 관리자 페이지의 버튼들이 실제로 하는 일 (서버에서 실행됨)
-   - login / logout      : 로그인, 로그아웃
-   - artistLogin / artistLogout : 작가 로그인, 로그아웃 (작가는 웹툰·회차만 다룰 수 있음)
-   - saveArtistPassword  : 작가 비밀번호 정하기 (회장 페이지)
-   - createArtistPassword / changeArtistPassword : 작가 페이지에서 작가가 직접 만들기 / 바꾸기
-   - saveItem            : 카드 추가 또는 수정 (이미지 업로드 포함)
-   - deleteItem          : 카드 삭제
-   - saveHero            : 첫 화면(히어로) 글자 저장
-   - saveWebtoon / deleteWebtoon : 요일별 웹툰 추가·수정 / 삭제
-   - uploadEpisodeImage / saveEpisode / deleteEpisode : 웹툰 회차 그림 올리기 / 회차 저장 / 삭제 */
+/* 관리자·작가 페이지의 버튼들이 실제로 하는 일 (서버에서 실행됨)
+   - login / logout      : 회장 로그인, 로그아웃
+   - artistSignup / artistLogin / artistLogout / changeArtistPassword : 작가 가입·로그인·로그아웃·비밀번호 바꾸기
+   - saveItem / deleteItem : 카드 추가·수정 / 삭제 (회장만)
+   - saveHero            : 첫 화면(히어로) 글자 저장 (회장만)
+   - saveWebtoon / deleteWebtoon : 웹툰 추가·수정 / 삭제 (회장 또는 그 웹툰을 올린 작가)
+   - uploadEpisodeImage / saveEpisode / deleteEpisode : 회차 그림 올리기 / 저장 / 삭제 (회장 또는 그 웹툰의 작가)
+   - approveArtist / blockArtist / deleteArtist : 작가 계정 승인 / 막기 / 삭제 (회장만) */
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { siteConfig } from "@/site.config";
 import {
-  checkArtistPassword,
+  changeOwnArtistPassword,
   checkPassword,
   endAdminSession,
   endArtistSession,
+  getApprovedArtistId,
+  getCurrentArtist,
   isAdmin,
-  isArtist,
-  isArtistPasswordSet,
-  saveArtistPasswordToStore,
+  loginArtist,
+  registerArtist,
   startAdminSession,
-  startArtistSession,
 } from "@/lib/admin-auth";
 import { getAdminClient, IMAGE_BUCKET } from "@/lib/supabase-admin";
 
@@ -49,14 +47,36 @@ export async function logout() {
   redirect("/admin");
 }
 
-/* ---------- 작가 로그인 / 로그아웃 ---------- */
+/* ---------- 작가 가입 / 로그인 / 로그아웃 ---------- */
+
+function readNewPassword(formData: FormData): { password?: string; message?: string } {
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirm") ?? "");
+  if (password.length < 4) return { message: "비밀번호는 4글자 이상으로 정해 주세요." };
+  if (password !== confirm) return { message: "두 칸의 비밀번호가 서로 다릅니다." };
+  return { password };
+}
+
+/** 작가 가입 → 승인 대기 상태로 로그인됨 (회장이 승인해야 웹툰을 올릴 수 있음) */
+export async function artistSignup(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const email = String(formData.get("email") ?? "").trim();
+  const name = String(formData.get("name") ?? "").trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { message: "이메일 주소를 정확히 입력해 주세요." };
+  if (!name) return { message: "작가 이름을 입력해 주세요." };
+  const { password, message } = readNewPassword(formData);
+  if (!password) return { message };
+
+  const result = await registerArtist(email, name, password);
+  if (!result.ok) return { message: result.message };
+  revalidatePath("/admin");
+  redirect("/artist");
+}
 
 export async function artistLogin(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
-  if (!(await checkArtistPassword(password))) {
-    return { message: "비밀번호가 올바르지 않습니다." };
-  }
-  await startArtistSession();
+  const result = await loginArtist(email, password);
+  if (!result.ok) return { message: result.message };
   redirect("/artist");
 }
 
@@ -64,6 +84,41 @@ export async function artistLogout() {
   await endArtistSession();
   redirect("/artist");
 }
+
+/** 작가 본인 비밀번호 바꾸기 */
+export async function changeArtistPassword(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const artist = await getCurrentArtist();
+  if (!artist || artist.status === "blocked") return { message: "로그인이 필요합니다. 새로고침 후 다시 로그인하세요." };
+  const { password, message } = readNewPassword(formData);
+  if (!password) return { message };
+
+  const result = await changeOwnArtistPassword(artist.id, password);
+  if (!result.ok) return { message: result.message };
+  return { ok: true, message: "비밀번호를 바꿨습니다." };
+}
+
+/* ---------- 웹툰을 다룰 수 있는 사람 확인 ----------
+   - 회장: 모든 웹툰
+   - 승인된 작가: 자기가 올린 웹툰만 (artist_id 가 자기 것) */
+
+type Editor = { admin: true } | { admin: false; artistId: string };
+
+async function getEditor(): Promise<Editor | null> {
+  if (await isAdmin()) return { admin: true };
+  const artistId = await getApprovedArtistId();
+  return artistId ? { admin: false, artistId } : null;
+}
+
+/** 이 웹툰을 다룰 수 있는지 (회장은 항상, 작가는 자기 웹툰만) */
+async function canEditWebtoon(editor: Editor, webtoonId: string) {
+  if (editor.admin) return true;
+  const supabase = getAdminClient();
+  if (!supabase) return false;
+  const { data } = await supabase.from("webtoons").select("artist_id").eq("id", webtoonId).maybeSingle();
+  return Boolean(data) && data!.artist_id === editor.artistId;
+}
+
+const NO_PERMISSION = "로그인이 필요하거나, 내가 올린 웹툰이 아닙니다.";
 
 /* ---------- 카드 저장 (추가 / 수정) ---------- */
 
@@ -181,12 +236,15 @@ export async function saveHero(_prev: ActionState, formData: FormData): Promise<
 const WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
 export async function saveWebtoon(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  if (!(await isAdmin()) && !(await isArtist())) return { message: "로그인이 필요합니다. 새로고침 후 다시 로그인하세요." };
+  const editor = await getEditor();
+  if (!editor) return { message: "로그인이 필요합니다. 새로고침 후 다시 로그인하세요." };
 
   const supabase = getAdminClient();
   if (!supabase) return { message: "Supabase가 연결되지 않았습니다. .env.local 을 확인하세요." };
 
   const id = String(formData.get("id") ?? "");
+  // 수정은 회장 또는 그 웹툰을 올린 작가만
+  if (id && !(await canEditWebtoon(editor, id))) return { message: NO_PERMISSION };
   const title = String(formData.get("title") ?? "").trim();
   const weekday = String(formData.get("weekday") ?? "");
   const isUp = formData.get("is_up") === "on";
@@ -221,6 +279,9 @@ export async function saveWebtoon(_prev: ActionState, formData: FormData): Promi
     row.cover_url = null;
   }
 
+  // 작가가 새로 추가하면 그 작가의 웹툰으로 기록
+  if (!id && !editor.admin) row.artist_id = editor.artistId;
+
   const { error } = id
     ? await supabase.from("webtoons").update(row).eq("id", id)
     : await supabase.from("webtoons").insert(row);
@@ -229,20 +290,22 @@ export async function saveWebtoon(_prev: ActionState, formData: FormData): Promi
 
   revalidatePath("/");
   revalidatePath("/admin");
+  revalidatePath("/artist");
   return { ok: true, message: id ? "수정했습니다." : "추가했습니다." };
 }
 
 /* ---------- 웹툰 삭제 ---------- */
 
 export async function deleteWebtoon(formData: FormData) {
-  // 삭제는 회장만 (작가들은 비밀번호를 같이 써서 누가 올렸는지 구별할 수 없으므로)
-  if (!(await isAdmin())) return;
+  // 삭제는 회장 또는 그 웹툰을 올린 작가만
+  const editor = await getEditor();
+  if (!editor) return;
   const supabase = getAdminClient();
   if (!supabase) return;
 
   const id = String(formData.get("id") ?? "");
   const coverUrl = String(formData.get("cover_url") ?? "");
-  if (!id) return;
+  if (!id || !(await canEditWebtoon(editor, id))) return;
 
   await supabase.from("webtoons").delete().eq("id", id);
 
@@ -254,6 +317,7 @@ export async function deleteWebtoon(formData: FormData) {
 
   revalidatePath("/");
   revalidatePath("/admin");
+  revalidatePath("/artist");
 }
 
 /* ---------- 웹툰 회차 ---------- */
@@ -265,13 +329,15 @@ export type UploadResult = { ok: true; url: string } | { ok: false; message: str
 
 /** 회차 그림 한 장 올리기 → 그림 주소를 돌려줌 */
 export async function uploadEpisodeImage(formData: FormData): Promise<UploadResult> {
-  if (!(await isAdmin()) && !(await isArtist())) return { ok: false, message: "로그인이 필요합니다. 새로고침 후 다시 로그인하세요." };
+  const editor = await getEditor();
+  if (!editor) return { ok: false, message: "로그인이 필요합니다. 새로고침 후 다시 로그인하세요." };
   const supabase = getAdminClient();
   if (!supabase) return { ok: false, message: "Supabase가 연결되지 않았습니다." };
 
   const webtoonId = String(formData.get("webtoon_id") ?? "");
   const file = formData.get("file");
   if (!webtoonId) return { ok: false, message: "웹툰 정보가 없습니다." };
+  if (!(await canEditWebtoon(editor, webtoonId))) return { ok: false, message: NO_PERMISSION };
   if (!(file instanceof File) || file.size === 0) return { ok: false, message: "그림 파일이 없습니다." };
   if (!file.type.startsWith("image/")) return { ok: false, message: `${file.name}: 이미지 파일만 올릴 수 있습니다.` };
   if (file.size > MAX_EPISODE_IMAGE_BYTES) return { ok: false, message: `${file.name}: 한 장에 4MB 이하만 올릴 수 있습니다.` };
@@ -293,12 +359,14 @@ export async function saveEpisode(input: {
   title: string;
   imageUrls: string[];
 }): Promise<ActionState> {
-  if (!(await isAdmin()) && !(await isArtist())) return { message: "로그인이 필요합니다. 새로고침 후 다시 로그인하세요." };
+  const editor = await getEditor();
+  if (!editor) return { message: "로그인이 필요합니다. 새로고침 후 다시 로그인하세요." };
   const supabase = getAdminClient();
   if (!supabase) return { message: "Supabase가 연결되지 않았습니다." };
 
   const title = input.title.trim();
   if (!input.webtoonId) return { message: "웹툰 정보가 없습니다." };
+  if (!(await canEditWebtoon(editor, input.webtoonId))) return { message: NO_PERMISSION };
   if (!Number.isInteger(input.number) || input.number < 1) return { message: "회차 번호는 1 이상 숫자로 입력하세요." };
   if (!title) return { message: "회차 제목을 입력하세요." };
 
@@ -319,15 +387,17 @@ export async function saveEpisode(input: {
 
 /** 회차 삭제 (그림 파일도 함께 정리) */
 export async function deleteEpisode(formData: FormData) {
-  // 삭제는 회장만 (작가들은 비밀번호를 같이 써서 누가 올렸는지 구별할 수 없으므로)
-  if (!(await isAdmin())) return;
+  // 삭제는 회장 또는 그 웹툰을 올린 작가만
+  const editor = await getEditor();
+  if (!editor) return;
   const supabase = getAdminClient();
   if (!supabase) return;
 
   const id = String(formData.get("id") ?? "");
   if (!id) return;
 
-  const { data } = await supabase.from("episodes").select("image_urls").eq("id", id).maybeSingle();
+  const { data } = await supabase.from("episodes").select("image_urls, webtoon_id").eq("id", id).maybeSingle();
+  if (!data || !(await canEditWebtoon(editor, data.webtoon_id as string))) return;
   await supabase.from("episodes").delete().eq("id", id);
 
   const marker = `/object/public/${IMAGE_BUCKET}/`;
@@ -339,62 +409,35 @@ export async function deleteEpisode(formData: FormData) {
   revalidatePath("/", "layout");
 }
 
-/* ---------- 작가 비밀번호 정하기 (회장만) ---------- */
+/* ---------- 작가 계정 관리 (회장만): 승인 / 막기 / 삭제 ---------- */
 
-export async function saveArtistPassword(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  if (!(await isAdmin())) return { message: "로그인이 필요합니다. 새로고침 후 다시 로그인하세요." };
-
-  const password = String(formData.get("password") ?? "");
-  const confirm = String(formData.get("confirm") ?? "");
-  if (password.length < 4) return { message: "비밀번호는 4글자 이상으로 정해 주세요." };
-  if (password !== confirm) return { message: "두 칸의 비밀번호가 서로 다릅니다." };
-
-  const result = await saveArtistPasswordToStore(password);
-  if (!result.ok) return { message: result.message };
-
+async function setArtistStatus(formData: FormData, status: "approved" | "blocked") {
+  if (!(await isAdmin())) return;
+  const supabase = getAdminClient();
+  if (!supabase) return;
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+  await supabase.from("artists").update({ status }).eq("id", id);
   revalidatePath("/admin");
-  revalidatePath("/artist");
-  return { ok: true, message: "작가 비밀번호를 저장했습니다. 작가들에게 알려 주세요." };
 }
 
-/* ---------- 작가 페이지에서 작가가 직접 비밀번호 만들기 / 바꾸기 ---------- */
-
-function readNewPassword(formData: FormData): { password?: string; message?: string } {
-  const password = String(formData.get("password") ?? "");
-  const confirm = String(formData.get("confirm") ?? "");
-  if (password.length < 4) return { message: "비밀번호는 4글자 이상으로 정해 주세요." };
-  if (password !== confirm) return { message: "두 칸의 비밀번호가 서로 다릅니다." };
-  return { password };
+/** 승인: 그 작가가 웹툰을 올릴 수 있게 됨 */
+export async function approveArtist(formData: FormData) {
+  await setArtistStatus(formData, "approved");
 }
 
-/** 처음 만들기: 아직 작가 비밀번호가 하나도 없을 때만 가능. 만들면 바로 작가로 로그인됩니다. */
-export async function createArtistPassword(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  if (await isArtistPasswordSet()) {
-    return { message: "이미 작가 비밀번호가 있어요. 새로고침 후 로그인해 주세요." };
-  }
-  const { password, message } = readNewPassword(formData);
-  if (!password) return { message };
-
-  const result = await saveArtistPasswordToStore(password);
-  if (!result.ok) return { message: result.message };
-
-  await startArtistSession();
-  redirect("/artist");
+/** 막기: 그 작가는 로그인도, 웹툰 올리기도 못 함 (올린 웹툰은 그대로 남음) */
+export async function blockArtist(formData: FormData) {
+  await setArtistStatus(formData, "blocked");
 }
 
-/** 바꾸기: 작가(또는 회장)로 로그인한 사람만. 바꾸면 다른 작가들은 새 비밀번호로 다시 로그인해야 합니다. */
-export async function changeArtistPassword(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  if (!(await isArtist()) && !(await isAdmin())) {
-    return { message: "로그인이 필요합니다. 새로고침 후 다시 로그인하세요." };
-  }
-  const { password, message } = readNewPassword(formData);
-  if (!password) return { message };
-
-  const result = await saveArtistPasswordToStore(password);
-  if (!result.ok) return { message: result.message };
-
-  // 비밀번호가 바뀌면 로그인 기억 값도 바뀌므로, 바꾼 사람은 새 값으로 다시 기억
-  await startArtistSession();
-  revalidatePath("/artist");
-  return { ok: true, message: "작가 비밀번호를 바꿨습니다. 다른 작가들에게도 알려 주세요." };
+/** 삭제: 작가 계정을 지움. 그 작가가 올린 웹툰은 남고, 회장만 관리하는 웹툰이 됨 */
+export async function deleteArtist(formData: FormData) {
+  if (!(await isAdmin())) return;
+  const supabase = getAdminClient();
+  if (!supabase) return;
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+  await supabase.from("artists").delete().eq("id", id);
+  revalidatePath("/admin");
 }

@@ -32,6 +32,8 @@ export type Webtoon = {
   title: string;
   weekday: Weekday;
   cover_url: string | null;
+  /** 올린 작가 (없으면 회장이 관리하는 웹툰) */
+  artist_id?: string | null;
   /** true 면 제목 앞에 UP 표시 */
   is_up: boolean;
   sort_order: number;
@@ -48,5 +50,17 @@ export type Episode = {
   title: string;
   /** 만화 그림 주소들 (위에서 아래 순서) */
   image_urls: string[];
+  created_at: string;
+};
+
+/** 작가 계정 상태: 승인 대기 / 승인됨 / 막힘 */
+export type ArtistStatus = "pending" | "approved" | "blocked";
+
+/** 작가 계정 (비밀번호는 빼고). supabase/schema.sql 의 artists 테이블과 같습니다. */
+export type Artist = {
+  id: string;
+  email: string;
+  name: string;
+  status: ArtistStatus;
   created_at: string;
 };

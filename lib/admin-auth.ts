@@ -3,11 +3,12 @@ import { createHash, randomBytes, scryptSync, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
 
 import { getAdminClient } from "@/lib/supabase-admin";
+import type { Artist } from "@/lib/types";
 
 /* 간단한 관리자 로그인
    - 비밀번호는 .env.local 의 ADMIN_PASSWORD 값
    - 로그인하면 8시간 동안 유지되는 쿠키를 저장
-   - 아래쪽에 작가 로그인(ARTIST_PASSWORD)도 따로 있음 */
+   - 아래쪽에 작가 계정(작가마다 이메일+비밀번호, 회장 승인)도 따로 있음 */
 
 const COOKIE_NAME = "admin_session";
 const MAX_AGE_SECONDS = 60 * 60 * 8;
@@ -59,14 +60,13 @@ export async function endAdminSession() {
   store.delete(COOKIE_NAME);
 }
 
-/* ---------- 작가 로그인 (웹툰·회차 올리기 전용) ----------
-   - 작가 비밀번호는 회장 페이지 "작가" 탭에서 정합니다. (작가들끼리 같이 씀)
-     Supabase 의 site_secrets 표에 '알아볼 수 없게 바꾼 형태(scrypt)'로만 저장됩니다.
-   - .env.local / Vercel 의 ARTIST_PASSWORD 가 있으면 그것도 같이 통합니다.
+
+/* ---------- 작가 계정 (작가마다 이메일 + 비밀번호) ----------
+   - 작가가 작가 페이지에서 직접 가입 → 회장이 "작가" 탭에서 승인해야 웹툰을 올릴 수 있음
+   - 비밀번호는 Supabase 의 artists 표에 '알아볼 수 없게 바꾼 형태(scrypt)'로만 저장
    - 관리자(회장) 로그인과는 따로 기억합니다. 관리자 확인(isAdmin)은 위 그대로. */
 
 const ARTIST_COOKIE_NAME = "artist_session";
-const ARTIST_SECRET_KEY = "artist_password";
 
 /** 비밀번호 → 저장용 문자열 "scrypt$소금$결과" (원래 비밀번호는 저장하지 않음) */
 function hashForStorage(password: string) {
@@ -83,60 +83,46 @@ function matchesStored(input: string, stored: string) {
   return actual.length === expected.length && timingSafeEqual(actual, expected);
 }
 
-/** 회장 페이지에서 정한 작가 비밀번호(저장용 문자열). 없으면 null. */
-async function getStoredArtistSecret(): Promise<string | null> {
+/** 이메일은 소문자·앞뒤 공백 없이 저장/비교 */
+export function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
+}
+
+type ArtistRow = Artist & { password_hash: string };
+
+/** 로그인 기억용 표시. 비밀번호를 바꾸면 값이 달라져서 다른 기기의 로그인은 풀립니다. */
+function artistSignature(id: string, passwordHash: string) {
+  return hash(`artist-session:${id}:${passwordHash}`).toString("hex");
+}
+
+async function getArtistRow(column: "id" | "email", value: string): Promise<ArtistRow | null> {
   const supabase = getAdminClient();
   if (!supabase) return null;
-  const { data } = await supabase.from("site_secrets").select("value").eq("key", ARTIST_SECRET_KEY).maybeSingle();
-  return (data?.value as string | undefined) ?? null;
+  const { data } = await supabase.from("artists").select("*").eq(column, value).maybeSingle();
+  return (data as ArtistRow | null) ?? null;
 }
 
-/** 작가 비밀번호 저장 (회장만 부르도록 actions.ts 에서 isAdmin 확인 후 호출) */
-export async function saveArtistPasswordToStore(password: string) {
-  const supabase = getAdminClient();
-  if (!supabase) return { ok: false as const, message: "Supabase가 연결되지 않았습니다." };
-  const { error } = await supabase
-    .from("site_secrets")
-    .upsert({ key: ARTIST_SECRET_KEY, value: hashForStorage(password), updated_at: new Date().toISOString() });
-  if (error) return { ok: false as const, message: `저장 실패: ${error.message}` };
-  return { ok: true as const };
-}
-
-/** 작가 비밀번호가 정해져 있는지 (회장 페이지에서 정했거나, 환경변수에 있거나) */
-export async function isArtistPasswordSet() {
-  if (process.env.ARTIST_PASSWORD) return true;
-  return Boolean(await getStoredArtistSecret());
-}
-
-/** 입력한 작가 비밀번호가 맞는지 */
-export async function checkArtistPassword(input: string) {
-  const stored = await getStoredArtistSecret();
-  if (stored && matchesStored(input, stored)) return true;
-  const envPassword = process.env.ARTIST_PASSWORD;
-  return Boolean(envPassword) && timingSafeEqual(hash(input), hash(envPassword!));
-}
-
-/** 로그인 기억용 표시. 회장이 비밀번호를 바꾸면 값이 달라져서 기존 작가 로그인은 풀립니다. */
-async function artistSessionToken() {
-  const stored = await getStoredArtistSecret();
-  if (stored) return hash(`artist-session:${stored}`).toString("hex");
-  const envPassword = process.env.ARTIST_PASSWORD;
-  return envPassword ? hash(`artist-session:${envPassword}`).toString("hex") : null;
-}
-
-/** 지금 접속한 사람이 로그인한 작가인지 */
-export async function isArtist() {
-  const token = await artistSessionToken();
-  if (!token) return false;
+/** 지금 로그인한 작가 (상태 상관없이). 로그인 안 했으면 null. 비밀번호 정보는 빼고 돌려줌. */
+export async function getCurrentArtist(): Promise<Artist | null> {
   const store = await cookies();
-  return store.get(ARTIST_COOKIE_NAME)?.value === token;
+  const raw = store.get(ARTIST_COOKIE_NAME)?.value;
+  if (!raw) return null;
+  const [id, signature] = raw.split(".");
+  if (!id || !signature) return null;
+  const row = await getArtistRow("id", id);
+  if (!row || artistSignature(row.id, row.password_hash) !== signature) return null;
+  return { id: row.id, email: row.email, name: row.name, status: row.status, created_at: row.created_at };
 }
 
-export async function startArtistSession() {
-  const token = await artistSessionToken();
-  if (!token) return;
+/** 지금 접속한 사람이 '승인된' 작가인지 (승인된 작가만 웹툰을 올릴 수 있음) */
+export async function getApprovedArtistId(): Promise<string | null> {
+  const artist = await getCurrentArtist();
+  return artist?.status === "approved" ? artist.id : null;
+}
+
+async function startArtistSessionFor(row: Pick<ArtistRow, "id" | "password_hash">) {
   const store = await cookies();
-  store.set(ARTIST_COOKIE_NAME, token, {
+  store.set(ARTIST_COOKIE_NAME, `${row.id}.${artistSignature(row.id, row.password_hash)}`, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
@@ -148,4 +134,47 @@ export async function startArtistSession() {
 export async function endArtistSession() {
   const store = await cookies();
   store.delete(ARTIST_COOKIE_NAME);
+}
+
+type AuthResult = { ok: true } | { ok: false; message: string };
+
+/** 작가 가입 (승인 대기 상태로 만들고 바로 로그인 상태로 기억) */
+export async function registerArtist(email: string, name: string, password: string): Promise<AuthResult> {
+  const supabase = getAdminClient();
+  if (!supabase) return { ok: false, message: "Supabase가 연결되지 않았습니다." };
+
+  const passwordHash = hashForStorage(password);
+  const { data, error } = await supabase
+    .from("artists")
+    .insert({ email: normalizeEmail(email), name: name.trim(), password_hash: passwordHash })
+    .select("id")
+    .single();
+  if (error) {
+    if (error.code === "23505") return { ok: false, message: "이미 가입된 이메일이에요. 로그인해 주세요." };
+    return { ok: false, message: `가입 실패: ${error.message}` };
+  }
+  await startArtistSessionFor({ id: data.id as string, password_hash: passwordHash });
+  return { ok: true };
+}
+
+/** 작가 로그인 (막힌 계정은 로그인 불가) */
+export async function loginArtist(email: string, password: string): Promise<AuthResult> {
+  const row = await getArtistRow("email", normalizeEmail(email));
+  if (!row || !matchesStored(password, row.password_hash)) {
+    return { ok: false, message: "이메일 또는 비밀번호가 올바르지 않습니다." };
+  }
+  if (row.status === "blocked") return { ok: false, message: "회장이 막은 계정이에요. 회장에게 문의해 주세요." };
+  await startArtistSessionFor(row);
+  return { ok: true };
+}
+
+/** 작가 본인 비밀번호 바꾸기 (바꾼 기기는 계속 로그인 상태) */
+export async function changeOwnArtistPassword(artistId: string, newPassword: string): Promise<AuthResult> {
+  const supabase = getAdminClient();
+  if (!supabase) return { ok: false, message: "Supabase가 연결되지 않았습니다." };
+  const passwordHash = hashForStorage(newPassword);
+  const { error } = await supabase.from("artists").update({ password_hash: passwordHash }).eq("id", artistId);
+  if (error) return { ok: false, message: `저장 실패: ${error.message}` };
+  await startArtistSessionFor({ id: artistId, password_hash: passwordHash });
+  return { ok: true };
 }
