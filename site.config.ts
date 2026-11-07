@@ -70,6 +70,13 @@ export const siteConfig = {
     ] as { key: Weekday; label: string }[],
   },
 
+  /* 완결 웹툰 섹션 (요일별 웹툰 바로 아래) — 회장·작가 페이지에서 "완결"에 체크한 웹툰이 여기 모임 */
+  completedWebtoons: {
+    eyebrow: "Completed",
+    title: "완결 웹툰",
+    empty: "아직 완결된 웹툰이 없어요.",
+  },
+
   /* 연락처 섹션 */
   contact: {
     eyebrow: "tea time",

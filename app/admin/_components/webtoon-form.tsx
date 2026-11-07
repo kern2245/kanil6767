@@ -52,6 +52,10 @@ export function WebtoonForm({ webtoon }: { webtoon?: Webtoon }) {
           UP 항상 표시 (끄면 연재 요일에만 자동 표시)
         </label>
         <label className="flex items-center gap-2">
+          <input type="checkbox" name="is_completed" defaultChecked={webtoon?.is_completed ?? false} />
+          완결 (첫 화면 &quot;완결 웹툰&quot; 칸으로 옮김)
+        </label>
+        <label className="flex items-center gap-2">
           <input type="checkbox" name="is_visible" defaultChecked={webtoon?.is_visible ?? true} />
           사이트에 보이기
         </label>

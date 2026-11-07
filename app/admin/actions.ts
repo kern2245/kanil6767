@@ -286,6 +286,7 @@ export async function saveWebtoon(_prev: ActionState, formData: FormData): Promi
   const title = String(formData.get("title") ?? "").trim();
   const weekday = String(formData.get("weekday") ?? "");
   const isUp = formData.get("is_up") === "on";
+  const isCompleted = formData.get("is_completed") === "on";
   const isVisible = formData.get("is_visible") === "on";
   const removeCover = formData.get("remove_cover") === "on";
   const cover = formData.get("cover");
@@ -297,6 +298,7 @@ export async function saveWebtoon(_prev: ActionState, formData: FormData): Promi
     title,
     weekday,
     is_up: isUp,
+    is_completed: isCompleted,
     is_visible: isVisible,
   };
 

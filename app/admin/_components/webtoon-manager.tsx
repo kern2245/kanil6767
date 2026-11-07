@@ -96,7 +96,7 @@ export async function WebtoonManager({ artistId }: { artistId?: string }) {
                         ) : null}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {dayLabel(w.weekday)}요일
+                        {w.is_completed ? "완결" : `${dayLabel(w.weekday)}요일`}
                         {!artistId ? ` · ${artistName(w.artist_id) ?? "회장"}` : null}
                       </p>
                     </div>

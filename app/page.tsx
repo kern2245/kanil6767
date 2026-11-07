@@ -18,6 +18,8 @@ export default function HomePage() {
       <Navbar />
       <main className="flex-1">
         <Hero />
+        {/* 완결 웹툰은 요일별 웹툰 제목 옆 버튼으로 봄.
+            따로 큰 칸으로 보이고 싶으면 components/sections/webtoon-completed.tsx 의 WebtoonCompleted 를 여기 넣기 */}
         <WebtoonWeekly />
         <AdBoard />
       </main>

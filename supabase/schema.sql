@@ -217,3 +217,6 @@ create policy "Anyone can read comments"
   on public.comments for select
   to anon, authenticated
   using (true);
+
+-- 14) 웹툰 "완결" 표시 칸 — 켜면 첫 화면에서 요일 탭 대신 "완결" 탭에만 보임
+alter table public.webtoons add column if not exists is_completed boolean not null default false;

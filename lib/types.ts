@@ -36,6 +36,8 @@ export type Webtoon = {
   artist_id?: string | null;
   /** true 면 제목 앞에 UP 표시 */
   is_up: boolean;
+  /** true 면 완결 — 첫 화면에서 요일 탭 대신 "완결" 탭에만 보임 (예전 데이터엔 없을 수 있음) */
+  is_completed?: boolean;
   sort_order: number;
   is_visible: boolean;
   created_at: string;
