@@ -5,10 +5,12 @@ import { ChevronLeft, ChevronRight, List } from "lucide-react";
 
 import { getEpisode, getEpisodes, getWebtoon } from "@/lib/data";
 import { Button } from "@/components/ui/button";
+import { EpisodeComments } from "@/components/sections/episode-comments";
 
 /* 웹툰 뷰어 (주소: /webtoon/웹툰번호/회차번호)
    - 만화 그림을 위에서 아래로 이어 붙여 보여줌 (세로 스크롤)
-   - 위·아래에 이전화 / 목록 / 다음화 버튼 */
+   - 위·아래에 이전화 / 목록 / 다음화 버튼
+   - 화면 아래에 떠 있는 바 + 💬 누르면 올라오는 댓글 창 (components/sections/episode-comments.tsx) */
 
 export const revalidate = 60;
 
@@ -113,9 +115,18 @@ export default async function EpisodeViewerPage(props: PageProps<"/webtoon/[id]/
       </div>
 
       {/* 아래쪽: 이전화 / 목록 / 다음화 */}
-      <div className="mx-auto max-w-3xl px-4 py-10">
+      <div className="mx-auto max-w-3xl px-4 pt-10 pb-28">
         <EpisodeNav webtoonId={id} prev={prev} next={next} />
       </div>
+
+      {/* 화면 아래에 떠 있는 바 + 💬 누르면 올라오는 댓글 창 */}
+      <EpisodeComments
+        episodeId={episode.id}
+        path={`/webtoon/${id}/${number}`}
+        listHref={`/webtoon/${id}`}
+        prevHref={prev !== undefined ? `/webtoon/${id}/${prev}` : undefined}
+        nextHref={next !== undefined ? `/webtoon/${id}/${next}` : undefined}
+      />
     </main>
   );
 }

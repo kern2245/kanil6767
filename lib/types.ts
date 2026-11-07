@@ -72,6 +72,23 @@ export type ContactTexts = {
   description: string;
 };
 
+/** 독자 계정 (비밀번호는 빼고). supabase/schema.sql 의 readers 테이블과 같습니다. */
+export type Reader = {
+  id: string;
+  email: string;
+  nickname: string;
+};
+
+/** 회차 댓글 한 개. supabase/schema.sql 의 comments 테이블과 같습니다. */
+export type Comment = {
+  id: string;
+  episode_id: string;
+  reader_id: string;
+  author_name: string;
+  body: string;
+  created_at: string;
+};
+
 /** 광고판 한 장. supabase/schema.sql 의 ads 테이블과 같습니다. */
 export type Ad = {
   id: string;

@@ -183,3 +183,37 @@ select coalesce(c.eyebrow, 'tea time'),
 from (select 1) as one
 left join public.contact_texts c on c.id = 1
 where not exists (select 1 from public.ads);
+
+-- 12) 독자 계정 표 — 댓글을 달려면 독자가 이메일+비밀번호로 가입·로그인 (승인 없이 바로 사용)
+--     비밀번호는 알아볼 수 없게 바꾼 형태(scrypt)로만 저장. 읽기 규칙이 없어서 방문자는 못 읽음.
+create table if not exists public.readers (
+  id             uuid primary key default gen_random_uuid(),
+  email          text not null unique,               -- 로그인 아이디 (소문자로 저장)
+  nickname       text not null,                      -- 댓글에 보이는 이름
+  password_hash  text not null,                      -- 암호화된 비밀번호
+  created_at     timestamptz not null default now()
+);
+
+alter table public.readers enable row level security;
+
+-- 13) 댓글 표 — 웹툰 회차마다 달리는 댓글
+--     누구나 읽을 수 있고, 쓰기·지우기는 서버의 비밀 키로만 (로그인한 독자 본인 / 회장)
+--     회차나 독자 계정이 지워지면 그 댓글도 함께 지워집니다.
+create table if not exists public.comments (
+  id           uuid primary key default gen_random_uuid(),
+  episode_id   uuid not null references public.episodes (id) on delete cascade,
+  reader_id    uuid not null references public.readers (id) on delete cascade,
+  author_name  text not null,                        -- 댓글 쓸 때의 닉네임
+  body         text not null check (char_length(body) between 1 and 500),
+  created_at   timestamptz not null default now()
+);
+
+create index if not exists comments_episode_idx on public.comments (episode_id, created_at);
+
+alter table public.comments enable row level security;
+
+drop policy if exists "Anyone can read comments" on public.comments;
+create policy "Anyone can read comments"
+  on public.comments for select
+  to anon, authenticated
+  using (true);

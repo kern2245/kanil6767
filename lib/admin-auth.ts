@@ -67,13 +67,13 @@ export async function endAdminSession() {
 const ARTIST_COOKIE_NAME = "artist_session";
 
 /** 비밀번호 → 저장용 문자열 "scrypt$소금$결과" (원래 비밀번호는 저장하지 않음) */
-function hashForStorage(password: string) {
+export function hashForStorage(password: string) {
   const salt = randomBytes(16).toString("hex");
   const derived = scryptSync(password, salt, 32).toString("hex");
   return `scrypt$${salt}$${derived}`;
 }
 
-function matchesStored(input: string, stored: string) {
+export function matchesStored(input: string, stored: string) {
   const [kind, salt, derived] = stored.split("$");
   if (kind !== "scrypt" || !salt || !derived) return false;
   const expected = Buffer.from(derived, "hex");

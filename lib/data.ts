@@ -1,6 +1,22 @@
 import { sampleItems, sampleWebtoons, siteConfig } from "@/site.config";
 import { getPublicClient } from "@/lib/supabase";
-import type { Ad, ContactTexts, Episode, HeroTexts, Item, Webtoon } from "@/lib/types";
+import type { Ad, Comment, ContactTexts, Episode, HeroTexts, Item, Webtoon } from "@/lib/types";
+
+/** 회차 댓글 목록 (오래된 것부터). Supabase 연결이 없거나 댓글 표가 아직 없으면 빈 목록. */
+export async function getComments(episodeId: string): Promise<Comment[]> {
+  const supabase = getPublicClient();
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from("comments")
+    .select("*")
+    .eq("episode_id", episodeId)
+    .order("created_at", { ascending: true });
+  if (error) {
+    console.error("[getComments] Supabase 읽기 실패:", error.message);
+    return [];
+  }
+  return (data as Comment[]) ?? [];
+}
 
 /**
  * 특정 섹션의 카드 목록을 가져옵니다.

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 
 import { siteConfig } from "@/site.config";
@@ -9,6 +9,15 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: siteConfig.title,
   description: siteConfig.description,
+};
+
+/* 휴대폰·태블릿 화면 설정
+   viewportFit "cover": 아이폰·아이패드의 아래쪽 홈 막대 영역까지 알려줘서,
+   회차 화면 아래 바가 홈 막대에 가려지지 않게 함 (env(safe-area-inset-bottom) 이 작동) */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 /* 접속할 때마다 제목 그라데이션 팔레트(1~6)를 무작위로 고르는 작은 스크립트.
