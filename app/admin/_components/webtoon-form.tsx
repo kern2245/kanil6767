@@ -12,8 +12,9 @@ import type { Webtoon } from "@/lib/types";
 const inputClass =
   "h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/50";
 
-/** 웹툰 추가/수정 입력 칸. webtoon 을 넘기면 '수정', 안 넘기면 '새로 추가' 모드. */
-export function WebtoonForm({ webtoon }: { webtoon?: Webtoon }) {
+/** 웹툰 추가/수정 입력 칸. webtoon 을 넘기면 '수정', 안 넘기면 '새로 추가' 모드.
+    canSetCompleted: 회장만 true → "완결" 체크가 보임 (작가 화면에서는 안 보이고, 서버에서도 회장만 바꿀 수 있음) */
+export function WebtoonForm({ webtoon, canSetCompleted = false }: { webtoon?: Webtoon; canSetCompleted?: boolean }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(saveWebtoon, {});
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -52,10 +53,14 @@ export function WebtoonForm({ webtoon }: { webtoon?: Webtoon }) {
           <input type="checkbox" name="is_up" defaultChecked={webtoon?.is_up ?? false} />
           UP 항상 표시 (끄면 새 회차를 올린 뒤 24시간만 자동 표시)
         </label>
-        <label className="flex items-center gap-2">
-          <input type="checkbox" name="is_completed" defaultChecked={webtoon?.is_completed ?? false} />
-          완결 (첫 화면 &quot;완결 웹툰&quot; 칸으로 옮김)
-        </label>
+        {canSetCompleted ? (
+          <label className="flex items-center gap-2">
+            <input type="checkbox" name="is_completed" defaultChecked={webtoon?.is_completed ?? false} />
+            완결 (첫 화면 &quot;완결 웹툰&quot; 칸으로 옮김 · 회장만)
+          </label>
+        ) : webtoon?.is_completed ? (
+          <span className="text-muted-foreground">완결된 웹툰이에요 (완결은 회장만 바꿀 수 있어요)</span>
+        ) : null}
         <label className="flex items-center gap-2">
           <input type="checkbox" name="is_visible" defaultChecked={webtoon?.is_visible ?? true} />
           사이트에 보이기

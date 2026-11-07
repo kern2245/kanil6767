@@ -304,9 +304,10 @@ export async function saveWebtoon(_prev: ActionState, formData: FormData): Promi
     title,
     weekday,
     is_up: isUp,
-    is_completed: isCompleted,
     is_visible: isVisible,
   };
+  // 완결로 넘기기 / 되돌리기는 회장만 (작가가 저장하면 완결 상태는 그대로 둠)
+  if (editor.admin) row.is_completed = isCompleted;
 
   // 새 표지를 올린 경우 → Supabase 저장소의 webtoons/ 폴더에 업로드
   if (cover instanceof File && cover.size > 0) {

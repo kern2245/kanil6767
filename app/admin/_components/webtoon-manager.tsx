@@ -83,7 +83,7 @@ export async function WebtoonManager({ artistId, ownerOnly = false }: { artistId
       <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
         <section className="h-fit rounded-xl border p-6">
           <h2 className="mb-5 text-lg font-semibold">웹툰 추가</h2>
-          <WebtoonForm />
+          <WebtoonForm canSetCompleted={!artistId} />
         </section>
 
         <section>
@@ -126,7 +126,7 @@ export async function WebtoonManager({ artistId, ownerOnly = false }: { artistId
                   <details className="border-t px-4 py-3">
                     <summary className="cursor-pointer text-sm text-muted-foreground">수정하기</summary>
                     <div className="pt-4">
-                      <WebtoonForm webtoon={w} />
+                      <WebtoonForm webtoon={w} canSetCompleted={!artistId} />
                     </div>
                   </details>
                   <details className="border-t px-4 py-3">
