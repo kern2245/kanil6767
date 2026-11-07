@@ -5,7 +5,7 @@ import { siteConfig } from "@/site.config";
 import { getAdminClient } from "@/lib/supabase-admin";
 import { formatPublishAt, isScheduled, publishOptions } from "@/lib/publish-time";
 import type { Episode, Webtoon } from "@/lib/types";
-import { CoverButtons, DeleteWebtoonButton, WebtoonForm } from "./webtoon-form";
+import { CompleteButton, CoverButtons, DeleteWebtoonButton, WebtoonForm } from "./webtoon-form";
 import { EpisodeManager } from "./episode-manager";
 
 /** 웹툰 관리 화면 (웹툰 추가 + 등록된 웹툰 목록 + 수정하기 + 회차 관리)
@@ -83,7 +83,7 @@ export async function WebtoonManager({ artistId, ownerOnly = false }: { artistId
       <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
         <section className="h-fit rounded-xl border p-6">
           <h2 className="mb-5 text-lg font-semibold">웹툰 추가</h2>
-          <WebtoonForm canSetCompleted={!artistId} />
+          <WebtoonForm />
         </section>
 
         <section>
@@ -120,13 +120,15 @@ export async function WebtoonManager({ artistId, ownerOnly = false }: { artistId
                     <DeleteWebtoonButton id={w.id} coverUrl={w.cover_url} />
                   </div>
                   {/* 표지만 바로 바꾸기 / 지우기 */}
-                  <div className="border-t px-3 py-1.5">
+                  <div className="flex flex-wrap items-center gap-1 border-t px-3 py-1.5">
                     <CoverButtons id={w.id} hasCover={Boolean(w.cover_url)} />
+                    {/* 완결로 넘기기 / 연재로 되돌리기 — 회장 페이지에서만 (작가 화면에는 없음) */}
+                    {!artistId && !ownerOnly ? <CompleteButton id={w.id} completed={Boolean(w.is_completed)} /> : null}
                   </div>
                   <details className="border-t px-4 py-3">
                     <summary className="cursor-pointer text-sm text-muted-foreground">수정하기</summary>
                     <div className="pt-4">
-                      <WebtoonForm webtoon={w} canSetCompleted={!artistId} />
+                      <WebtoonForm webtoon={w} />
                     </div>
                   </details>
                   <details className="border-t px-4 py-3">

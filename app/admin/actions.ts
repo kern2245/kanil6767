@@ -8,6 +8,7 @@
    - saveContactTexts    : (예전) TEA TIME 칸 글자 저장 — 지금은 광고판으로 바뀌어 안 씀
    - saveAd / deleteAd   : 광고판 추가·수정 / 삭제 (회장만)
    - saveWebtoon / deleteWebtoon : 웹툰 추가·수정 / 삭제 (회장 또는 그 웹툰을 올린 작가)
+   - setWebtoonCompleted : 완결로 넘기기 / 연재로 되돌리기 (회장만)
    - updateWebtoonCover  : 표지만 바꾸기 / 무프사로 (회장 또는 그 웹툰을 올린 작가)
    - updateEpisodeThumbnail : 회차 썸네일 바꾸기 / 무프사로 (회장 또는 그 웹툰의 작가)
    - updateEpisodePublishAt : 예약 회차 공개 날짜 바꾸기(1년 안) / 지금 바로 공개 (회장 또는 그 웹툰의 작가)
@@ -292,7 +293,6 @@ export async function saveWebtoon(_prev: ActionState, formData: FormData): Promi
   const title = String(formData.get("title") ?? "").trim();
   const weekday = String(formData.get("weekday") ?? "");
   const isUp = formData.get("is_up") === "on";
-  const isCompleted = formData.get("is_completed") === "on";
   const isVisible = formData.get("is_visible") === "on";
   const removeCover = formData.get("remove_cover") === "on";
   const cover = formData.get("cover");
@@ -306,8 +306,7 @@ export async function saveWebtoon(_prev: ActionState, formData: FormData): Promi
     is_up: isUp,
     is_visible: isVisible,
   };
-  // 완결로 넘기기 / 되돌리기는 회장만 (작가가 저장하면 완결 상태는 그대로 둠)
-  if (editor.admin) row.is_completed = isCompleted;
+  // 완결 상태는 여기서 안 바꿈 → 회장 페이지의 "완결로 넘기기" 버튼(setWebtoonCompleted)으로만
 
   // 새 표지를 올린 경우 → Supabase 저장소의 webtoons/ 폴더에 업로드
   if (cover instanceof File && cover.size > 0) {
@@ -386,6 +385,20 @@ export async function updateWebtoonCover(formData: FormData): Promise<ActionStat
 
   revalidatePath("/", "layout");
   return { ok: true, message: remove ? "무프사로 바꿨습니다." : "표지를 바꿨습니다." };
+}
+
+/* ---------- 완결로 넘기기 / 연재로 되돌리기 (회장만) ---------- */
+
+export async function setWebtoonCompleted(formData: FormData): Promise<void> {
+  if (!(await isAdmin())) return;
+  const supabase = getAdminClient();
+  const id = String(formData.get("id") ?? "");
+  if (!supabase || !id) return;
+  await supabase
+    .from("webtoons")
+    .update({ is_completed: formData.get("completed") === "on" })
+    .eq("id", id);
+  revalidatePath("/", "layout");
 }
 
 /* ---------- 웹툰 삭제 ---------- */

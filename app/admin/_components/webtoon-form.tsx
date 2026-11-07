@@ -1,9 +1,15 @@
 "use client";
 
 import { useActionState, useEffect, useRef } from "react";
-import { Trash2 } from "lucide-react";
+import { BookCheck, Trash2 } from "lucide-react";
 
-import { deleteWebtoon, saveWebtoon, updateWebtoonCover, type ActionState } from "@/app/admin/actions";
+import {
+  deleteWebtoon,
+  saveWebtoon,
+  setWebtoonCompleted,
+  updateWebtoonCover,
+  type ActionState,
+} from "@/app/admin/actions";
 import { ImageSlotButtons } from "./image-slot-buttons";
 import { Button } from "@/components/ui/button";
 import { siteConfig } from "@/site.config";
@@ -13,8 +19,8 @@ const inputClass =
   "h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/50";
 
 /** 웹툰 추가/수정 입력 칸. webtoon 을 넘기면 '수정', 안 넘기면 '새로 추가' 모드.
-    canSetCompleted: 회장만 true → "완결" 체크가 보임 (작가 화면에서는 안 보이고, 서버에서도 회장만 바꿀 수 있음) */
-export function WebtoonForm({ webtoon, canSetCompleted = false }: { webtoon?: Webtoon; canSetCompleted?: boolean }) {
+    완결 체크는 여기 없음 → 회장 페이지 웹툰 목록의 "완결로 넘기기" 버튼(CompleteButton)으로만 */
+export function WebtoonForm({ webtoon }: { webtoon?: Webtoon }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(saveWebtoon, {});
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -53,14 +59,6 @@ export function WebtoonForm({ webtoon, canSetCompleted = false }: { webtoon?: We
           <input type="checkbox" name="is_up" defaultChecked={webtoon?.is_up ?? false} />
           UP 항상 표시 (끄면 새 회차를 올린 뒤 24시간만 자동 표시)
         </label>
-        {canSetCompleted ? (
-          <label className="flex items-center gap-2">
-            <input type="checkbox" name="is_completed" defaultChecked={webtoon?.is_completed ?? false} />
-            완결 (첫 화면 &quot;완결 웹툰&quot; 칸으로 옮김 · 회장만)
-          </label>
-        ) : webtoon?.is_completed ? (
-          <span className="text-muted-foreground">완결된 웹툰이에요 (완결은 회장만 바꿀 수 있어요)</span>
-        ) : null}
         <label className="flex items-center gap-2">
           <input type="checkbox" name="is_visible" defaultChecked={webtoon?.is_visible ?? true} />
           사이트에 보이기
@@ -90,6 +88,28 @@ export function WebtoonForm({ webtoon, canSetCompleted = false }: { webtoon?: We
 /** 웹툰 목록의 표지 버튼: "표지 바꾸기" / "무프사로"(표지 없는 기본 모양) */
 export function CoverButtons({ id, hasCover }: { id: string; hasCover: boolean }) {
   return <ImageSlotButtons id={id} hasImage={hasCover} label="표지" fileField="cover" action={updateWebtoonCover} />;
+}
+
+/** 회장 전용: "완결로 넘기기" / "연재로 되돌리기" 버튼 (한 번 더 물어봄) */
+export function CompleteButton({ id, completed }: { id: string; completed: boolean }) {
+  return (
+    <form
+      action={setWebtoonCompleted}
+      onSubmit={(e) => {
+        const message = completed
+          ? "이 웹툰을 다시 연재 중으로 되돌릴까요? 요일별 웹툰으로 돌아가요."
+          : "이 웹툰을 완결로 넘길까요? 요일별 웹툰에서 빠지고 완결 웹툰으로 옮겨져요.";
+        if (!window.confirm(message)) e.preventDefault();
+      }}
+    >
+      <input type="hidden" name="id" value={id} />
+      <input type="hidden" name="completed" value={completed ? "off" : "on"} />
+      <Button type="submit" variant="ghost" size="sm">
+        <BookCheck />
+        {completed ? "연재로 되돌리기" : "완결로 넘기기"}
+      </Button>
+    </form>
+  );
 }
 
 /** 웹툰 삭제 버튼 — 실수 방지를 위해 한 번 더 물어봅니다. */
