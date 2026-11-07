@@ -8,6 +8,8 @@
    - saveContactTexts    : (예전) TEA TIME 칸 글자 저장 — 지금은 광고판으로 바뀌어 안 씀
    - saveAd / deleteAd   : 광고판 추가·수정 / 삭제 (회장만)
    - saveWebtoon / deleteWebtoon : 웹툰 추가·수정 / 삭제 (회장 또는 그 웹툰을 올린 작가)
+   - updateWebtoonCover  : 표지만 바꾸기 / 무프사로 (회장 또는 그 웹툰을 올린 작가)
+   - updateEpisodeThumbnail : 회차 썸네일 바꾸기 / 무프사로 (회장 또는 그 웹툰의 작가)
    - uploadEpisodeImage / saveEpisode / deleteEpisode : 회차 그림 올리기 / 저장 / 삭제 (회장 또는 그 웹툰의 작가)
    - approveArtist / blockArtist / deleteArtist : 작가 계정 승인 / 막기 / 삭제 (회장만) */
 
@@ -336,6 +338,53 @@ export async function saveWebtoon(_prev: ActionState, formData: FormData): Promi
   return { ok: true, message: id ? "수정했습니다." : "추가했습니다." };
 }
 
+/* ---------- 표지만 바꾸기 / 지우기 (웹툰 목록의 표지 버튼) ----------
+   - cover 파일이 있으면: 새 표지로 바꿈
+   - remove=on 이면: 표지 지움 (사이트에는 기본 그림 아이콘이 보임)
+   예전 표지 파일은 저장소에서 정리합니다. */
+
+export async function updateWebtoonCover(formData: FormData): Promise<ActionState> {
+  const editor = await getEditor();
+  if (!editor) return { message: "로그인이 필요합니다. 새로고침 후 다시 로그인하세요." };
+  const supabase = getAdminClient();
+  if (!supabase) return { message: "Supabase가 연결되지 않았습니다." };
+
+  const id = String(formData.get("id") ?? "");
+  if (!id || !(await canEditWebtoon(editor, id))) return { message: NO_PERMISSION };
+
+  const remove = formData.get("remove") === "on";
+  const cover = formData.get("cover");
+  const { data: current } = await supabase.from("webtoons").select("cover_url").eq("id", id).maybeSingle();
+  const oldUrl = (current?.cover_url as string | null) ?? null;
+
+  let newUrl: string | null = null;
+  if (!remove) {
+    if (!(cover instanceof File) || cover.size === 0) return { message: "표지 그림을 골라 주세요." };
+    if (!cover.type.startsWith("image/")) return { message: "이미지 파일만 올릴 수 있습니다." };
+    if (cover.size > MAX_IMAGE_BYTES) return { message: "이미지는 5MB 이하만 올릴 수 있습니다." };
+
+    const ext = (cover.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const path = `webtoons/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const { error: uploadError } = await supabase.storage
+      .from(IMAGE_BUCKET)
+      .upload(path, cover, { contentType: cover.type, upsert: false });
+    if (uploadError) return { message: `표지 업로드 실패: ${uploadError.message}` };
+    newUrl = supabase.storage.from(IMAGE_BUCKET).getPublicUrl(path).data.publicUrl;
+  }
+
+  const { error } = await supabase.from("webtoons").update({ cover_url: newUrl }).eq("id", id);
+  if (error) return { message: `저장 실패: ${error.message}` };
+
+  // 예전 표지 파일 정리
+  const marker = `/object/public/${IMAGE_BUCKET}/`;
+  if (oldUrl && oldUrl.includes(marker)) {
+    await supabase.storage.from(IMAGE_BUCKET).remove([oldUrl.split(marker)[1]]);
+  }
+
+  revalidatePath("/", "layout");
+  return { ok: true, message: remove ? "무프사로 바꿨습니다." : "표지를 바꿨습니다." };
+}
+
 /* ---------- 웹툰 삭제 ---------- */
 
 export async function deleteWebtoon(formData: FormData) {
@@ -400,6 +449,8 @@ export async function saveEpisode(input: {
   number: number;
   title: string;
   imageUrls: string[];
+  /** 회차 썸네일 (선택, 없으면 무프사) — uploadEpisodeImage 로 먼저 올린 주소 */
+  thumbnailUrl?: string | null;
 }): Promise<ActionState> {
   const editor = await getEditor();
   if (!editor) return { message: "로그인이 필요합니다. 새로고침 후 다시 로그인하세요." };
@@ -428,6 +479,7 @@ export async function saveEpisode(input: {
     number: input.number,
     title,
     image_urls: input.imageUrls,
+    thumbnail_url: input.thumbnailUrl || null,
     publish_at: publishAt.toISOString(),
   });
   if (error) {
@@ -444,6 +496,54 @@ export async function saveEpisode(input: {
   };
 }
 
+/** 회차 썸네일만 바꾸기 / 무프사로 (회차 목록의 썸네일 버튼)
+    - thumbnail 파일이 있으면: 새 썸네일로 바꿈
+    - remove=on 이면: 썸네일 빼고 무프사(기본 모양)로 */
+export async function updateEpisodeThumbnail(formData: FormData): Promise<ActionState> {
+  const editor = await getEditor();
+  if (!editor) return { message: "로그인이 필요합니다. 새로고침 후 다시 로그인하세요." };
+  const supabase = getAdminClient();
+  if (!supabase) return { message: "Supabase가 연결되지 않았습니다." };
+
+  const id = String(formData.get("id") ?? "");
+  const { data: episode } = await supabase
+    .from("episodes")
+    .select("webtoon_id, thumbnail_url")
+    .eq("id", id)
+    .maybeSingle();
+  if (!episode || !(await canEditWebtoon(editor, episode.webtoon_id as string))) return { message: NO_PERMISSION };
+
+  const remove = formData.get("remove") === "on";
+  const file = formData.get("thumbnail");
+  let newUrl: string | null = null;
+  if (!remove) {
+    if (!(file instanceof File) || file.size === 0) return { message: "썸네일 그림을 골라 주세요." };
+    if (!file.type.startsWith("image/")) return { message: "이미지 파일만 올릴 수 있습니다." };
+    if (file.size > MAX_EPISODE_IMAGE_BYTES) return { message: "썸네일은 4MB 이하만 올릴 수 있습니다." };
+
+    const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const path = `episodes/${episode.webtoon_id}/thumb-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const { error: uploadError } = await supabase.storage
+      .from(IMAGE_BUCKET)
+      .upload(path, file, { contentType: file.type, upsert: false });
+    if (uploadError) return { message: `썸네일 업로드 실패: ${uploadError.message}` };
+    newUrl = supabase.storage.from(IMAGE_BUCKET).getPublicUrl(path).data.publicUrl;
+  }
+
+  const { error } = await supabase.from("episodes").update({ thumbnail_url: newUrl }).eq("id", id);
+  if (error) return { message: `저장 실패: ${error.message}` };
+
+  // 예전 썸네일 파일 정리
+  const oldUrl = (episode.thumbnail_url as string | null) ?? null;
+  const marker = `/object/public/${IMAGE_BUCKET}/`;
+  if (oldUrl && oldUrl.includes(marker)) {
+    await supabase.storage.from(IMAGE_BUCKET).remove([oldUrl.split(marker)[1]]);
+  }
+
+  revalidatePath("/", "layout");
+  return { ok: true, message: remove ? "무프사로 바꿨습니다." : "썸네일을 바꿨습니다." };
+}
+
 /** 회차 삭제 (그림 파일도 함께 정리) */
 export async function deleteEpisode(formData: FormData) {
   // 삭제는 회장 또는 그 웹툰을 올린 작가만
@@ -455,12 +555,17 @@ export async function deleteEpisode(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   if (!id) return;
 
-  const { data } = await supabase.from("episodes").select("image_urls, webtoon_id").eq("id", id).maybeSingle();
+  const { data } = await supabase
+    .from("episodes")
+    .select("image_urls, webtoon_id, thumbnail_url")
+    .eq("id", id)
+    .maybeSingle();
   if (!data || !(await canEditWebtoon(editor, data.webtoon_id as string))) return;
   await supabase.from("episodes").delete().eq("id", id);
 
+  // 만화 그림 + 썸네일 파일 정리
   const marker = `/object/public/${IMAGE_BUCKET}/`;
-  const paths = ((data?.image_urls as string[] | undefined) ?? [])
+  const paths = [...((data?.image_urls as string[] | undefined) ?? []), (data?.thumbnail_url as string | null) ?? ""]
     .filter((url) => url.includes(marker))
     .map((url) => url.split(marker)[1]);
   if (paths.length > 0) await supabase.storage.from(IMAGE_BUCKET).remove(paths);

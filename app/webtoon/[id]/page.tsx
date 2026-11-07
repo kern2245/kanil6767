@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 
 /* 웹툰 페이지 (주소: /webtoon/웹툰번호)
    - 위쪽: 표지 + 제목 + 연재 요일 + "첫화 보기" 버튼
-   - 아래쪽: 회차 목록 (최신 회차가 위)
+   - 아래쪽: 회차 목록 (최신 회차가 위, 회차마다 썸네일 — 없으면 무프사)
    - 회차는 관리자 페이지 "웹툰" 탭 → 각 웹툰의 "회차 관리"에서 올립니다. */
 
 export const revalidate = 60;
@@ -64,8 +64,18 @@ export default async function WebtoonPage(props: PageProps<"/webtoon/[id]">) {
                 <li key={ep.id}>
                   <Link
                     href={`/webtoon/${id}/${ep.number}`}
-                    className="flex items-center gap-3 py-4 transition-colors hover:text-foreground"
+                    className="flex items-center gap-3 py-3 transition-colors hover:text-foreground"
                   >
+                    {/* 회차 썸네일 (없으면 무프사) */}
+                    <div className="relative aspect-[5/3] w-20 shrink-0 overflow-hidden rounded-md bg-muted sm:w-24">
+                      {ep.thumbnail_url ? (
+                        <Image src={ep.thumbnail_url} alt="" fill sizes="96px" className="object-cover" />
+                      ) : (
+                        <div className="flex h-full items-center justify-center text-muted-foreground">
+                          <ImageIcon className="size-5" />
+                        </div>
+                      )}
+                    </div>
                     <span className="w-12 shrink-0 text-sm text-muted-foreground">{ep.number}화</span>
                     <span className="min-w-0 flex-1 truncate font-medium">{ep.title}</span>
                     <span className="shrink-0 text-xs text-muted-foreground">

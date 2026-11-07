@@ -5,7 +5,7 @@ import { siteConfig } from "@/site.config";
 import { getAdminClient } from "@/lib/supabase-admin";
 import { formatPublishAt, isScheduled } from "@/lib/publish-time";
 import type { Episode, Webtoon } from "@/lib/types";
-import { DeleteWebtoonButton, WebtoonForm } from "./webtoon-form";
+import { CoverButtons, DeleteWebtoonButton, WebtoonForm } from "./webtoon-form";
 import { EpisodeManager } from "./episode-manager";
 
 /** 웹툰 관리 화면 (웹툰 추가 + 등록된 웹툰 목록 + 수정하기 + 회차 관리)
@@ -50,10 +50,15 @@ export async function WebtoonManager({ artistId, ownerOnly = false }: { artistId
   // 웹툰별 회차 목록 (회차 관리용)
   const { data: episodeRows } = await supabase
     .from("episodes")
-    .select("id, webtoon_id, number, title, image_urls, publish_at")
+    .select("id, webtoon_id, number, title, image_urls, publish_at, thumbnail_url")
     .order("number", { ascending: true });
   const episodesOf = (webtoonId: string) =>
-    ((episodeRows ?? []) as Pick<Episode, "id" | "webtoon_id" | "number" | "title" | "image_urls" | "publish_at">[])
+    (
+      (episodeRows ?? []) as Pick<
+        Episode,
+        "id" | "webtoon_id" | "number" | "title" | "image_urls" | "publish_at" | "thumbnail_url"
+      >[]
+    )
       .filter((ep) => ep.webtoon_id === webtoonId)
       .map((ep) => ({
         id: ep.id,
@@ -62,6 +67,7 @@ export async function WebtoonManager({ artistId, ownerOnly = false }: { artistId
         imageCount: ep.image_urls.length,
         // 아직 공개 전이면 "11월 14일(금) 0시" 같은 공개 예정 시간 (회차 목록에 "예약" 으로 보임)
         scheduledLabel: isScheduled(ep.publish_at) ? formatPublishAt(ep.publish_at as string) : null,
+        thumbnailUrl: ep.thumbnail_url ?? null,
       }));
 
   return (
@@ -112,6 +118,10 @@ export async function WebtoonManager({ artistId, ownerOnly = false }: { artistId
                       </p>
                     </div>
                     <DeleteWebtoonButton id={w.id} coverUrl={w.cover_url} />
+                  </div>
+                  {/* 표지만 바로 바꾸기 / 지우기 */}
+                  <div className="border-t px-3 py-1.5">
+                    <CoverButtons id={w.id} hasCover={Boolean(w.cover_url)} />
                   </div>
                   <details className="border-t px-4 py-3">
                     <summary className="cursor-pointer text-sm text-muted-foreground">수정하기</summary>

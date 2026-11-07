@@ -237,3 +237,7 @@ create policy "Anyone can read episodes of visible webtoons"
     publish_at <= now()
     and exists (select 1 from public.webtoons w where w.id = webtoon_id and w.is_visible = true)
   );
+
+-- 16) 회차 썸네일 칸 — 회차 목록에 보이는 작은 대표 그림 (비어 있으면 무프사 = 기본 모양)
+--     그림은 images 버킷의 episodes/ 폴더에 저장
+alter table public.episodes add column if not exists thumbnail_url text;

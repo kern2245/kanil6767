@@ -3,7 +3,8 @@
 import { useActionState, useEffect, useRef } from "react";
 import { Trash2 } from "lucide-react";
 
-import { deleteWebtoon, saveWebtoon, type ActionState } from "@/app/admin/actions";
+import { deleteWebtoon, saveWebtoon, updateWebtoonCover, type ActionState } from "@/app/admin/actions";
+import { ImageSlotButtons } from "./image-slot-buttons";
 import { Button } from "@/components/ui/button";
 import { siteConfig } from "@/site.config";
 import type { Webtoon } from "@/lib/types";
@@ -62,7 +63,7 @@ export function WebtoonForm({ webtoon }: { webtoon?: Webtoon }) {
         {webtoon?.cover_url ? (
           <label className="flex items-center gap-2">
             <input type="checkbox" name="remove_cover" />
-            기존 표지 지우기
+            무프사로 (표지 빼기)
           </label>
         ) : null}
       </div>
@@ -79,6 +80,11 @@ export function WebtoonForm({ webtoon }: { webtoon?: Webtoon }) {
       </div>
     </form>
   );
+}
+
+/** 웹툰 목록의 표지 버튼: "표지 바꾸기" / "무프사로"(표지 없는 기본 모양) */
+export function CoverButtons({ id, hasCover }: { id: string; hasCover: boolean }) {
+  return <ImageSlotButtons id={id} hasImage={hasCover} label="표지" fileField="cover" action={updateWebtoonCover} />;
 }
 
 /** 웹툰 삭제 버튼 — 실수 방지를 위해 한 번 더 물어봅니다. */

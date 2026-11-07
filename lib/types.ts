@@ -59,6 +59,8 @@ export type Episode = {
   created_at: string;
   /** 독자에게 공개되는 시간 (연재 요일이 아닌 날 올리면 다음 연재 요일 0시 — lib/publish-time.ts) */
   publish_at?: string;
+  /** 회차 목록에 보이는 작은 대표 그림. 없으면 무프사(기본 모양) */
+  thumbnail_url?: string | null;
 };
 
 /** 작가 계정 상태: 승인 대기 / 승인됨 / 막힘 */

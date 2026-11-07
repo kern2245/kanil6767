@@ -1,12 +1,14 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Trash2 } from "lucide-react";
+import { ImageIcon, Trash2 } from "lucide-react";
 
-import { deleteEpisode, saveEpisode, uploadEpisodeImage } from "@/app/admin/actions";
+import { deleteEpisode, saveEpisode, updateEpisodeThumbnail, uploadEpisodeImage } from "@/app/admin/actions";
 import { Button } from "@/components/ui/button";
 import { pdfToImages } from "@/lib/pdf-to-images";
+import { ImageSlotButtons } from "./image-slot-buttons";
 
 const inputClass =
   "h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/50";
@@ -18,9 +20,26 @@ type EpisodeRow = {
   imageCount: number;
   /** 공개 전(예약)이면 공개 예정 시간 글자, 이미 공개됐으면 null */
   scheduledLabel: string | null;
+  /** 회차 썸네일 (없으면 무프사) */
+  thumbnailUrl: string | null;
 };
 
-/** 웹툰 한 개의 회차 관리: 회차 추가(그림 여러 장 또는 PDF) + 올린 회차 목록·삭제
+/** 회차 썸네일 작은 그림. 없으면 무프사(그림 아이콘) */
+function EpisodeThumb({ url }: { url: string | null }) {
+  return (
+    <div className="relative aspect-[5/3] w-14 shrink-0 overflow-hidden rounded bg-muted">
+      {url ? (
+        <Image src={url} alt="" fill sizes="56px" className="object-cover" />
+      ) : (
+        <div className="flex h-full items-center justify-center text-muted-foreground">
+          <ImageIcon className="size-4" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** 웹툰 한 개의 회차 관리: 회차 추가(그림 여러 장 또는 PDF + 썸네일) + 올린 회차 목록·썸네일 바꾸기·삭제
     그림은 파일 이름 순서대로(001, 002 …) 위에서 아래로 붙습니다.
     PDF 는 브라우저에서 쪽마다 JPG 로 바꾼 뒤 한 장씩 올립니다. (lib/pdf-to-images.ts) */
 export function EpisodeManager({
@@ -75,6 +94,23 @@ export function EpisodeManager({
         files.push(f);
       }
     }
+    // 썸네일 (선택) — 먼저 한 장 올림. 안 고르면 무프사
+    let thumbnailUrl: string | null = null;
+    const thumb = data.get("thumbnail");
+    if (thumb instanceof File && thumb.size > 0) {
+      setStatus({ message: "썸네일 올리는 중…" });
+      const one = new FormData();
+      one.set("webtoon_id", webtoonId);
+      one.set("file", thumb);
+      const result = await uploadEpisodeImage(one);
+      if (!result.ok) {
+        setStatus({ message: `썸네일: ${result.message}` });
+        setPending(false);
+        return;
+      }
+      thumbnailUrl = result.url;
+    }
+
     const urls: string[] = [];
     for (let i = 0; i < files.length; i++) {
       setStatus({ message: `그림 올리는 중… ${i + 1} / ${files.length}` });
@@ -91,7 +127,7 @@ export function EpisodeManager({
     }
 
     setStatus({ message: "회차 저장 중…" });
-    const saved = await saveEpisode({ webtoonId, number, title, imageUrls: urls });
+    const saved = await saveEpisode({ webtoonId, number, title, imageUrls: urls, thumbnailUrl });
     setStatus({ ok: saved.ok, message: saved.message ?? "" });
     setPending(false);
     if (saved.ok) {
@@ -138,6 +174,13 @@ export function EpisodeManager({
             파일 이름 순서대로 위에서 아래로 붙습니다. (예: 001.jpg, 002.jpg) PDF는 쪽 순서대로 그림으로 바뀌어 올라갑니다.
           </span>
         </label>
+        <label className="grid gap-1.5 text-sm">
+          <span className="font-medium">회차 썸네일 (선택, 4MB 이하, 가로로 긴 그림 추천)</span>
+          <input name="thumbnail" type="file" accept="image/*" className="text-sm" />
+          <span className="text-xs text-muted-foreground">
+            안 고르면 무프사(그림 없는 기본 모양)로 보여요. 나중에 회차 목록에서 바꿀 수 있어요.
+          </span>
+        </label>
         <div className="flex flex-wrap items-center gap-3">
           <Button type="submit" disabled={pending}>
             {pending ? "올리는 중..." : "회차 올리기"}
@@ -158,7 +201,9 @@ export function EpisodeManager({
         ) : (
           <ul className="divide-y rounded-lg border">
             {episodes.map((ep) => (
-              <li key={ep.id} className="flex items-center gap-3 px-3 py-2 text-sm">
+              <li key={ep.id} className="px-3 py-2 text-sm">
+                <div className="flex items-center gap-3">
+                <EpisodeThumb url={ep.thumbnailUrl} />
                 <span className="w-10 shrink-0 text-muted-foreground">{ep.number}화</span>
                 <span className="min-w-0 flex-1 truncate">{ep.title}</span>
                 {ep.scheduledLabel ? (
@@ -185,6 +230,17 @@ export function EpisodeManager({
                   </Button>
                 </form>
                 ) : null}
+                </div>
+                {/* 썸네일 바꾸기 / 무프사로 */}
+                <div className="mt-1 pl-1">
+                  <ImageSlotButtons
+                    id={ep.id}
+                    hasImage={Boolean(ep.thumbnailUrl)}
+                    label="썸네일"
+                    fileField="thumbnail"
+                    action={updateEpisodeThumbnail}
+                  />
+                </div>
               </li>
             ))}
           </ul>

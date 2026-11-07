@@ -145,7 +145,7 @@ export async function getEpisodes(webtoonId: string): Promise<Omit<Episode, "ima
   if (!supabase) return [];
   const { data, error } = await supabase
     .from("episodes")
-    .select("id, webtoon_id, number, title, created_at, publish_at")
+    .select("id, webtoon_id, number, title, created_at, publish_at, thumbnail_url")
     .eq("webtoon_id", webtoonId)
     .order("number", { ascending: true });
   if (error) {
