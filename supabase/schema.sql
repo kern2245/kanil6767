@@ -241,3 +241,33 @@ create policy "Anyone can read episodes of visible webtoons"
 -- 16) 회차 썸네일 칸 — 회차 목록에 보이는 작은 대표 그림 (비어 있으면 무프사 = 기본 모양)
 --     그림은 images 버킷의 episodes/ 폴더에 저장
 alter table public.episodes add column if not exists thumbnail_url text;
+
+-- 17) 작가 커뮤니티 — 승인된 작가 + 회장만 보는 게시판 (글 + 댓글, 익명/실명 선택)
+--     읽기 규칙(policy)을 일부러 만들지 않음 → 방문자는 절대 못 읽고, 서버의 비밀 키로만 읽고 씀
+--     익명 글도 누가 썼는지(author_artist_id)는 저장 → 회장만 실명 확인 가능, 작가들에게는 "익명"으로만 보임
+--     author_artist_id 가 비어 있고 is_owner = true 면 회장이 쓴 글
+create table if not exists public.community_posts (
+  id                uuid primary key default gen_random_uuid(),
+  author_artist_id  uuid references public.artists (id) on delete cascade,
+  is_owner          boolean not null default false,
+  is_anonymous      boolean not null default false,
+  title             text not null check (char_length(title) between 1 and 100),
+  body              text not null check (char_length(body) between 1 and 5000),
+  created_at        timestamptz not null default now()
+);
+
+create index if not exists community_posts_created_idx on public.community_posts (created_at desc);
+alter table public.community_posts enable row level security;
+
+create table if not exists public.community_comments (
+  id                uuid primary key default gen_random_uuid(),
+  post_id           uuid not null references public.community_posts (id) on delete cascade,
+  author_artist_id  uuid references public.artists (id) on delete cascade,
+  is_owner          boolean not null default false,
+  is_anonymous      boolean not null default false,
+  body              text not null check (char_length(body) between 1 and 1000),
+  created_at        timestamptz not null default now()
+);
+
+create index if not exists community_comments_post_idx on public.community_comments (post_id, created_at);
+alter table public.community_comments enable row level security;
