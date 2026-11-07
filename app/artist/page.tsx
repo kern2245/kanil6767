@@ -15,7 +15,7 @@ import { ArtistAuth } from "./_components/artist-auth";
    2) 가입했지만 회장이 아직 승인 안 했으면 → "승인 대기" 안내
    3) 회장이 막았으면 → "막힌 계정" 안내
    4) 승인됐으면 → 내가 올린 웹툰만 추가·수정·삭제 + 회차 올리기 + 내 비밀번호 바꾸기
-   회장으로 로그인돼 있고 작가 로그인을 안 했으면 → 모든 웹툰 관리 (회장 페이지와 같음) */
+   회장으로 로그인돼 있고 작가 로그인을 안 했으면 → 회장이 직접 올린 웹툰만 관리 (다른 작가 웹툰은 안 보임, 회장 페이지에서 관리) */
 
 export const metadata = { title: "작가" };
 
@@ -62,8 +62,10 @@ export default async function ArtistPage() {
       return (
         <Container className="py-10">
           <TopBar title="작가 (회장으로 보는 중)" showLogout={false} />
-          <p className="mt-2 text-sm text-muted-foreground">회장은 모든 작가의 웹툰을 관리할 수 있어요.</p>
-          <WebtoonManager />
+          <p className="mt-2 text-sm text-muted-foreground">
+            작가 페이지에서는 회장이 직접 올린 웹툰만 보이고 고칠 수 있어요. 다른 작가의 웹툰은 회장 페이지에서 관리하세요.
+          </p>
+          <WebtoonManager ownerOnly />
         </Container>
       );
     }

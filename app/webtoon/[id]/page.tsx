@@ -69,7 +69,7 @@ export default async function WebtoonPage(props: PageProps<"/webtoon/[id]">) {
                     <span className="w-12 shrink-0 text-sm text-muted-foreground">{ep.number}화</span>
                     <span className="min-w-0 flex-1 truncate font-medium">{ep.title}</span>
                     <span className="shrink-0 text-xs text-muted-foreground">
-                      {new Date(ep.created_at).toLocaleDateString("ko-KR")}
+                      {new Date(ep.publish_at ?? ep.created_at).toLocaleDateString("ko-KR", { timeZone: "Asia/Seoul" })}
                     </span>
                     <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
                   </Link>

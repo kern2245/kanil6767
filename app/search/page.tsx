@@ -5,7 +5,6 @@ import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { Container } from "@/components/layout/container";
 import { WebtoonCard } from "@/components/sections/webtoon-board";
-import { todayInKorea } from "@/components/sections/webtoon-weekly";
 
 /* 웹툰 검색 결과 페이지 (주소: /search?q=검색어)
    - 위쪽 메뉴의 "웹툰 검색" 칸에서 검색하면 여기로 옵니다.
@@ -17,7 +16,6 @@ export default async function SearchPage(props: PageProps<"/search">) {
   const { q } = await props.searchParams;
   const query = typeof q === "string" ? q.trim() : "";
   const results = query ? await searchWebtoons(query) : [];
-  const today = todayInKorea();
 
   return (
     <>
@@ -44,7 +42,7 @@ export default async function SearchPage(props: PageProps<"/search">) {
             <div className="mt-6 grid grid-cols-3 gap-x-3 gap-y-6 sm:grid-cols-5 lg:grid-cols-7">
               {results.map((w) => (
                 <Link key={w.id} href={`/webtoon/${w.id}`}>
-                  <WebtoonCard webtoon={w} today={today} />
+                  <WebtoonCard webtoon={w} />
                 </Link>
               ))}
             </div>

@@ -28,6 +28,8 @@ import {
   registerArtist,
 } from "@/lib/admin-auth";
 import { getAdminClient, IMAGE_BUCKET } from "@/lib/supabase-admin";
+import { formatPublishAt, nextPublishAt } from "@/lib/publish-time";
+import type { Weekday } from "@/lib/types";
 
 export type ActionState = { ok?: boolean; message?: string };
 
@@ -410,11 +412,23 @@ export async function saveEpisode(input: {
   if (!Number.isInteger(input.number) || input.number < 1) return { message: "회차 번호는 1 이상 숫자로 입력하세요." };
   if (!title) return { message: "회차 제목을 입력하세요." };
 
+  // 공개 시간: 연재 요일 당일이면 바로, 아니면 다음 연재 요일 0시 (lib/publish-time.ts)
+  const { data: webtoon } = await supabase
+    .from("webtoons")
+    .select("weekday, is_completed")
+    .eq("id", input.webtoonId)
+    .maybeSingle();
+  if (!webtoon) return { message: "웹툰 정보를 찾지 못했습니다." };
+  const now = new Date();
+  const publishAt = nextPublishAt(webtoon.weekday as Weekday, Boolean(webtoon.is_completed), now);
+  const scheduled = publishAt.getTime() > now.getTime();
+
   const { error } = await supabase.from("episodes").insert({
     webtoon_id: input.webtoonId,
     number: input.number,
     title,
     image_urls: input.imageUrls,
+    publish_at: publishAt.toISOString(),
   });
   if (error) {
     if (error.code === "23505") return { message: `${input.number}화는 이미 있습니다. 다른 번호를 쓰세요.` };
@@ -422,7 +436,12 @@ export async function saveEpisode(input: {
   }
 
   revalidatePath("/", "layout");
-  return { ok: true, message: `${input.number}화를 올렸습니다.` };
+  return {
+    ok: true,
+    message: scheduled
+      ? `${input.number}화를 올렸습니다. ${formatPublishAt(publishAt)}에 공개돼요. (그 전까지는 독자에게 안 보여요)`
+      : `${input.number}화를 올렸습니다. 바로 공개됐어요.`,
+  };
 }
 
 /** 회차 삭제 (그림 파일도 함께 정리) */

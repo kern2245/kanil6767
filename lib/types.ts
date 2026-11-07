@@ -34,8 +34,12 @@ export type Webtoon = {
   cover_url: string | null;
   /** 올린 작가 (없으면 회장이 관리하는 웹툰) */
   artist_id?: string | null;
-  /** true 면 제목 앞에 UP 표시 */
+  /** true 면 시간과 상관없이 항상 제목 앞에 UP 표시 */
   is_up: boolean;
+  /** 가장 최근 회차를 올린 시간 (첫 화면·검색에서만 채워짐) */
+  latest_episode_at?: string | null;
+  /** 새 회차를 올린 지 24시간이 안 됐으면 true → UP 표시 (lib/data.ts 에서 계산) */
+  is_new?: boolean;
   /** true 면 완결 — 첫 화면에서 요일 탭 대신 "완결" 탭에만 보임 (예전 데이터엔 없을 수 있음) */
   is_completed?: boolean;
   sort_order: number;
@@ -53,6 +57,8 @@ export type Episode = {
   /** 만화 그림 주소들 (위에서 아래 순서) */
   image_urls: string[];
   created_at: string;
+  /** 독자에게 공개되는 시간 (연재 요일이 아닌 날 올리면 다음 연재 요일 0시 — lib/publish-time.ts) */
+  publish_at?: string;
 };
 
 /** 작가 계정 상태: 승인 대기 / 승인됨 / 막힘 */

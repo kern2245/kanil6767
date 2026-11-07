@@ -220,3 +220,20 @@ create policy "Anyone can read comments"
 
 -- 14) 웹툰 "완결" 표시 칸 — 켜면 첫 화면에서 요일 탭 대신 "완결" 탭에만 보임
 alter table public.webtoons add column if not exists is_completed boolean not null default false;
+
+-- 15) 회차 "공개 시간" 칸 — 연재 요일이 아닌 날 올리면 다음 연재 요일 0시(한국 시간)에 공개 (예약)
+--     독자는 공개 시간이 지난 회차만 볼 수 있음. 회장·작가 페이지(서버 비밀 키)는 예약 회차도 보임.
+--     예전에 올린 회차는 올린 시간(created_at)을 공개 시간으로 채움 → 그대로 공개 상태.
+alter table public.episodes add column if not exists publish_at timestamptz;
+update public.episodes set publish_at = created_at where publish_at is null;
+alter table public.episodes alter column publish_at set default now();
+alter table public.episodes alter column publish_at set not null;
+
+drop policy if exists "Anyone can read episodes of visible webtoons" on public.episodes;
+create policy "Anyone can read episodes of visible webtoons"
+  on public.episodes for select
+  to anon, authenticated
+  using (
+    publish_at <= now()
+    and exists (select 1 from public.webtoons w where w.id = webtoon_id and w.is_visible = true)
+  );

@@ -11,7 +11,14 @@ import { pdfToImages } from "@/lib/pdf-to-images";
 const inputClass =
   "h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/50";
 
-type EpisodeRow = { id: string; number: number; title: string; imageCount: number };
+type EpisodeRow = {
+  id: string;
+  number: number;
+  title: string;
+  imageCount: number;
+  /** 공개 전(예약)이면 공개 예정 시간 글자, 이미 공개됐으면 null */
+  scheduledLabel: string | null;
+};
 
 /** 웹툰 한 개의 회차 관리: 회차 추가(그림 여러 장 또는 PDF) + 올린 회차 목록·삭제
     그림은 파일 이름 순서대로(001, 002 …) 위에서 아래로 붙습니다.
@@ -126,6 +133,8 @@ export function EpisodeManager({
             className="text-sm"
           />
           <span className="text-xs text-muted-foreground">
+            연재 요일이 아닌 날 올리면 다음 연재 요일 0시에 공개돼요(예약). 연재 요일 당일에 올리면 바로 공개돼요.
+            <br />
             파일 이름 순서대로 위에서 아래로 붙습니다. (예: 001.jpg, 002.jpg) PDF는 쪽 순서대로 그림으로 바뀌어 올라갑니다.
           </span>
         </label>
@@ -152,6 +161,11 @@ export function EpisodeManager({
               <li key={ep.id} className="flex items-center gap-3 px-3 py-2 text-sm">
                 <span className="w-10 shrink-0 text-muted-foreground">{ep.number}화</span>
                 <span className="min-w-0 flex-1 truncate">{ep.title}</span>
+                {ep.scheduledLabel ? (
+                  <span className="shrink-0 rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">
+                    예약 · {ep.scheduledLabel} 공개
+                  </span>
+                ) : null}
                 <span className="shrink-0 text-xs text-muted-foreground">그림 {ep.imageCount}장</span>
                 {canDelete ? (
                 <form

@@ -87,16 +87,38 @@ export async function getWebtoons(): Promise<Webtoon[]> {
 
   const { data, error } = await supabase
     .from("webtoons")
-    .select("*")
+    .select(WEBTOON_WITH_LATEST_EPISODE)
     .eq("is_visible", true)
     .order("sort_order", { ascending: true })
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: true })
+    .order("publish_at", { referencedTable: "episodes", ascending: false })
+    .limit(1, { referencedTable: "episodes" });
 
   if (error) {
     console.error("[getWebtoons] Supabase 읽기 실패:", error.message);
     return sampleWebtoons;
   }
-  return data && data.length > 0 ? (data as Webtoon[]) : sampleWebtoons;
+  return data && data.length > 0 ? data.map(withNewFlag) : sampleWebtoons;
+}
+
+/* ---------- UP 표시 (새 회차) ----------
+   새 회차가 공개되고 24시간 동안만 웹툰 카드에 UP 이 붙습니다.
+   (예약 회차는 공개 시간(publish_at)부터 24시간. 공개 전 회차는 독자 쪽에서 아예 안 읽힘)
+   (회장·작가 페이지에서 "UP 항상 표시"를 켠 웹툰은 시간과 상관없이 붙음) */
+
+const NEW_EPISODE_HOURS = 24;
+
+/** 웹툰 + 가장 최근에 공개된 회차의 공개 시간 (회차가 여러 개여도 맨 마지막 1개만 가져옴) */
+const WEBTOON_WITH_LATEST_EPISODE = "*, episodes(publish_at)";
+
+type WebtoonRowWithEpisodes = Webtoon & { episodes?: { publish_at: string }[] | null };
+
+/** 데이터베이스에서 읽은 웹툰에 "24시간 안에 새 회차가 공개됐는지(is_new)" 를 붙임 */
+function withNewFlag(row: WebtoonRowWithEpisodes): Webtoon {
+  const { episodes, ...webtoon } = row;
+  const latest = episodes?.[0]?.publish_at ?? null;
+  const isNew = latest !== null && Date.now() - new Date(latest).getTime() < NEW_EPISODE_HOURS * 60 * 60 * 1000;
+  return { ...webtoon, latest_episode_at: latest, is_new: isNew };
 }
 
 /** 웹툰 한 개 (웹툰 페이지·뷰어용). 없거나 숨김이면 null. */
@@ -116,13 +138,14 @@ export async function getWebtoon(id: string): Promise<Webtoon | null> {
   return (data as Webtoon) ?? null;
 }
 
-/** 웹툰의 회차 목록 (그림 주소는 빼고, 회차 번호 순서대로) */
+/** 웹툰의 회차 목록 (그림 주소는 빼고, 회차 번호 순서대로)
+    공개 시간이 안 된 예약 회차는 Supabase 보안 규칙 때문에 여기서 빠집니다. */
 export async function getEpisodes(webtoonId: string): Promise<Omit<Episode, "image_urls">[]> {
   const supabase = getPublicClient();
   if (!supabase) return [];
   const { data, error } = await supabase
     .from("episodes")
-    .select("id, webtoon_id, number, title, created_at")
+    .select("id, webtoon_id, number, title, created_at, publish_at")
     .eq("webtoon_id", webtoonId)
     .order("number", { ascending: true });
   if (error) {
@@ -159,17 +182,19 @@ export async function searchWebtoons(query: string): Promise<Webtoon[]> {
   const escaped = q.replace(/[\\%_]/g, (c) => "\\" + c);
   const { data, error } = await supabase
     .from("webtoons")
-    .select("*")
+    .select(WEBTOON_WITH_LATEST_EPISODE)
     .eq("is_visible", true)
     .ilike("title", `%${escaped}%`)
     .order("title", { ascending: true })
-    .limit(60);
+    .limit(60)
+    .order("publish_at", { referencedTable: "episodes", ascending: false })
+    .limit(1, { referencedTable: "episodes" });
 
   if (error) {
     console.error("[searchWebtoons] Supabase 읽기 실패:", error.message);
     return [];
   }
-  return (data ?? []) as Webtoon[];
+  return (data ?? []).map(withNewFlag);
 }
 
 /**

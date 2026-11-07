@@ -12,11 +12,11 @@ import { cn } from "@/lib/utils";
 export type BoardTab = { key: Weekday; label: string; items: Webtoon[] };
 
 /** 웹툰 카드 한 개: 표지 + (UP / 완결) 제목
-    UP 표시: 오늘(한국 시간) 연재 요일인 웹툰은 자동으로 붙고, 날짜가 바뀌면 다음 요일로 넘어갑니다.
-    관리자에서 "UP 항상 표시"를 켠 웹툰은 요일과 상관없이 붙습니다.
+    UP 표시: 새 회차를 올리고 24시간 동안만 자동으로 붙습니다. (계산은 lib/data.ts 의 is_new)
+    관리자에서 "UP 항상 표시"를 켠 웹툰은 시간과 상관없이 붙습니다.
     완결 웹툰은 UP 대신 "완결" 표시가 붙습니다. */
-export function WebtoonCard({ webtoon, today }: { webtoon: Webtoon; today: Weekday }) {
-  const showUp = !webtoon.is_completed && (webtoon.is_up || webtoon.weekday === today);
+export function WebtoonCard({ webtoon }: { webtoon: Webtoon }) {
+  const showUp = !webtoon.is_completed && (webtoon.is_up || Boolean(webtoon.is_new));
   return (
     <article className="group">
       <div className="relative aspect-[160/207] overflow-hidden rounded-xl bg-muted">
@@ -52,16 +52,16 @@ export function WebtoonCard({ webtoon, today }: { webtoon: Webtoon; today: Weekd
 }
 
 /** 웹툰 칸 (표지 그리드). 웹툰 칸 수: 휴대폰 3칸 → 태블릿 5칸 → 데스크톱 7칸 */
-function WebtoonGrid({ items, today }: { items: Webtoon[]; today: Weekday }) {
+function WebtoonGrid({ items }: { items: Webtoon[] }) {
   return (
     <div className="mt-6 grid grid-cols-3 gap-x-3 gap-y-6 sm:grid-cols-5 lg:grid-cols-7">
       {items.map((w) =>
         // 예시 웹툰은 눌러도 이동하지 않음, 실제 웹툰은 웹툰 페이지(회차 목록)로 이동
         w.id.startsWith("sample-") ? (
-          <WebtoonCard key={w.id} webtoon={w} today={today} />
+          <WebtoonCard key={w.id} webtoon={w} />
         ) : (
           <Link key={w.id} href={`/webtoon/${w.id}`}>
-            <WebtoonCard webtoon={w} today={today} />
+            <WebtoonCard webtoon={w} />
           </Link>
         ),
       )}
@@ -126,7 +126,7 @@ export function WebtoonBoard({
           <p className="py-16 text-center text-sm text-muted-foreground">{completedHeading.empty}</p>
         ) : (
           <div className="mt-8">
-            <WebtoonGrid items={completed} today={today} />
+            <WebtoonGrid items={completed} />
           </div>
         )
       ) : (
@@ -184,7 +184,7 @@ function WeekdayTabs({
       {current.items.length === 0 ? (
         <p className="py-16 text-center text-sm text-muted-foreground">준비 중입니다.</p>
       ) : (
-        <WebtoonGrid items={current.items} today={today} />
+        <WebtoonGrid items={current.items} />
       )}
     </div>
   );
