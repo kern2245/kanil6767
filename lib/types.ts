@@ -93,7 +93,10 @@ export type Reader = {
 export type Comment = {
   id: string;
   episode_id: string;
-  reader_id: string;
+  /** 독자가 쓴 댓글이면 독자 id (작가 댓글이면 null) */
+  reader_id: string | null;
+  /** 회장이 승인한 작가 계정으로 쓴 댓글이면 작가 id ("작가" 표시) */
+  artist_id?: string | null;
   author_name: string;
   body: string;
   created_at: string;
