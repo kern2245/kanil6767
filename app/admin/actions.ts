@@ -11,7 +11,8 @@
    - updateWebtoonCover  : 표지만 바꾸기 / 무프사로 (회장 또는 그 웹툰을 올린 작가)
    - updateEpisodeThumbnail : 회차 썸네일 바꾸기 / 무프사로 (회장 또는 그 웹툰의 작가)
    - uploadEpisodeImage / saveEpisode / deleteEpisode : 회차 그림 올리기 / 저장 / 삭제 (회장 또는 그 웹툰의 작가)
-   - approveArtist / blockArtist / deleteArtist : 작가 계정 승인 / 막기 / 삭제 (회장만) */
+   - approveArtist / blockArtist / deleteArtist : 작가 계정 승인 / 막기 / 삭제 (회장만)
+   - adminDeleteCommunityPosts / adminDeleteCommunityPost / adminDeleteCommunityComment : 작가 커뮤니티 글·댓글 지우기 (회장만) */
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
@@ -571,6 +572,46 @@ export async function deleteEpisode(formData: FormData) {
   if (paths.length > 0) await supabase.storage.from(IMAGE_BUCKET).remove(paths);
 
   revalidatePath("/", "layout");
+}
+
+/* ---------- 작가 커뮤니티 관리 (회장만) ----------
+   회장 페이지 "커뮤니티" 탭: 글을 골라서 한꺼번에 지우기 / 글 하나 지우기 / 댓글 지우기
+   (글을 지우면 그 글의 댓글도 함께 지워짐) */
+
+function refreshCommunity() {
+  revalidatePath("/admin");
+  revalidatePath("/artist/community", "layout");
+}
+
+/** 체크한 글들을 한꺼번에 지우기 (ids 여러 개) */
+export async function adminDeleteCommunityPosts(formData: FormData): Promise<void> {
+  if (!(await isAdmin())) return;
+  const supabase = getAdminClient();
+  if (!supabase) return;
+  const ids = formData.getAll("ids").map(String).filter(Boolean);
+  if (ids.length === 0) return;
+  await supabase.from("community_posts").delete().in("id", ids);
+  refreshCommunity();
+}
+
+/** 글 하나 지우기 */
+export async function adminDeleteCommunityPost(formData: FormData): Promise<void> {
+  if (!(await isAdmin())) return;
+  const supabase = getAdminClient();
+  const id = String(formData.get("postId") ?? "");
+  if (!supabase || !id) return;
+  await supabase.from("community_posts").delete().eq("id", id);
+  refreshCommunity();
+}
+
+/** 댓글 하나 지우기 */
+export async function adminDeleteCommunityComment(formData: FormData): Promise<void> {
+  if (!(await isAdmin())) return;
+  const supabase = getAdminClient();
+  const id = String(formData.get("commentId") ?? "");
+  if (!supabase || !id) return;
+  await supabase.from("community_comments").delete().eq("id", id);
+  refreshCommunity();
 }
 
 /* ---------- 작가 계정 관리 (회장만): 승인 / 막기 / 삭제 ---------- */

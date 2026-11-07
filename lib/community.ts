@@ -176,6 +176,62 @@ export async function getCommunityPost(
   };
 }
 
+/** 회장 페이지 "커뮤니티" 탭용: 모든 글 + 각 글의 댓글 (실명 포함 — 회장만 부름) */
+export async function getCommunityForOwner(): Promise<
+  (CommunityPostView & { comments: CommunityCommentView[] })[]
+> {
+  const supabase = getAdminClient();
+  if (!supabase) return [];
+  const owner: CommunityViewer = { artistId: null, isOwner: true, name: "회장" };
+
+  const { data: posts, error } = await supabase
+    .from("community_posts")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(300);
+  if (error) {
+    console.error("[getCommunityForOwner] Supabase 읽기 실패:", error.message);
+    return [];
+  }
+  const postRows = (posts ?? []) as PostRow[];
+  const { data: comments } = postRows.length
+    ? await supabase
+        .from("community_comments")
+        .select("*")
+        .in("post_id", postRows.map((p) => p.id))
+        .order("created_at", { ascending: true })
+    : { data: [] };
+  const commentRows = (comments ?? []) as CommentRow[];
+  const names = await artistNames([
+    ...postRows.map((p) => p.author_artist_id),
+    ...commentRows.map((c) => c.author_artist_id),
+  ]);
+
+  return postRows.map((p) => {
+    const mine = isMine(p, owner);
+    const own = commentRows.filter((c) => c.post_id === p.id);
+    return {
+      id: p.id,
+      title: p.title,
+      body: p.body,
+      createdAt: p.created_at,
+      ...describe(p, names, owner),
+      isMine: mine,
+      canDelete: true,
+      commentCount: own.length,
+      comments: own.map((c) => ({
+        id: c.id,
+        body: c.body,
+        createdAt: c.created_at,
+        ...describe(c, names, owner),
+        isPostAuthor: sameAuthor(p, c),
+        isMine: isMine(c, owner),
+        canDelete: true,
+      })),
+    };
+  });
+}
+
 /** 글·댓글을 쓸 때 저장할 "누가 썼는지" 값 */
 export function authorFields(viewer: CommunityViewer, anonymous: boolean) {
   return {

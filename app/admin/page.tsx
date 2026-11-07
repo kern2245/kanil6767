@@ -16,12 +16,15 @@ import { AdForm, DeleteAdButton } from "./_components/ad-form";
 import { DeleteButton } from "./_components/delete-button";
 import { WebtoonManager } from "./_components/webtoon-manager";
 import { ArtistList } from "./_components/artist-list";
+import { CommunityManager } from "./_components/community-manager";
+import { getCommunityForOwner } from "@/lib/community";
 
 /* 관리자 페이지 (주소: /admin)
    1) 비밀번호가 설정 안 됐으면 → 설정 안내
    2) 로그인 안 했으면 → 로그인 화면
    3) Supabase 연결 안 됐으면 → 연결 안내
-   4) 모두 준비됐으면 → "히어로" 탭(글자) + "광고판" 탭(자동 슬라이드) + "웹툰" + "작가" + 섹션별 카드(항목) 관리 */
+   4) 모두 준비됐으면 → "히어로" 탭(글자) + "광고판" 탭(자동 슬라이드) + "웹툰" + "작가" + "커뮤니티"(작가 커뮤니티 글 지우기)
+      + 섹션별 카드(항목) 관리 */
 
 export const metadata = { title: "관리자" };
 
@@ -62,6 +65,7 @@ function SectionTabs({ current }: { current: string }) {
     { key: "contact", label: "광고판" },
     { key: "webtoons", label: "웹툰" },
     { key: "artist", label: "작가" },
+    { key: "community", label: "커뮤니티" },
     ...siteConfig.adminSections,
   ];
   return (
@@ -240,6 +244,26 @@ export default async function AdminPage(props: PageProps<"/admin">) {
             자기 웹툰을 올릴 수 있어요.
           </p>
           <ArtistList />
+        </section>
+      </Container>
+    );
+  }
+
+  // "커뮤니티" 탭: 작가 커뮤니티 글·댓글을 실명과 함께 보고 지우기 (회장 전용)
+  if (requested === "community") {
+    const posts = await getCommunityForOwner();
+    return (
+      <Container className="py-10">
+        <AdminTopBar />
+        <SectionTabs current="community" />
+        <section className="mt-8 max-w-3xl">
+          <h2 className="text-lg font-semibold">
+            작가 커뮤니티 관리 <span className="text-muted-foreground">({posts.length})</span>
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            회장만 보는 화면이에요. 익명 글·댓글도 실명이 같이 보여요. 문제 있는 글은 골라서 한꺼번에 지울 수 있어요.
+          </p>
+          <CommunityManager posts={posts} />
         </section>
       </Container>
     );
