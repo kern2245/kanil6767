@@ -249,6 +249,12 @@ alter table public.comments alter column reader_id drop not null;
 alter table public.comments drop constraint if exists comments_author_check;
 alter table public.comments add constraint comments_author_check check (reader_id is not null or artist_id is not null);
 
+-- 16-3) 회장도 회차 댓글을 바로 달 수 있게 — 회장 댓글은 is_owner = true ("회장" 표시)
+alter table public.comments add column if not exists is_owner boolean not null default false;
+alter table public.comments drop constraint if exists comments_author_check;
+alter table public.comments add constraint comments_author_check
+  check (reader_id is not null or artist_id is not null or is_owner);
+
 -- 17) 작가 커뮤니티 — 승인된 작가 + 회장만 보는 게시판 (글 + 댓글, 익명/실명 선택)
 --     읽기 규칙(policy)을 일부러 만들지 않음 → 방문자는 절대 못 읽고, 서버의 비밀 키로만 읽고 씀
 --     익명 글도 누가 썼는지(author_artist_id)는 저장 → 회장만 실명 확인 가능, 작가들에게는 "익명"으로만 보임

@@ -11,13 +11,21 @@ import { CommentForm, CommentSheet, ReaderAuthForm } from "./comment-forms";
    - 화면 아래에 항상 떠 있는 바: 이전화 · 목록 · 💬댓글 수 · 다음화
    - 💬 를 누르면 댓글 창이 아래에서 올라옴
    - 누구나 댓글을 볼 수 있고, 댓글 달기는 로그인한 독자 또는 회장이 승인한 작가 계정
-     (작가 계정은 독자 가입 없이 바로 댓글, 댓글에 "작가" 표시 / 아무 로그인도 안 했으면 독자 로그인·가입 칸)
+     (작가 계정은 독자 가입 없이 바로 댓글, 댓글에 "작가" 표시 / 회장도 바로 댓글, "회장" 표시
+      / 아무 로그인도 안 했으면 독자 로그인·가입 칸)
    - 지우기 버튼: 내가 쓴 댓글 또는 회장에게만 보임 */
 
 /** 작가 계정으로 쓴 댓글에 붙는 "작가" 표시 */
 function ArtistBadge() {
   return (
     <span className="rounded-full bg-primary px-1.5 text-[10px] font-bold leading-4 text-primary-foreground">작가</span>
+  );
+}
+
+/** 회장이 쓴 댓글에 붙는 "회장" 표시 */
+function OwnerBadge() {
+  return (
+    <span className="rounded-full border border-primary px-1.5 text-[10px] font-bold leading-4 text-primary">회장</span>
   );
 }
 
@@ -63,6 +71,15 @@ export async function EpisodeComments({ episodeId, path, listHref, prevHref, nex
             </p>
             <CommentForm episodeId={episodeId} path={path} />
           </div>
+        ) : admin ? (
+          // 회장 로그인 → 독자 가입 없이 "회장"으로 댓글 달기
+          <div className="space-y-2">
+            <p className="flex items-center gap-1.5 text-sm">
+              <OwnerBadge />
+              <span className="text-muted-foreground">회장으로 댓글 달기</span>
+            </p>
+            <CommentForm episodeId={episodeId} path={path} />
+          </div>
         ) : reader ? (
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
@@ -98,6 +115,7 @@ export async function EpisodeComments({ episodeId, path, listHref, prevHref, nex
                   <div className="min-w-0 flex-1">
                     <p className="flex flex-wrap items-center gap-1.5 text-sm">
                       {comment.artist_id ? <ArtistBadge /> : null}
+                      {comment.is_owner ? <OwnerBadge /> : null}
                       <span className="font-semibold">{comment.author_name}</span>
                       <span className="ml-1 text-xs text-muted-foreground">{formatDate(comment.created_at)}</span>
                     </p>

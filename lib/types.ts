@@ -97,6 +97,8 @@ export type Comment = {
   reader_id: string | null;
   /** 회장이 승인한 작가 계정으로 쓴 댓글이면 작가 id ("작가" 표시) */
   artist_id?: string | null;
+  /** 회장이 쓴 댓글이면 true ("회장" 표시) */
+  is_owner?: boolean;
   author_name: string;
   body: string;
   created_at: string;
