@@ -2,12 +2,12 @@
 
 /* 회차 화면 아래 댓글 칸의 버튼들이 실제로 하는 일 (서버에서 실행됨)
    - readerSignup / readerLogin / readerLogout : 독자 가입·로그인·로그아웃
-   - addComment    : 댓글 달기 (로그인한 독자, 또는 회장이 승인한 작가 계정 — 작가는 "작가" 표시)
-   - deleteComment : 댓글 지우기 (쓴 독자·작가 본인 또는 회장) */
+   - addComment    : 댓글 달기 (로그인한 독자만)
+   - deleteComment : 댓글 지우기 (쓴 독자 본인 또는 회장) */
 
 import { revalidatePath } from "next/cache";
 
-import { getApprovedArtistId, getCurrentArtist, isAdmin } from "@/lib/admin-auth";
+import { isAdmin } from "@/lib/admin-auth";
 import { endReaderSession, getCurrentReader, loginReader, registerReader } from "@/lib/reader-auth";
 import { getAdminClient } from "@/lib/supabase-admin";
 
@@ -62,21 +62,9 @@ export async function readerLogout(formData: FormData) {
 
 /* ---------- 댓글 달기 / 지우기 ---------- */
 
-/** 지금 댓글을 다는 사람: 승인된 작가 계정이 있으면 작가로, 아니면 독자로 */
-async function getCommenter() {
-  const artistId = await getApprovedArtistId();
-  if (artistId) {
-    const artist = await getCurrentArtist();
-    if (artist) return { kind: "artist" as const, id: artist.id, name: artist.name };
-  }
-  const reader = await getCurrentReader();
-  if (reader) return { kind: "reader" as const, id: reader.id, name: reader.nickname };
-  return null;
-}
-
 export async function addComment(_prev: CommentActionState, formData: FormData): Promise<CommentActionState> {
-  const commenter = await getCommenter();
-  if (!commenter) return { message: "로그인이 필요해요. 새로고침 후 다시 로그인해 주세요." };
+  const reader = await getCurrentReader();
+  if (!reader) return { message: "로그인이 필요해요. 새로고침 후 다시 로그인해 주세요." };
 
   const episodeId = String(formData.get("episodeId") ?? "");
   const body = String(formData.get("body") ?? "").trim();
@@ -87,14 +75,9 @@ export async function addComment(_prev: CommentActionState, formData: FormData):
   const supabase = getAdminClient();
   if (!supabase) return { message: "Supabase가 연결되지 않았습니다." };
 
-  const { error } = await supabase.from("comments").insert({
-    episode_id: episodeId,
-    // 작가 댓글이면 artist_id, 독자 댓글이면 reader_id 에 기록
-    reader_id: commenter.kind === "reader" ? commenter.id : null,
-    artist_id: commenter.kind === "artist" ? commenter.id : null,
-    author_name: commenter.name,
-    body,
-  });
+  const { error } = await supabase
+    .from("comments")
+    .insert({ episode_id: episodeId, reader_id: reader.id, author_name: reader.nickname, body });
   if (error) return { message: `댓글 저장 실패: ${error.message}` };
 
   refresh(formData);
@@ -110,11 +93,10 @@ export async function deleteComment(formData: FormData) {
   if (await isAdmin()) {
     await supabase.from("comments").delete().eq("id", commentId);
   } else {
-    const commenter = await getCommenter();
-    if (!commenter) return;
-    // 내 댓글만 지워지도록 reader_id / artist_id 도 같이 확인
-    const column = commenter.kind === "artist" ? "artist_id" : "reader_id";
-    await supabase.from("comments").delete().eq("id", commentId).eq(column, commenter.id);
+    const reader = await getCurrentReader();
+    if (!reader) return;
+    // 내 댓글만 지워지도록 reader_id 도 같이 확인
+    await supabase.from("comments").delete().eq("id", commentId).eq("reader_id", reader.id);
   }
   refresh(formData);
 }
