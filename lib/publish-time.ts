@@ -19,12 +19,64 @@ export function nextPublishAt(weekday: Weekday, isCompleted: boolean, now = new 
   return new Date(midnightKst - KST_OFFSET_MS);
 }
 
-/** 공개 시간을 "11월 14일(금) 0시" 처럼 보여주기 */
-export function formatPublishAt(value: string | Date): string {
+/** 공개 시간을 "11월 14일(금) 0시" 처럼 보여주기 (올해가 아니면 "2027년 11월 5일(금) 0시") */
+export function formatPublishAt(value: string | Date, now = new Date()): string {
   const kst = new Date(new Date(value).getTime() + KST_OFFSET_MS);
+  const thisYear = new Date(now.getTime() + KST_OFFSET_MS).getUTCFullYear();
+  const year = kst.getUTCFullYear() !== thisYear ? `${kst.getUTCFullYear()}년 ` : "";
   const hour = kst.getUTCHours();
   const minute = kst.getUTCMinutes();
-  return `${kst.getUTCMonth() + 1}월 ${kst.getUTCDate()}일(${WEEKDAY_KO[kst.getUTCDay()]}) ${hour}시${minute ? ` ${minute}분` : ""}`;
+  return `${year}${kst.getUTCMonth() + 1}월 ${kst.getUTCDate()}일(${WEEKDAY_KO[kst.getUTCDay()]}) ${hour}시${minute ? ` ${minute}분` : ""}`;
+}
+
+/* ---------- 공개 날짜 고르기 (최대 1년 뒤까지) ----------
+   회차를 올리거나 예약을 바꿀 때 고르는 목록: 연재 요일 0시만 쭉 (다음 연재일 ~ 1년 뒤)
+   "now" 는 "지금 바로 공개" */
+
+export const PUBLISH_NOW = "now";
+const MAX_DAYS_AHEAD = 366;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+export type PublishOption = { value: string; label: string };
+
+/** 고를 수 있는 공개 날짜 목록. 첫 번째가 기본값(다음 연재일, 연재 요일 당일이면 "지금 바로") */
+export function publishOptions(weekday: Weekday, isCompleted: boolean, now = new Date()): PublishOption[] {
+  const nowOption = { value: PUBLISH_NOW, label: "지금 바로 공개" };
+  if (isCompleted) return [nowOption];
+
+  const first = nextPublishAt(weekday, false, now);
+  const options: PublishOption[] = [];
+  // 연재 요일 당일이면 "지금 바로"가 기본, 아니면 다음 연재일 0시가 기본
+  const startMidnight =
+    first.getTime() === now.getTime() ? first.getTime() - (first.getTime() + KST_OFFSET_MS) % DAY_MS + 7 * DAY_MS : first.getTime();
+  if (first.getTime() === now.getTime()) options.push({ value: PUBLISH_NOW, label: "지금 바로 공개 (오늘이 연재일)" });
+
+  for (let t = startMidnight; t - now.getTime() <= MAX_DAYS_AHEAD * DAY_MS; t += 7 * DAY_MS) {
+    const iso = new Date(t).toISOString();
+    options.push({ value: iso, label: formatPublishAt(iso, now) });
+  }
+  if (first.getTime() !== now.getTime()) options.push(nowOption); // 연재일이 아니어도 맨 아래에 "지금 바로"
+  return options;
+}
+
+/** 화면에서 보내온 공개 날짜가 허용되는지 확인하고 Date 로 바꿈 (안 되면 null)
+    - "now" → 지금
+    - 그 외 → 연재 요일 0시(한국 시간)이고, 지금보다 뒤이고, 1년 안이어야 함 */
+export function parsePublishChoice(
+  value: string,
+  weekday: Weekday,
+  isCompleted: boolean,
+  now = new Date(),
+): Date | null {
+  if (value === PUBLISH_NOW) return now;
+  if (isCompleted) return null;
+  const date = new Date(value);
+  const t = date.getTime();
+  if (Number.isNaN(t) || t <= now.getTime() || t - now.getTime() > MAX_DAYS_AHEAD * DAY_MS) return null;
+  const kst = new Date(t + KST_OFFSET_MS);
+  const isMidnight = kst.getUTCHours() === 0 && kst.getUTCMinutes() === 0 && kst.getUTCSeconds() === 0;
+  if (!isMidnight || kst.getUTCDay() !== WEEKDAY_INDEX[weekday]) return null;
+  return date;
 }
 
 /** 아직 공개 전(예약)인지 */

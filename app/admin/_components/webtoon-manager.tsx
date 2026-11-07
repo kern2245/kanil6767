@@ -3,7 +3,7 @@ import { EyeOff } from "lucide-react";
 
 import { siteConfig } from "@/site.config";
 import { getAdminClient } from "@/lib/supabase-admin";
-import { formatPublishAt, isScheduled } from "@/lib/publish-time";
+import { formatPublishAt, isScheduled, publishOptions } from "@/lib/publish-time";
 import type { Episode, Webtoon } from "@/lib/types";
 import { CoverButtons, DeleteWebtoonButton, WebtoonForm } from "./webtoon-form";
 import { EpisodeManager } from "./episode-manager";
@@ -134,7 +134,11 @@ export async function WebtoonManager({ artistId, ownerOnly = false }: { artistId
                       회차 관리 ({episodesOf(w.id).length}화)
                     </summary>
                     <div className="pt-4">
-                      <EpisodeManager webtoonId={w.id} episodes={episodesOf(w.id)} />
+                      <EpisodeManager
+                        webtoonId={w.id}
+                        episodes={episodesOf(w.id)}
+                        publishChoices={publishOptions(w.weekday, Boolean(w.is_completed))}
+                      />
                     </div>
                   </details>
                 </li>

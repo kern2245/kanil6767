@@ -10,6 +10,7 @@
    - saveWebtoon / deleteWebtoon : 웹툰 추가·수정 / 삭제 (회장 또는 그 웹툰을 올린 작가)
    - updateWebtoonCover  : 표지만 바꾸기 / 무프사로 (회장 또는 그 웹툰을 올린 작가)
    - updateEpisodeThumbnail : 회차 썸네일 바꾸기 / 무프사로 (회장 또는 그 웹툰의 작가)
+   - updateEpisodePublishAt : 예약 회차 공개 날짜 바꾸기(1년 안) / 지금 바로 공개 (회장 또는 그 웹툰의 작가)
    - uploadEpisodeImage / saveEpisode / deleteEpisode : 회차 그림 올리기 / 저장 / 삭제 (회장 또는 그 웹툰의 작가)
    - approveArtist / blockArtist / deleteArtist : 작가 계정 승인 / 막기 / 삭제 (회장만)
    - adminDeleteCommunityPosts / adminDeleteCommunityPost / adminDeleteCommunityComment : 작가 커뮤니티 글·댓글 지우기 (회장만) */
@@ -31,7 +32,7 @@ import {
   registerArtist,
 } from "@/lib/admin-auth";
 import { getAdminClient, IMAGE_BUCKET } from "@/lib/supabase-admin";
-import { formatPublishAt, nextPublishAt } from "@/lib/publish-time";
+import { formatPublishAt, nextPublishAt, parsePublishChoice } from "@/lib/publish-time";
 import type { Weekday } from "@/lib/types";
 
 export type ActionState = { ok?: boolean; message?: string };
@@ -452,6 +453,8 @@ export async function saveEpisode(input: {
   imageUrls: string[];
   /** 회차 썸네일 (선택, 없으면 무프사) — uploadEpisodeImage 로 먼저 올린 주소 */
   thumbnailUrl?: string | null;
+  /** 공개 날짜 (선택): "now" 또는 연재 요일 0시 날짜 — 안 보내면 다음 연재일 (lib/publish-time.ts) */
+  publishAt?: string;
 }): Promise<ActionState> {
   const editor = await getEditor();
   if (!editor) return { message: "로그인이 필요합니다. 새로고침 후 다시 로그인하세요." };
@@ -472,7 +475,13 @@ export async function saveEpisode(input: {
     .maybeSingle();
   if (!webtoon) return { message: "웹툰 정보를 찾지 못했습니다." };
   const now = new Date();
-  const publishAt = nextPublishAt(webtoon.weekday as Weekday, Boolean(webtoon.is_completed), now);
+  const weekday = webtoon.weekday as Weekday;
+  const completed = Boolean(webtoon.is_completed);
+  // 고른 공개 날짜가 있으면 그 날짜(연재 요일 0시, 1년 안), 없으면 다음 연재일
+  const publishAt = input.publishAt
+    ? parsePublishChoice(input.publishAt, weekday, completed, now)
+    : nextPublishAt(weekday, completed, now);
+  if (!publishAt) return { message: "공개 날짜가 올바르지 않아요. 새로고침 후 다시 골라 주세요." };
   const scheduled = publishAt.getTime() > now.getTime();
 
   const { error } = await supabase.from("episodes").insert({
@@ -494,6 +503,44 @@ export async function saveEpisode(input: {
     message: scheduled
       ? `${input.number}화를 올렸습니다. ${formatPublishAt(publishAt)}에 공개돼요. (그 전까지는 독자에게 안 보여요)`
       : `${input.number}화를 올렸습니다. 바로 공개됐어요.`,
+  };
+}
+
+/** 예약 회차의 공개 날짜 바꾸기 / 지금 바로 공개
+    formData: id(회차), publishAt("now" 또는 연재 요일 0시 날짜, 1년 안) */
+export async function updateEpisodePublishAt(formData: FormData): Promise<ActionState> {
+  const editor = await getEditor();
+  if (!editor) return { message: "로그인이 필요합니다. 새로고침 후 다시 로그인하세요." };
+  const supabase = getAdminClient();
+  if (!supabase) return { message: "Supabase가 연결되지 않았습니다." };
+
+  const id = String(formData.get("id") ?? "");
+  const choice = String(formData.get("publishAt") ?? "");
+  const { data: episode } = await supabase
+    .from("episodes")
+    .select("webtoon_id, number, webtoons(weekday, is_completed)")
+    .eq("id", id)
+    .maybeSingle();
+  if (!episode || !(await canEditWebtoon(editor, episode.webtoon_id as string))) return { message: NO_PERMISSION };
+
+  const webtoon = (Array.isArray(episode.webtoons) ? episode.webtoons[0] : episode.webtoons) as
+    | { weekday: Weekday; is_completed: boolean | null }
+    | null;
+  if (!webtoon) return { message: "웹툰 정보를 찾지 못했습니다." };
+  const now = new Date();
+  const publishAt = parsePublishChoice(choice, webtoon.weekday, Boolean(webtoon.is_completed), now);
+  if (!publishAt) return { message: "공개 날짜가 올바르지 않아요. 새로고침 후 다시 골라 주세요." };
+
+  const { error } = await supabase.from("episodes").update({ publish_at: publishAt.toISOString() }).eq("id", id);
+  if (error) return { message: `저장 실패: ${error.message}` };
+
+  revalidatePath("/", "layout");
+  return {
+    ok: true,
+    message:
+      publishAt.getTime() > now.getTime()
+        ? `${episode.number}화를 ${formatPublishAt(publishAt)}에 공개하도록 바꿨어요.`
+        : `${episode.number}화를 지금 바로 공개했어요.`,
   };
 }
 

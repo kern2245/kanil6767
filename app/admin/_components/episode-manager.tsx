@@ -5,10 +5,69 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ImageIcon, Trash2 } from "lucide-react";
 
-import { deleteEpisode, saveEpisode, updateEpisodeThumbnail, uploadEpisodeImage } from "@/app/admin/actions";
+import {
+  deleteEpisode,
+  saveEpisode,
+  updateEpisodePublishAt,
+  updateEpisodeThumbnail,
+  uploadEpisodeImage,
+  type ActionState,
+} from "@/app/admin/actions";
 import { Button } from "@/components/ui/button";
 import { pdfToImages } from "@/lib/pdf-to-images";
+import type { PublishOption } from "@/lib/publish-time";
 import { ImageSlotButtons } from "./image-slot-buttons";
+
+/** 예약 회차의 공개 날짜 바꾸기 / 지금 바로 공개 */
+function RescheduleControls({ episodeId, choices: allChoices }: { episodeId: string; choices: PublishOption[] }) {
+  const router = useRouter();
+  const choices = allChoices.filter((c) => c.value !== "now"); // 날짜만 (완결 웹툰이면 비어 있음)
+  const [value, setValue] = useState(choices[0]?.value ?? "now");
+  const [pending, setPending] = useState(false);
+  const [status, setStatus] = useState<ActionState | null>(null);
+
+  async function send(publishAt: string) {
+    if (publishAt === "now" && !window.confirm("이 회차를 지금 바로 독자에게 공개할까요?")) return;
+    setPending(true);
+    const data = new FormData();
+    data.set("id", episodeId);
+    data.set("publishAt", publishAt);
+    const result = await updateEpisodePublishAt(data);
+    setStatus(result);
+    setPending(false);
+    if (result.ok) router.refresh();
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {choices.length > 0 ? (
+        <>
+          <select
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            aria-label="공개 날짜 고르기"
+            className="h-8 rounded-lg border bg-background px-2 text-base sm:text-sm"
+          >
+            {choices.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+          <Button type="button" size="sm" variant="outline" disabled={pending} onClick={() => send(value)}>
+            공개 날짜 바꾸기
+          </Button>
+        </>
+      ) : null}
+      <Button type="button" size="sm" variant="ghost" disabled={pending} onClick={() => send("now")}>
+        지금 바로 공개
+      </Button>
+      {status?.message ? (
+        <span className={status.ok ? "text-xs text-muted-foreground" : "text-xs text-destructive"}>{status.message}</span>
+      ) : null}
+    </div>
+  );
+}
 
 const inputClass =
   "h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/50";
@@ -45,10 +104,13 @@ function EpisodeThumb({ url }: { url: string | null }) {
 export function EpisodeManager({
   webtoonId,
   episodes,
+  publishChoices,
   canDelete = true,
 }: {
   webtoonId: string;
   episodes: EpisodeRow[];
+  /** 고를 수 있는 공개 날짜 (연재 요일 0시, 최대 1년 뒤 + "지금 바로") — 첫 번째가 기본값 */
+  publishChoices: PublishOption[];
   /** false 면 회차 삭제 버튼을 숨김 (작가 페이지). 삭제는 서버에서도 회장만 가능 */
   canDelete?: boolean;
 }) {
@@ -64,6 +126,7 @@ export function EpisodeManager({
     const data = new FormData(form);
     const number = Number(data.get("number"));
     const title = String(data.get("title") ?? "");
+    const publishAt = String(data.get("publishAt") ?? "") || undefined;
     // 파일 이름 순서대로 정렬 (1, 2, 10 처럼 숫자도 자연스럽게)
     const picked = (data.getAll("images") as File[])
       .filter((f) => f.size > 0)
@@ -127,7 +190,7 @@ export function EpisodeManager({
     }
 
     setStatus({ message: "회차 저장 중…" });
-    const saved = await saveEpisode({ webtoonId, number, title, imageUrls: urls, thumbnailUrl });
+    const saved = await saveEpisode({ webtoonId, number, title, imageUrls: urls, thumbnailUrl, publishAt });
     setStatus({ ok: saved.ok, message: saved.message ?? "" });
     setPending(false);
     if (saved.ok) {
@@ -172,6 +235,19 @@ export function EpisodeManager({
             연재 요일이 아닌 날 올리면 다음 연재 요일 0시에 공개돼요(예약). 연재 요일 당일에 올리면 바로 공개돼요.
             <br />
             파일 이름 순서대로 위에서 아래로 붙습니다. (예: 001.jpg, 002.jpg) PDF는 쪽 순서대로 그림으로 바뀌어 올라갑니다.
+          </span>
+        </label>
+        <label className="grid gap-1.5 text-sm">
+          <span className="font-medium">공개 날짜</span>
+          <select name="publishAt" defaultValue={publishChoices[0]?.value} className={inputClass}>
+            {publishChoices.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+          <span className="text-xs text-muted-foreground">
+            연재 요일 0시 중에서 최대 1년 뒤까지 고를 수 있어요. 공개 전까지는 독자에게 안 보여요.
           </span>
         </label>
         <label className="grid gap-1.5 text-sm">
@@ -231,6 +307,12 @@ export function EpisodeManager({
                 </form>
                 ) : null}
                 </div>
+                {/* 예약 회차: 공개 날짜 바꾸기 / 지금 바로 공개 */}
+                {ep.scheduledLabel ? (
+                  <div className="mt-2 pl-1">
+                    <RescheduleControls episodeId={ep.id} choices={publishChoices} />
+                  </div>
+                ) : null}
                 {/* 썸네일 바꾸기 / 무프사로 */}
                 <div className="mt-1 pl-1">
                   <ImageSlotButtons
