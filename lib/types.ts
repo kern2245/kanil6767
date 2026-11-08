@@ -38,7 +38,7 @@ export type Webtoon = {
   is_up: boolean;
   /** 가장 최근 회차를 올린 시간 (첫 화면·검색에서만 채워짐) */
   latest_episode_at?: string | null;
-  /** 새 회차를 올린 지 24시간이 안 됐으면 true → UP 표시 (lib/data.ts 에서 계산) */
+  /** 오늘(한국 날짜) 새 회차가 공개됐으면 true → UP 표시, 다음 날이 되면 false (lib/data.ts 에서 계산) */
   is_new?: boolean;
   /** true 면 완결 — 첫 화면에서 요일 탭 대신 "완결" 탭에만 보임 (예전 데이터엔 없을 수 있음) */
   is_completed?: boolean;

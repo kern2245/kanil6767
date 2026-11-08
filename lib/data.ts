@@ -102,22 +102,25 @@ export async function getWebtoons(): Promise<Webtoon[]> {
 }
 
 /* ---------- UP 표시 (새 회차) ----------
-   새 회차가 공개되고 24시간 동안만 웹툰 카드에 UP 이 붙습니다.
-   (예약 회차는 공개 시간(publish_at)부터 24시간. 공개 전 회차는 독자 쪽에서 아예 안 읽힘)
-   (회장·작가 페이지에서 "UP 항상 표시"를 켠 웹툰은 시간과 상관없이 붙음) */
+   새 회차가 공개된 "그날(한국 날짜)"에만 웹툰 카드에 UP 이 붙고, 자정이 지나 다음 날이 되면 사라집니다.
+   (예: 토요일 밤 11시에 올려도 일요일 0시에 UP 이 사라짐 / 예약 회차는 공개된 날 하루)
+   (회장·작가 페이지에서 "UP 항상 표시"를 켠 웹툰은 날짜와 상관없이 붙음) */
 
-const NEW_EPISODE_HOURS = 24;
+/** 한국 날짜를 "2026-11-14" 처럼 */
+function koreanDate(value: string | Date) {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" }).format(new Date(value));
+}
 
 /** 웹툰 + 가장 최근에 공개된 회차의 공개 시간 (회차가 여러 개여도 맨 마지막 1개만 가져옴) */
 const WEBTOON_WITH_LATEST_EPISODE = "*, episodes(publish_at)";
 
 type WebtoonRowWithEpisodes = Webtoon & { episodes?: { publish_at: string }[] | null };
 
-/** 데이터베이스에서 읽은 웹툰에 "24시간 안에 새 회차가 공개됐는지(is_new)" 를 붙임 */
+/** 데이터베이스에서 읽은 웹툰에 "오늘(한국 날짜) 새 회차가 공개됐는지(is_new)" 를 붙임 */
 function withNewFlag(row: WebtoonRowWithEpisodes): Webtoon {
   const { episodes, ...webtoon } = row;
   const latest = episodes?.[0]?.publish_at ?? null;
-  const isNew = latest !== null && Date.now() - new Date(latest).getTime() < NEW_EPISODE_HOURS * 60 * 60 * 1000;
+  const isNew = latest !== null && koreanDate(latest) === koreanDate(new Date());
   return { ...webtoon, latest_episode_at: latest, is_new: isNew };
 }
 

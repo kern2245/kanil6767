@@ -57,7 +57,7 @@ export function WebtoonForm({ webtoon }: { webtoon?: Webtoon }) {
       <div className="flex flex-wrap gap-6 text-sm">
         <label className="flex items-center gap-2">
           <input type="checkbox" name="is_up" defaultChecked={webtoon?.is_up ?? false} />
-          UP 항상 표시 (끄면 새 회차를 올린 뒤 24시간만 자동 표시)
+          UP 항상 표시 (끄면 새 회차가 공개된 그날에만 자동 표시)
         </label>
         <label className="flex items-center gap-2">
           <input type="checkbox" name="is_visible" defaultChecked={webtoon?.is_visible ?? true} />
