@@ -34,7 +34,7 @@ export type Webtoon = {
   cover_url: string | null;
   /** 올린 작가 (없으면 회장이 관리하는 웹툰) */
   artist_id?: string | null;
-  /** true 면 시간과 상관없이 항상 제목 앞에 UP 표시 */
+  /** (예전 "UP 항상 표시" 값 — 지금은 안 씀. UP 은 is_new 로 자동) */
   is_up: boolean;
   /** 가장 최근 회차를 올린 시간 (첫 화면·검색에서만 채워짐) */
   latest_episode_at?: string | null;

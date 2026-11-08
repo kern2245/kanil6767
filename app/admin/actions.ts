@@ -292,7 +292,6 @@ export async function saveWebtoon(_prev: ActionState, formData: FormData): Promi
   if (id && !(await canEditWebtoon(editor, id))) return { message: NO_PERMISSION };
   const title = String(formData.get("title") ?? "").trim();
   const weekday = String(formData.get("weekday") ?? "");
-  const isUp = formData.get("is_up") === "on";
   const isVisible = formData.get("is_visible") === "on";
   const removeCover = formData.get("remove_cover") === "on";
   const cover = formData.get("cover");
@@ -303,7 +302,6 @@ export async function saveWebtoon(_prev: ActionState, formData: FormData): Promi
   const row: Record<string, unknown> = {
     title,
     weekday,
-    is_up: isUp,
     is_visible: isVisible,
   };
   // 완결 상태는 여기서 안 바꿈 → 회장 페이지의 "완결로 넘기기" 버튼(setWebtoonCompleted)으로만

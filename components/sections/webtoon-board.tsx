@@ -12,11 +12,11 @@ import { cn } from "@/lib/utils";
 export type BoardTab = { key: Weekday; label: string; items: Webtoon[] };
 
 /** 웹툰 카드 한 개: 표지 + (UP / 완결) 제목
-    UP 표시: 새 회차가 공개된 그날(한국 날짜)에만 자동으로 붙고, 다음 날이면 사라집니다. (계산은 lib/data.ts 의 is_new)
-    관리자에서 "UP 항상 표시"를 켠 웹툰은 시간과 상관없이 붙습니다.
+    UP 표시: 완전 자동 — 새 회차가 공개된 그날(한국 날짜)에만 붙고, 다음 날이면 사라집니다. (계산은 lib/data.ts 의 is_new)
+    ("UP 항상 표시" 체크는 없앴어요. 예전에 켜 둔 값이 있어도 무시합니다)
     완결 웹툰은 UP 대신 "완결" 표시가 붙습니다. */
 export function WebtoonCard({ webtoon }: { webtoon: Webtoon }) {
-  const showUp = !webtoon.is_completed && (webtoon.is_up || Boolean(webtoon.is_new));
+  const showUp = !webtoon.is_completed && Boolean(webtoon.is_new);
   return (
     <article className="group">
       <div className="relative aspect-[160/207] overflow-hidden rounded-xl bg-muted">

@@ -106,7 +106,6 @@ export async function WebtoonManager({ artistId, ownerOnly = false }: { artistId
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="flex items-center gap-2 font-medium">
-                        {w.is_up ? <span className="text-xs font-bold text-up">UP</span> : null}
                         <span className="truncate">{w.title}</span>
                         {!w.is_visible ? (
                           <EyeOff className="size-4 shrink-0 text-muted-foreground" aria-label="숨김" />
