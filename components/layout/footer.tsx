@@ -1,9 +1,7 @@
-import Link from "next/link";
-
 import { siteConfig } from "@/site.config";
 import { Container } from "@/components/layout/container";
 
-/** 맨 아래 영역. 오른쪽 끝의 작은 점(•)이 관리자 페이지로 가는 숨은 버튼입니다. */
+/** 맨 아래 영역. 오른쪽에 "회장" · "작가" 버튼 (예전 작은 점(•) 숨은 버튼은 회장 버튼과 같아서 뺐어요) */
 export function Footer() {
   return (
     <footer className="border-t border-border/60 py-10">
@@ -33,14 +31,6 @@ export function Footer() {
           >
             {siteConfig.artistButton.label}
           </a>
-          {/* 숨은 관리자 버튼 */}
-          <Link
-            href="/admin"
-            aria-label="관리자"
-            className="opacity-30 transition-opacity hover:opacity-100"
-          >
-            •
-          </Link>
         </div>
       </Container>
     </footer>
