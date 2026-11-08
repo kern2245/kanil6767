@@ -36,7 +36,8 @@ import { getAdminClient, IMAGE_BUCKET } from "@/lib/supabase-admin";
 import { formatPublishAt, nextPublishAt, parsePublishChoice } from "@/lib/publish-time";
 import type { Weekday } from "@/lib/types";
 
-export type ActionState = { ok?: boolean; message?: string };
+/** 버튼 결과. id: 새로 만든 웹툰 번호 (새 웹툰 만들기에서 1화를 이어서 올릴 때 씀) */
+export type ActionState = { ok?: boolean; message?: string; id?: string };
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5MB
 
@@ -326,16 +327,23 @@ export async function saveWebtoon(_prev: ActionState, formData: FormData): Promi
   // 작가가 새로 추가하면 그 작가의 웹툰으로 기록
   if (!id && !editor.admin) row.artist_id = editor.artistId;
 
-  const { error } = id
-    ? await supabase.from("webtoons").update(row).eq("id", id)
-    : await supabase.from("webtoons").insert(row);
+  // 새로 만들면 만든 웹툰 번호(newId)를 돌려줌 → "새 웹툰 만들기"에서 1화를 바로 이어서 올림
+  let newId: string | undefined;
+  let error: { message: string } | null = null;
+  if (id) {
+    ({ error } = await supabase.from("webtoons").update(row).eq("id", id));
+  } else {
+    const inserted = await supabase.from("webtoons").insert(row).select("id").single();
+    error = inserted.error;
+    newId = (inserted.data?.id as string | undefined) ?? undefined;
+  }
 
   if (error) return { message: `저장 실패: ${error.message}` };
 
   revalidatePath("/");
   revalidatePath("/admin");
   revalidatePath("/artist");
-  return { ok: true, message: id ? "수정했습니다." : "추가했습니다." };
+  return { ok: true, message: id ? "수정했습니다." : "웹툰을 만들었습니다.", id: id || newId };
 }
 
 /* ---------- 표지만 바꾸기 / 지우기 (웹툰 목록의 표지 버튼) ----------

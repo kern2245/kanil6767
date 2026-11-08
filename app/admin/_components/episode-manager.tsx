@@ -5,18 +5,12 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ImageIcon, Trash2 } from "lucide-react";
 
-import {
-  deleteEpisode,
-  saveEpisode,
-  updateEpisodePublishAt,
-  updateEpisodeThumbnail,
-  uploadEpisodeImage,
-  type ActionState,
-} from "@/app/admin/actions";
+import { deleteEpisode, updateEpisodePublishAt, updateEpisodeThumbnail, type ActionState } from "@/app/admin/actions";
 import { Button } from "@/components/ui/button";
-import { pdfToImages } from "@/lib/pdf-to-images";
 import type { PublishOption } from "@/lib/publish-time";
 import { ImageSlotButtons } from "./image-slot-buttons";
+import { fileInputClass } from "./form-styles";
+import { uploadEpisode } from "./upload-episode";
 
 /** 예약 회차의 공개 날짜 바꾸기 / 지금 바로 공개 */
 function RescheduleControls({ episodeId, choices: allChoices }: { episodeId: string; choices: PublishOption[] }) {
@@ -124,73 +118,21 @@ export function EpisodeManager({
     e.preventDefault();
     const form = e.currentTarget;
     const data = new FormData(form);
-    const number = Number(data.get("number"));
-    const title = String(data.get("title") ?? "");
-    const publishAt = String(data.get("publishAt") ?? "") || undefined;
-    // 파일 이름 순서대로 정렬 (1, 2, 10 처럼 숫자도 자연스럽게)
-    const picked = (data.getAll("images") as File[])
-      .filter((f) => f.size > 0)
-      .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
-
-    if (picked.length === 0) {
-      setStatus({ message: "만화 그림이나 PDF를 하나 이상 골라 주세요." });
-      return;
-    }
+    const thumb = data.get("thumbnail");
 
     setPending(true);
-
-    // PDF 는 쪽마다 그림(JPG)으로 바꾸고, 그림 파일은 그대로 사용
-    const files: File[] = [];
-    for (const f of picked) {
-      if (f.type === "application/pdf" || /\.pdf$/i.test(f.name)) {
-        try {
-          const pages = await pdfToImages(f, (p, total) =>
-            setStatus({ message: `PDF를 그림으로 바꾸는 중… ${f.name} ${p} / ${total}쪽` }),
-          );
-          files.push(...pages);
-        } catch {
-          setStatus({ message: `${f.name}: PDF를 읽지 못했습니다. 다른 PDF로 해 보거나 그림 파일로 올려 주세요.` });
-          setPending(false);
-          return;
-        }
-      } else {
-        files.push(f);
-      }
-    }
-    // 썸네일 (선택) — 먼저 한 장 올림. 안 고르면 무프사
-    let thumbnailUrl: string | null = null;
-    const thumb = data.get("thumbnail");
-    if (thumb instanceof File && thumb.size > 0) {
-      setStatus({ message: "썸네일 올리는 중…" });
-      const one = new FormData();
-      one.set("webtoon_id", webtoonId);
-      one.set("file", thumb);
-      const result = await uploadEpisodeImage(one);
-      if (!result.ok) {
-        setStatus({ message: `썸네일: ${result.message}` });
-        setPending(false);
-        return;
-      }
-      thumbnailUrl = result.url;
-    }
-
-    const urls: string[] = [];
-    for (let i = 0; i < files.length; i++) {
-      setStatus({ message: `그림 올리는 중… ${i + 1} / ${files.length}` });
-      const one = new FormData();
-      one.set("webtoon_id", webtoonId);
-      one.set("file", files[i]);
-      const result = await uploadEpisodeImage(one);
-      if (!result.ok) {
-        setStatus({ message: result.message });
-        setPending(false);
-        return;
-      }
-      urls.push(result.url);
-    }
-
-    setStatus({ message: "회차 저장 중…" });
-    const saved = await saveEpisode({ webtoonId, number, title, imageUrls: urls, thumbnailUrl, publishAt });
+    // 실제 올리기는 upload-episode.ts (새 웹툰 만들기의 "1화 같이 올리기"와 같은 과정)
+    const saved = await uploadEpisode(
+      {
+        webtoonId,
+        number: Number(data.get("number")),
+        title: String(data.get("title") ?? ""),
+        picked: data.getAll("images") as File[],
+        thumbnail: thumb instanceof File ? thumb : null,
+        publishAt: String(data.get("publishAt") ?? "") || undefined,
+      },
+      (message) => setStatus({ message }),
+    );
     setStatus({ ok: saved.ok, message: saved.message ?? "" });
     setPending(false);
     if (saved.ok) {
@@ -229,7 +171,7 @@ export function EpisodeManager({
             accept="image/*,application/pdf,.pdf"
             multiple
             required
-            className="text-sm"
+            className={fileInputClass}
           />
           <span className="text-xs text-muted-foreground">
             연재 요일이 아닌 날 올리면 다음 연재 요일 0시에 공개돼요(예약). 연재 요일 당일에 올리면 바로 공개돼요.
@@ -252,7 +194,7 @@ export function EpisodeManager({
         </label>
         <label className="grid gap-1.5 text-sm">
           <span className="font-medium">회차 썸네일 (선택, 4MB 이하, 가로로 긴 그림 추천)</span>
-          <input name="thumbnail" type="file" accept="image/*" className="text-sm" />
+          <input name="thumbnail" type="file" accept="image/*" className={fileInputClass} />
           <span className="text-xs text-muted-foreground">
             안 고르면 무프사(그림 없는 기본 모양)로 보여요. 나중에 회차 목록에서 바꿀 수 있어요.
           </span>

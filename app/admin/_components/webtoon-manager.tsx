@@ -1,14 +1,13 @@
-import Image from "next/image";
-import { EyeOff } from "lucide-react";
+import { Plus } from "lucide-react";
 
 import { siteConfig } from "@/site.config";
 import { getAdminClient } from "@/lib/supabase-admin";
 import { formatPublishAt, isScheduled, publishOptions } from "@/lib/publish-time";
 import type { Episode, Webtoon } from "@/lib/types";
-import { CompleteButton, CoverButtons, DeleteWebtoonButton, WebtoonForm } from "./webtoon-form";
-import { EpisodeManager } from "./episode-manager";
+import { NewWebtoonForm } from "./webtoon-form";
+import { StudioCard } from "./studio-card";
 
-/** 웹툰 관리 화면 (웹툰 추가 + 등록된 웹툰 목록 + 수정하기 + 회차 관리)
+/** 웹툰 관리 화면 = "작가 스튜디오" (+ 새 웹툰 + 큰 표지 카드 목록, 카드 안에 회차 관리·정보 수정·표지·설정 탭)
     관리자 페이지(/admin "웹툰" 탭)와 작가 페이지(/artist)가 같이 씁니다.
     로그인 확인은 이 화면을 부르는 페이지에서 먼저 합니다.
     - artistId 를 넘기면(작가 페이지): 그 작가가 올린 웹툰만 보임
@@ -80,73 +79,46 @@ export async function WebtoonManager({ artistId, ownerOnly = false }: { artistId
         </p>
       ) : null}
 
-      <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-        <section className="h-fit rounded-xl border p-6">
-          <h2 className="mb-5 text-lg font-semibold">웹툰 추가</h2>
-          <WebtoonForm />
-        </section>
+      <div className="mt-8 max-w-4xl">
+        {/* 위: 내 웹툰 제목 + "+ 새 웹툰" (누르면 추가 칸이 펼쳐짐) */}
+        <details className="group">
+          <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
+            <h2 className="text-xl font-semibold">
+              {artistId || ownerOnly ? "내 웹툰" : "등록된 웹툰"}{" "}
+              <span className="text-muted-foreground">{webtoons.length}</span>
+            </h2>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90">
+              <Plus className="size-4 transition-transform group-open:rotate-45" />
+              <span className="group-open:hidden">새 웹툰</span>
+              <span className="hidden group-open:inline">닫기</span>
+            </span>
+          </summary>
+          <section className="mt-4 rounded-2xl border bg-muted/20 p-5 sm:p-6">
+            <h3 className="mb-4 font-semibold">새 웹툰 만들기</h3>
+            <NewWebtoonForm />
+          </section>
+        </details>
 
-        <section>
-          <h2 className="mb-5 text-lg font-semibold">
-            등록된 웹툰 <span className="text-muted-foreground">({webtoons.length})</span>
-          </h2>
-          {webtoons.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              아직 없습니다. 왼쪽에서 추가해 보세요. (지금 사이트에는 예시 웹툰이 보입니다)
-            </p>
-          ) : (
-            <ul className="space-y-3">
-              {webtoons.map((w) => (
-                <li key={w.id} className="rounded-xl border">
-                  <div className="flex items-center gap-4 p-4">
-                    <div className="relative h-16 w-12 shrink-0 overflow-hidden rounded-md bg-muted">
-                      {w.cover_url ? (
-                        <Image src={w.cover_url} alt="" fill sizes="48px" className="object-cover" />
-                      ) : null}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="flex items-center gap-2 font-medium">
-                        <span className="truncate">{w.title}</span>
-                        {!w.is_visible ? (
-                          <EyeOff className="size-4 shrink-0 text-muted-foreground" aria-label="숨김" />
-                        ) : null}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {w.is_completed ? "완결" : `${dayLabel(w.weekday)}요일`}
-                        {!artistId && !ownerOnly ? ` · ${artistName(w.artist_id) ?? "회장"}` : null}
-                      </p>
-                    </div>
-                    <DeleteWebtoonButton id={w.id} coverUrl={w.cover_url} />
-                  </div>
-                  {/* 표지만 바로 바꾸기 / 지우기 */}
-                  <div className="flex flex-wrap items-center gap-1 border-t px-3 py-1.5">
-                    <CoverButtons id={w.id} hasCover={Boolean(w.cover_url)} />
-                    {/* 완결로 넘기기 / 연재로 되돌리기 — 회장 페이지에서만 (작가 화면에는 없음) */}
-                    {!artistId && !ownerOnly ? <CompleteButton id={w.id} completed={Boolean(w.is_completed)} /> : null}
-                  </div>
-                  <details className="border-t px-4 py-3">
-                    <summary className="cursor-pointer text-sm text-muted-foreground">수정하기</summary>
-                    <div className="pt-4">
-                      <WebtoonForm webtoon={w} />
-                    </div>
-                  </details>
-                  <details className="border-t px-4 py-3">
-                    <summary className="cursor-pointer text-sm text-muted-foreground">
-                      회차 관리 ({episodesOf(w.id).length}화)
-                    </summary>
-                    <div className="pt-4">
-                      <EpisodeManager
-                        webtoonId={w.id}
-                        episodes={episodesOf(w.id)}
-                        publishChoices={publishOptions(w.weekday, Boolean(w.is_completed))}
-                      />
-                    </div>
-                  </details>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+        {/* 웹툰 카드 목록 */}
+        {webtoons.length === 0 ? (
+          <div className="mt-6 rounded-2xl border border-dashed p-10 text-center text-sm text-muted-foreground">
+            아직 웹툰이 없어요. 오른쪽 위 <b>+ 새 웹툰</b>을 눌러 첫 웹툰을 만들어 보세요.
+          </div>
+        ) : (
+          <ul className="mt-6 grid gap-4">
+            {webtoons.map((w) => (
+              <StudioCard
+                key={w.id}
+                webtoon={w}
+                dayLabel={`${dayLabel(w.weekday)}요웹툰`}
+                episodes={episodesOf(w.id)}
+                publishChoices={publishOptions(w.weekday, Boolean(w.is_completed))}
+                ownerLabel={!artistId && !ownerOnly ? (artistName(w.artist_id) ?? "회장") : null}
+                canComplete={!artistId && !ownerOnly}
+              />
+            ))}
+          </ul>
+        )}
       </div>
     </>
   );

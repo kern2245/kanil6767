@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { BookCheck, Trash2 } from "lucide-react";
 
 import {
@@ -11,9 +12,12 @@ import {
   type ActionState,
 } from "@/app/admin/actions";
 import { ImageSlotButtons } from "./image-slot-buttons";
+import { fileInputClass } from "./form-styles";
+import { uploadEpisode } from "./upload-episode";
 import { Button } from "@/components/ui/button";
 import { siteConfig } from "@/site.config";
-import type { Webtoon } from "@/lib/types";
+import { publishOptions } from "@/lib/publish-time";
+import type { Webtoon, Weekday } from "@/lib/types";
 
 const inputClass =
   "h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/50";
@@ -51,7 +55,7 @@ export function WebtoonForm({ webtoon }: { webtoon?: Webtoon }) {
 
       <label className="grid gap-1.5 text-sm">
         <span className="font-medium">표지 그림 (선택, 5MB 이하, 세로로 긴 그림 추천)</span>
-        <input name="cover" type="file" accept="image/*" className="text-sm" />
+        <input name="cover" type="file" accept="image/*" className={fileInputClass} />
       </label>
 
       <div className="flex flex-wrap gap-6 text-sm">
@@ -74,6 +78,142 @@ export function WebtoonForm({ webtoon }: { webtoon?: Webtoon }) {
         {state.message ? (
           <p className={state.ok ? "text-sm text-muted-foreground" : "text-sm text-destructive"}>
             {state.message}
+          </p>
+        ) : null}
+      </div>
+    </form>
+  );
+}
+
+/** "새 웹툰 만들기" 칸 — 웹툰 정보 + (선택) 1화를 한 번에
+    1화 칸을 비워 두면 웹툰만 만들어지고, 만화 그림·PDF 를 고르면 웹툰을 만든 뒤 바로 1화까지 올라가요.
+    1화 올리는 과정은 회차 관리와 같음 (upload-episode.ts) */
+export function NewWebtoonForm() {
+  const router = useRouter();
+  const formRef = useRef<HTMLFormElement>(null);
+  const [weekday, setWeekday] = useState<Weekday>("mon");
+  const [pending, setPending] = useState(false);
+  const [status, setStatus] = useState<ActionState | null>(null);
+  // 1화 공개 날짜 목록 (고른 연재 요일에 맞춰 바뀜)
+  const choices = useMemo(() => publishOptions(weekday, false), [weekday]);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const data = new FormData(e.currentTarget);
+    const images = (data.getAll("ep_images") as File[]).filter((f) => f.size > 0);
+    const epTitle = String(data.get("ep_title") ?? "").trim();
+    if (images.length > 0 && !epTitle) {
+      setStatus({ message: "1화를 같이 올리려면 1화 제목을 입력해 주세요." });
+      return;
+    }
+
+    setPending(true);
+    setStatus({ message: "웹툰 만드는 중…" });
+    const created = await saveWebtoon({}, data);
+    if (!created.ok || !created.id) {
+      setStatus(created);
+      setPending(false);
+      return;
+    }
+
+    if (images.length > 0) {
+      const thumb = data.get("ep_thumbnail");
+      const episode = await uploadEpisode(
+        {
+          webtoonId: created.id,
+          number: 1,
+          title: epTitle,
+          picked: images,
+          thumbnail: thumb instanceof File ? thumb : null,
+          publishAt: String(data.get("ep_publishAt") ?? "") || undefined,
+        },
+        (message) => setStatus({ message }),
+      );
+      setStatus(
+        episode.ok
+          ? { ok: true, message: `웹툰을 만들고 ${episode.message}` }
+          : { message: `웹툰은 만들었어요. 1화는 실패: ${episode.message} (카드의 "회차 관리"에서 다시 올려 주세요)` },
+      );
+    } else {
+      setStatus(created);
+    }
+
+    setPending(false);
+    formRef.current?.reset();
+    setWeekday("mon");
+    router.refresh();
+  }
+
+  return (
+    <form ref={formRef} onSubmit={handleSubmit} className="grid gap-4">
+      <label className="grid gap-1.5 text-sm">
+        <span className="font-medium">제목 *</span>
+        <input name="title" required className={inputClass} />
+      </label>
+
+      <label className="grid gap-1.5 text-sm">
+        <span className="font-medium">연재 요일 *</span>
+        <select
+          name="weekday"
+          value={weekday}
+          onChange={(e) => setWeekday(e.target.value as Weekday)}
+          className={inputClass}
+        >
+          {siteConfig.webtoons.weekdays.map((d) => (
+            <option key={d.key} value={d.key}>
+              {d.label}요일
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className="grid gap-1.5 text-sm">
+        <span className="font-medium">표지 그림 (선택, 5MB 이하, 세로로 긴 그림 추천)</span>
+        <input name="cover" type="file" accept="image/*" className={fileInputClass} />
+      </label>
+
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" name="is_visible" defaultChecked />
+        사이트에 보이기
+      </label>
+
+      {/* 1화 같이 올리기 (선택) */}
+      <fieldset className="grid gap-4 rounded-xl border border-dashed p-4">
+        <legend className="px-1 text-sm font-semibold">1화 같이 올리기 (선택)</legend>
+        <p className="-mt-2 text-xs text-muted-foreground">
+          비워 두면 웹툰만 만들어져요. 1화는 나중에 카드의 &quot;회차 관리&quot;에서 올려도 돼요.
+        </p>
+        <label className="grid gap-1.5 text-sm">
+          <span className="font-medium">1화 제목</span>
+          <input name="ep_title" placeholder="예: 첫 만남" className={inputClass} />
+        </label>
+        <label className="grid gap-1.5 text-sm">
+          <span className="font-medium">만화 그림 또는 PDF (여러 개 한 번에 선택, 그림은 한 장 4MB 이하)</span>
+          <input name="ep_images" type="file" accept="image/*,application/pdf,.pdf" multiple className={fileInputClass} />
+        </label>
+        <label className="grid gap-1.5 text-sm">
+          <span className="font-medium">공개 날짜</span>
+          <select key={weekday} name="ep_publishAt" defaultValue={choices[0]?.value} className={inputClass}>
+            {choices.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="grid gap-1.5 text-sm">
+          <span className="font-medium">1화 썸네일 (선택, 안 고르면 무프사)</span>
+          <input name="ep_thumbnail" type="file" accept="image/*" className={fileInputClass} />
+        </label>
+      </fieldset>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <Button type="submit" disabled={pending}>
+          {pending ? "올리는 중..." : "웹툰 만들기"}
+        </Button>
+        {status?.message ? (
+          <p className={status.ok || pending ? "text-sm text-muted-foreground" : "text-sm text-destructive"}>
+            {status.message}
           </p>
         ) : null}
       </div>
