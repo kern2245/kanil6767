@@ -15,12 +15,11 @@ export const metadata = { title: "로그인" };
 export default async function LoginPage(props: PageProps<"/login">) {
   await connection();
   const { next, error } = await props.searchParams;
-  // 구글·카카오 로그인이 안 됐을 때 안내
+  // 구글 로그인이 안 됐을 때 안내
   const ERRORS: Record<string, string> = {
     google: "구글 로그인을 시작하지 못했어요. 잠시 뒤 다시 해 주세요.",
-    kakao: "카카오 로그인을 시작하지 못했어요. 잠시 뒤 다시 해 주세요.",
     social: "로그인에 실패했어요. 다시 해 주세요.",
-    "no-email": "이메일 정보를 받지 못했어요. 카카오라면 ‘이메일 제공’에 동의해 주세요.",
+    "no-email": "구글에서 이메일 정보를 받지 못했어요. 다시 해 주세요.",
     unverified: "확인되지 않은 이메일이라 가입할 수 없어요. 이메일이 확인된 계정으로 해 주세요.",
     blocked: "회장이 막은 계정이에요. 회장에게 문의해 주세요.",
     supabase: "Supabase가 연결되지 않았습니다.",

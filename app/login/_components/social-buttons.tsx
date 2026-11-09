@@ -1,12 +1,9 @@
 import { startSocialLogin } from "../actions";
 
-/* 구글 · 카카오로 시작하기 버튼 (로그인과 가입이 한 번에 — 처음이면 자동으로 회원 가입)
-   진짜 구글/카카오 계정만 쓸 수 있어서 가짜 이메일 가입을 막아요. */
+/* 구글로 시작하기 버튼 (로그인과 가입이 한 번에 — 처음이면 자동으로 회원 가입)
+   진짜 구글 계정만 쓸 수 있어서 가짜 이메일 가입을 막아요. (카카오는 안 씀) */
 
-const PROVIDERS = [
-  { key: "kakao", label: "카카오로 시작하기", mark: "K" },
-  { key: "google", label: "구글로 시작하기", mark: "G" },
-] as const;
+const PROVIDERS = [{ key: "google", label: "구글로 시작하기", mark: "G" }] as const;
 
 export function SocialButtons({ next }: { next: string }) {
   return (

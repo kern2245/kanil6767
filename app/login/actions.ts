@@ -28,12 +28,12 @@ function nextPath(formData: FormData) {
   return next.startsWith("/") && !next.startsWith("//") ? next : "/";
 }
 
-/* ---------- 구글 · 카카오로 로그인 / 가입 ----------
-   누르면 구글/카카오 로그인 화면으로 갔다가 /auth/member-callback 으로 돌아옴 (app/auth/member-callback/route.ts) */
+/* ---------- 구글로 로그인 / 가입 ----------
+   누르면 구글 로그인 화면으로 갔다가 /auth/member-callback 으로 돌아옴 (app/auth/member-callback/route.ts) */
 
 export async function startSocialLogin(formData: FormData) {
   const provider = String(formData.get("provider") ?? "");
-  if (provider !== "google" && provider !== "kakao") redirect("/login");
+  if (provider !== "google") redirect("/login"); // 지금은 구글만
   const next = nextPath(formData);
 
   const supabase = await getAuthClient();
@@ -47,12 +47,7 @@ export async function startSocialLogin(formData: FormData) {
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider,
-    options: {
-      redirectTo,
-      skipBrowserRedirect: true,
-      // 카카오는 이메일·닉네임·프사를 받으려면 이 항목들이 필요해요
-      ...(provider === "kakao" ? { scopes: "account_email profile_nickname profile_image" } : {}),
-    },
+    options: { redirectTo, skipBrowserRedirect: true },
   });
   if (error || !data.url) redirect(`/login?error=${provider}`);
   redirect(data.url);
