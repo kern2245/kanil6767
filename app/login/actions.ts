@@ -8,6 +8,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { getAuthClient } from "@/lib/supabase-auth";
+import { safeNextPath } from "@/lib/safe-path";
 
 import {
   changeOwnArtistPassword,
@@ -18,13 +19,13 @@ import {
   loginArtist,
 } from "@/lib/admin-auth";
 import { getAdminClient, IMAGE_BUCKET } from "@/lib/supabase-admin";
+import { IMAGE_ONLY_MESSAGE, imageExtension, isAllowedImage } from "@/lib/image-check";
 
 export type LoginState = { message?: string };
 
 /** 로그인 뒤 돌아갈 주소 — 우리 사이트 안의 주소만 허용 (다른 사이트로 튀지 않게) */
 function nextPath(formData: FormData) {
-  const next = String(formData.get("next") ?? "");
-  return next.startsWith("/") && !next.startsWith("//") ? next : "/";
+  return safeNextPath(formData.get("next"));
 }
 
 /* ---------- 구글로 로그인 / 가입 ----------
@@ -81,9 +82,9 @@ export async function updateMyAvatar(formData: FormData): Promise<AvatarResult> 
   let newUrl: string | null = null;
   if (!remove) {
     if (!(file instanceof File) || file.size === 0) return { message: "프사로 쓸 그림을 골라 주세요." };
-    if (!file.type.startsWith("image/")) return { message: "이미지 파일만 올릴 수 있어요." };
+    if (!isAllowedImage(file)) return { message: IMAGE_ONLY_MESSAGE };
     if (file.size > MAX_AVATAR_BYTES) return { message: "프사는 3MB 이하만 올릴 수 있어요." };
-    const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const ext = imageExtension(file);
     const path = `avatars/${me.id}-${Date.now()}.${ext}`;
     const { error: uploadError } = await supabase.storage
       .from(IMAGE_BUCKET)

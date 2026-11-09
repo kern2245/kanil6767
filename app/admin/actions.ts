@@ -24,6 +24,7 @@ import { siteConfig } from "@/site.config";
 import { getAuthClient } from "@/lib/supabase-auth";
 import { endAdminSession, endArtistSession, getApprovedArtistId, isAdmin } from "@/lib/admin-auth";
 import { getAdminClient, IMAGE_BUCKET } from "@/lib/supabase-admin";
+import { IMAGE_ONLY_MESSAGE, imageExtension, isAllowedImage } from "@/lib/image-check";
 import { formatPublishAt, nextPublishAt, parsePublishChoice } from "@/lib/publish-time";
 import type { Weekday } from "@/lib/types";
 
@@ -122,10 +123,10 @@ export async function saveItem(_prev: ActionState, formData: FormData): Promise<
 
   // 새 이미지를 올린 경우 → Supabase 저장소에 업로드
   if (image instanceof File && image.size > 0) {
-    if (!image.type.startsWith("image/")) return { message: "이미지 파일만 올릴 수 있습니다." };
+    if (!isAllowedImage(image)) return { message: IMAGE_ONLY_MESSAGE };
     if (image.size > MAX_IMAGE_BYTES) return { message: "이미지는 5MB 이하만 올릴 수 있습니다." };
 
-    const ext = (image.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const ext = imageExtension(image);
     const path = `${section}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
     const { error: uploadError } = await supabase.storage
       .from(IMAGE_BUCKET)
@@ -257,10 +258,10 @@ export async function saveWebtoon(_prev: ActionState, formData: FormData): Promi
 
   // 새 표지를 올린 경우 → Supabase 저장소의 webtoons/ 폴더에 업로드
   if (cover instanceof File && cover.size > 0) {
-    if (!cover.type.startsWith("image/")) return { message: "이미지 파일만 올릴 수 있습니다." };
+    if (!isAllowedImage(cover)) return { message: IMAGE_ONLY_MESSAGE };
     if (cover.size > MAX_IMAGE_BYTES) return { message: "이미지는 5MB 이하만 올릴 수 있습니다." };
 
-    const ext = (cover.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const ext = imageExtension(cover);
     const path = `webtoons/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
     const { error: uploadError } = await supabase.storage
       .from(IMAGE_BUCKET)
@@ -316,10 +317,10 @@ export async function updateWebtoonCover(formData: FormData): Promise<ActionStat
   let newUrl: string | null = null;
   if (!remove) {
     if (!(cover instanceof File) || cover.size === 0) return { message: "표지 그림을 골라 주세요." };
-    if (!cover.type.startsWith("image/")) return { message: "이미지 파일만 올릴 수 있습니다." };
+    if (!isAllowedImage(cover)) return { message: IMAGE_ONLY_MESSAGE };
     if (cover.size > MAX_IMAGE_BYTES) return { message: "이미지는 5MB 이하만 올릴 수 있습니다." };
 
-    const ext = (cover.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const ext = imageExtension(cover);
     const path = `webtoons/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
     const { error: uploadError } = await supabase.storage
       .from(IMAGE_BUCKET)
@@ -400,10 +401,10 @@ export async function uploadEpisodeImage(formData: FormData): Promise<UploadResu
   if (!webtoonId) return { ok: false, message: "웹툰 정보가 없습니다." };
   if (!(await canEditWebtoon(editor, webtoonId))) return { ok: false, message: NO_PERMISSION };
   if (!(file instanceof File) || file.size === 0) return { ok: false, message: "그림 파일이 없습니다." };
-  if (!file.type.startsWith("image/")) return { ok: false, message: `${file.name}: 이미지 파일만 올릴 수 있습니다.` };
+  if (!isAllowedImage(file)) return { ok: false, message: `${file.name}: ${IMAGE_ONLY_MESSAGE}` };
   if (file.size > MAX_EPISODE_IMAGE_BYTES) return { ok: false, message: `${file.name}: 한 장에 4MB 이하만 올릴 수 있습니다.` };
 
-  const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const ext = imageExtension(file);
   const path = `episodes/${webtoonId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
   const { error } = await supabase.storage
     .from(IMAGE_BUCKET)
@@ -534,10 +535,10 @@ export async function updateEpisodeThumbnail(formData: FormData): Promise<Action
   let newUrl: string | null = null;
   if (!remove) {
     if (!(file instanceof File) || file.size === 0) return { message: "썸네일 그림을 골라 주세요." };
-    if (!file.type.startsWith("image/")) return { message: "이미지 파일만 올릴 수 있습니다." };
+    if (!isAllowedImage(file)) return { message: IMAGE_ONLY_MESSAGE };
     if (file.size > MAX_EPISODE_IMAGE_BYTES) return { message: "썸네일은 4MB 이하만 올릴 수 있습니다." };
 
-    const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const ext = imageExtension(file);
     const path = `episodes/${episode.webtoon_id}/thumb-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
     const { error: uploadError } = await supabase.storage
       .from(IMAGE_BUCKET)

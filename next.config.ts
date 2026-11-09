@@ -14,6 +14,25 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "5mb",
     },
   },
+  // 보안 헤더 (모든 페이지)
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: [
+          // 다른 사이트가 세카이를 몰래 끼워 넣지 못하게 (클릭재킹 막기)
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
+          // 브라우저가 파일 종류를 멋대로 바꿔 읽지 못하게
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          // 다른 사이트로 넘어갈 때 우리 주소를 다 알려주지 않게
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          // 카메라·마이크·위치는 안 씀
+          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

@@ -1,5 +1,5 @@
 import "server-only";
-import { createHash, randomBytes, scryptSync, timingSafeEqual } from "crypto";
+import { createHash, createHmac, randomBytes, scryptSync, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
 
 import { siteConfig } from "@/site.config";
@@ -26,22 +26,43 @@ export function isAdminPasswordSet() {
   return Boolean(process.env.ADMIN_PASSWORD);
 }
 
-/** 회장 로그인 기억 값 — GitHub 회장 계정 + 서버 비밀값으로 만듦 (예전 비밀번호 로그인 쿠키는 더 이상 안 통함) */
-function sessionToken() {
+/** 서버 비밀값으로 서명 (HMAC) — 서버만 만들 수 있는 도장. 비밀값이 없으면 null */
+function sign(value: string): string | null {
   const secret = process.env.ADMIN_PASSWORD;
-  return secret ? hash(`owner-session:github:${siteConfig.ownerGithubLogin.toLowerCase()}:${secret}`).toString("hex") : null;
+  return secret ? createHmac("sha256", secret).update(`vibe-starter:${value}`).digest("hex") : null;
+}
+
+/** 두 도장이 같은지 (시간 차이로 알아내는 공격까지 막는 비교) */
+function sameSignature(a: string, b: string) {
+  const x = Buffer.from(a);
+  const y = Buffer.from(b);
+  return x.length === y.length && timingSafeEqual(x, y);
+}
+
+/** 회장 로그인 기억 값 = "로그인한 시각.도장"
+    도장 = GitHub 회장 계정 + 로그인 시각 + 서버 비밀값. 로그인 시각이 들어 있어서 8시간이 지나면 서버에서도 무효
+    (쿠키가 새어 나가도 8시간 뒤엔 못 씀) */
+function sessionToken(issuedAt: number) {
+  const signature = sign(`owner-session:github:${siteConfig.ownerGithubLogin.toLowerCase()}:${issuedAt}`);
+  return signature ? `${issuedAt}.${signature}` : null;
 }
 
 /** 지금 접속한 사람이 로그인한 관리자인지 */
 export async function isAdmin() {
-  const token = sessionToken();
-  if (!token) return false;
   const store = await cookies();
-  return store.get(COOKIE_NAME)?.value === token;
+  const raw = store.get(COOKIE_NAME)?.value;
+  if (!raw) return false;
+  const [issuedText, signature] = raw.split(".");
+  const issuedAt = Number(issuedText);
+  if (!Number.isFinite(issuedAt) || !signature) return false;
+  const age = Date.now() - issuedAt;
+  if (age < 0 || age > MAX_AGE_SECONDS * 1000) return false; // 8시간 지남 → 다시 로그인
+  const expected = sessionToken(issuedAt);
+  return expected !== null && sameSignature(raw, expected);
 }
 
 export async function startAdminSession() {
-  const token = sessionToken();
+  const token = sessionToken(Date.now());
   if (!token) return;
   const store = await cookies();
   store.set(COOKIE_NAME, token, {
@@ -130,7 +151,8 @@ export async function checkNickname(name: string, selfId?: string): Promise<stri
 
 /** 로그인 기억용 표시. 비밀번호를 바꾸면 값이 달라져서 다른 기기의 로그인은 풀립니다. */
 function artistSignature(id: string, passwordHash: string) {
-  return hash(`artist-session:${id}:${passwordHash}`).toString("hex");
+  // 서버 비밀값(ADMIN_PASSWORD)으로 서명 → 데이터베이스가 새도 로그인 쿠키를 흉내 낼 수 없음
+  return sign(`artist-session:${id}:${passwordHash}`) ?? hash(`artist-session:${id}:${passwordHash}`).toString("hex");
 }
 
 async function getArtistRow(column: "id" | "email", value: string): Promise<ArtistRow | null> {
@@ -148,7 +170,7 @@ export async function getCurrentArtist(): Promise<Artist | null> {
   const [id, signature] = raw.split(".");
   if (!id || !signature) return null;
   const row = await getArtistRow("id", id);
-  if (!row || artistSignature(row.id, row.password_hash) !== signature) return null;
+  if (!row || !sameSignature(artistSignature(row.id, row.password_hash), signature)) return null;
   return {
     id: row.id,
     email: row.email,

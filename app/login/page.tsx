@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { connection } from "next/server";
 
 import { getCurrentArtist } from "@/lib/admin-auth";
+import { safeNextPath } from "@/lib/safe-path";
 import { Navbar } from "@/components/layout/navbar";
 import { Container } from "@/components/layout/container";
 import { LoginForm } from "./_components/login-form";
@@ -25,7 +26,7 @@ export default async function LoginPage(props: PageProps<"/login">) {
     supabase: "Supabase가 연결되지 않았습니다.",
   };
   const errorMessage = typeof error === "string" ? ERRORS[error] : undefined;
-  const nextPath = typeof next === "string" && next.startsWith("/") && !next.startsWith("//") ? next : "/";
+  const nextPath = safeNextPath(next);
 
   // 이미 로그인했으면 돌아갈 곳으로
   const member = await getCurrentArtist();

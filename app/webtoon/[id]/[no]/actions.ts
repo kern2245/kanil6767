@@ -54,6 +54,22 @@ export async function addComment(_prev: CommentActionState, formData: FormData):
   const supabase = getAdminClient();
   if (!supabase) return { message: "Supabase가 연결되지 않았습니다." };
 
+  // 도배 막기: 회원은 10초에 1개, 1분에 5개까지 (회장은 제한 없음)
+  if (commenter.kind === "artist") {
+    const since = new Date(Date.now() - 60_000).toISOString();
+    const { data: recent } = await supabase
+      .from("comments")
+      .select("created_at")
+      .eq("artist_id", commenter.id)
+      .gte("created_at", since)
+      .order("created_at", { ascending: false });
+    const rows = (recent ?? []) as { created_at: string }[];
+    if (rows.length >= 5) return { message: "댓글을 너무 빨리 달고 있어요. 1분 뒤에 다시 달아 주세요." };
+    if (rows[0] && Date.now() - new Date(rows[0].created_at).getTime() < 10_000) {
+      return { message: "댓글은 10초에 하나씩 달 수 있어요. 잠깐만 기다려 주세요." };
+    }
+  }
+
   const { error } = await supabase.from("comments").insert({
     episode_id: episodeId,
     // 회원 댓글이면 artist_id, 회장 댓글이면 is_owner 에 기록

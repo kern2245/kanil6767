@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { loginWithSocialAccount } from "@/lib/admin-auth";
 import { clearAuthCookies, getAuthClient } from "@/lib/supabase-auth";
+import { safeNextPath } from "@/lib/safe-path";
 
 /* 구글 · 카카오 로그인 후 돌아오는 주소 (/auth/member-callback) — 회원(독자·작가) 전용
    - 구글/카카오가 "확인된 이메일"을 알려준 계정만 받음 (가짜 이메일 막기)
@@ -10,8 +11,7 @@ import { clearAuthCookies, getAuthClient } from "@/lib/supabase-auth";
 
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
-  const nextParam = request.nextUrl.searchParams.get("next") ?? "/";
-  const next = nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "/";
+  const next = safeNextPath(request.nextUrl.searchParams.get("next"));
   const fail = (reason: string) =>
     NextResponse.redirect(new URL(`/login?error=${reason}&next=${encodeURIComponent(next)}`, request.url));
 
