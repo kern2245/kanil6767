@@ -5,6 +5,7 @@ import { ChevronRight, ImageIcon } from "lucide-react";
 
 import { siteConfig } from "@/site.config";
 import { getEpisodes, getWebtoon } from "@/lib/data";
+import { formatViews, getViewCounts } from "@/lib/views";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { Container } from "@/components/layout/container";
@@ -24,6 +25,8 @@ export default async function WebtoonPage(props: PageProps<"/webtoon/[id]">) {
 
   const episodes = await getEpisodes(id);
   const newestFirst = [...episodes].reverse();
+  const viewCounts = await getViewCounts(episodes.map((ep) => ep.id));
+  const totalViews = [...viewCounts.values()].reduce((a, b) => a + b, 0);
   const dayLabel = siteConfig.webtoons.weekdays.find((d) => d.key === webtoon.weekday)?.label;
 
   return (
@@ -45,7 +48,7 @@ export default async function WebtoonPage(props: PageProps<"/webtoon/[id]">) {
             <div className="flex min-w-0 flex-col justify-center">
               <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{webtoon.title}</h1>
               {dayLabel ? <p className="mt-2 text-sm text-muted-foreground">{dayLabel}요웹툰</p> : null}
-              <p className="mt-1 text-sm text-muted-foreground">총 {episodes.length}화</p>
+              <p className="mt-1 text-sm text-muted-foreground">총 {episodes.length}화 · 조회 {formatViews(totalViews)}</p>
               {episodes.length > 0 ? (
                 <Button asChild size="sm" className="mt-4 w-fit">
                   <Link href={`/webtoon/${id}/${episodes[0].number}`}>첫화 보기</Link>
@@ -79,6 +82,7 @@ export default async function WebtoonPage(props: PageProps<"/webtoon/[id]">) {
                     <span className="w-12 shrink-0 text-sm text-muted-foreground">{ep.number}화</span>
                     <span className="min-w-0 flex-1 truncate font-medium">{ep.title}</span>
                     <span className="shrink-0 text-xs text-muted-foreground">
+                      조회 {formatViews(viewCounts.get(ep.id) ?? 0)} ·{" "}
                       {new Date(ep.publish_at ?? ep.created_at).toLocaleDateString("ko-KR", { timeZone: "Asia/Seoul" })}
                     </span>
                     <ChevronRight className="size-4 shrink-0 text-muted-foreground" />

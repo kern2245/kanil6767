@@ -7,6 +7,8 @@ import { getEpisode, getEpisodes, getWebtoon } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { EpisodeComments } from "@/components/sections/episode-comments";
 import { EpisodeReactions } from "@/components/sections/episode-reactions";
+import { EpisodeViewCounter } from "@/components/sections/episode-view-counter";
+import { formatViews, getViewCounts } from "@/lib/views";
 
 /* 웹툰 뷰어 (주소: /webtoon/웹툰번호/회차번호)
    - 만화 그림을 위에서 아래로 이어 붙여 보여줌 (세로 스크롤)
@@ -73,6 +75,7 @@ export default async function EpisodeViewerPage(props: PageProps<"/webtoon/[id]/
     getEpisodes(id),
   ]);
   if (!webtoon || !episode) notFound();
+  const views = (await getViewCounts([episode.id])).get(episode.id) ?? 0;
 
   const index = episodes.findIndex((ep) => ep.number === number);
   const prev = index > 0 ? episodes[index - 1].number : undefined;
@@ -91,6 +94,7 @@ export default async function EpisodeViewerPage(props: PageProps<"/webtoon/[id]/
             <span className="ml-2 text-muted-foreground">
               {episode.number}화 {episode.title}
             </span>
+            <span className="ml-2 text-xs text-muted-foreground">· 조회 {formatViews(views)}</span>
           </p>
         </div>
       </header>
@@ -114,6 +118,9 @@ export default async function EpisodeViewerPage(props: PageProps<"/webtoon/[id]/
           ))
         )}
       </div>
+
+      {/* 화면에 안 보이는 조회수 기록 (5초 머물면 1번, 하루 1번) */}
+      <EpisodeViewCounter episodeId={episode.id} />
 
       {/* 아래쪽: 좋아요 / 싫어요 → 이전화 / 목록 / 다음화 */}
       <div className="mx-auto max-w-3xl px-4 pt-10 pb-28">

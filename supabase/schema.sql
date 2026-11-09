@@ -318,3 +318,18 @@ create table if not exists public.episode_reactions (
 );
 
 alter table public.episode_reactions enable row level security;
+
+-- 21) 회차 조회수 — 주작 막기: 같은 사람은 한 회차를 "하루에 1번"만 셈 (한국 날짜 기준)
+--     viewer_key: 로그인 회원은 "m:회원번호", 로그인 안 한 사람은 "a:브라우저 익명번호(쿠키)"
+--     작가 본인 조회·봇은 서버에서 아예 안 넣음. 회차 화면에 5초 이상 머물러야 기록됨.
+--     읽기 규칙 없음 → 서버 비밀 키로만 (누가 봤는지는 공개 안 함, 개수만)
+create table if not exists public.episode_views (
+  episode_id  uuid not null references public.episodes (id) on delete cascade,
+  viewer_key  text not null,
+  view_date   date not null,
+  created_at  timestamptz not null default now(),
+  primary key (episode_id, viewer_key, view_date)
+);
+
+create index if not exists episode_views_episode_idx on public.episode_views (episode_id);
+alter table public.episode_views enable row level security;

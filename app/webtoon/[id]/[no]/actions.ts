@@ -4,9 +4,12 @@
    - addComment    : 댓글 달기 (로그인한 회원 — 독자·작가 한 계정, 작가면 "작가" 표시 / 회장 — "회장" 표시)
    - deleteComment : 댓글 지우기 (쓴 회원 본인 또는 회장)
    - toggleReaction : 회차 좋아요 / 싫어요 누르기·취소 (로그인한 회원)
+   - recordView     : 조회수 기록 (하루 1번 · 작가 본인·봇 제외 · 5초 머문 뒤)
    로그인·가입은 맨 위 "로그인"(/login, app/login/actions.ts) */
 
+import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
+import { cookies, headers } from "next/headers";
 
 import { getCurrentArtist, isAdmin } from "@/lib/admin-auth";
 import { getAdminClient } from "@/lib/supabase-admin";
@@ -110,4 +113,67 @@ export async function toggleReaction(formData: FormData) {
       .upsert({ episode_id: episodeId, member_id: me.id, reaction }, { onConflict: "episode_id,member_id" });
   }
   refresh(formData);
+}
+
+/* ---------- 조회수 (주작 막기) ----------
+   - 회차 화면에 5초 이상 머물면 화면이 이걸 한 번 부름 (episode-view-counter.tsx)
+   - 같은 사람은 한 회차를 하루(한국 날짜)에 1번만 셈: 로그인 회원은 회원번호, 아니면 브라우저 익명번호(쿠키 1년)
+   - 작가 본인(그 웹툰을 올린 회원), 회장이 올린 웹툰을 회장이 보는 것, 봇(검색 로봇 등)은 안 셈 */
+
+const VIEWER_COOKIE = "viewer_id";
+const BOT_PATTERN = /bot|crawl|spider|slurp|preview|facebookexternalhit|headless|lighthouse/i;
+
+export async function recordView(episodeId: string) {
+  if (!episodeId) return;
+  const h = await headers();
+  const ua = h.get("user-agent") ?? "";
+  if (!ua || BOT_PATTERN.test(ua)) return; // 봇은 안 셈
+
+  const supabase = getAdminClient();
+  if (!supabase) return;
+
+  const { data: episode } = await supabase
+    .from("episodes")
+    .select("id, webtoons(artist_id)")
+    .eq("id", episodeId)
+    .maybeSingle();
+  if (!episode) return;
+  const webtoon = (Array.isArray(episode.webtoons) ? episode.webtoons[0] : episode.webtoons) as
+    | { artist_id: string | null }
+    | null;
+
+  const me = await getCurrentArtist();
+  const member = me && me.status !== "blocked" ? me : null;
+  // 작가 본인 조회는 안 셈
+  if (member && webtoon?.artist_id === member.id) return;
+  if (!webtoon?.artist_id && (await isAdmin())) return;
+
+  // 누가 봤는지 구분하는 값 (로그인 회원 / 브라우저 익명번호)
+  let viewerKey: string;
+  if (member) {
+    viewerKey = `m:${member.id}`;
+  } else {
+    const store = await cookies();
+    let anon = store.get(VIEWER_COOKIE)?.value;
+    if (!anon || !/^[\w-]{10,64}$/.test(anon)) {
+      anon = randomUUID();
+      store.set(VIEWER_COOKIE, anon, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+        maxAge: 60 * 60 * 24 * 365,
+      });
+    }
+    viewerKey = `a:${anon}`;
+  }
+
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" }).format(new Date());
+  // 같은 사람·같은 날이면 이미 있으니 무시됨 (하루 1번)
+  await supabase
+    .from("episode_views")
+    .upsert(
+      { episode_id: episodeId, viewer_key: viewerKey, view_date: today },
+      { onConflict: "episode_id,viewer_key,view_date", ignoreDuplicates: true },
+    );
 }
