@@ -16,7 +16,6 @@ import {
   endArtistSession,
   getCurrentArtist,
   loginArtist,
-  registerArtist,
 } from "@/lib/admin-auth";
 import { getAdminClient, IMAGE_BUCKET } from "@/lib/supabase-admin";
 
@@ -62,20 +61,8 @@ export async function memberLogin(_prev: LoginState, formData: FormData): Promis
   redirect(nextPath(formData));
 }
 
-export async function memberSignup(_prev: LoginState, formData: FormData): Promise<LoginState> {
-  const email = String(formData.get("email") ?? "").trim();
-  const name = String(formData.get("name") ?? "").trim();
-  const password = String(formData.get("password") ?? "");
-  const confirm = String(formData.get("confirm") ?? "");
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { message: "이메일 주소를 정확히 입력해 주세요." };
-  const passwordError = checkNewPassword(password, confirm);
-  if (passwordError) return { message: passwordError };
-
-  const result = await registerArtist(email, name, password);
-  if (!result.ok) return { message: result.message };
-  revalidatePath("/", "layout");
-  redirect(nextPath(formData));
-}
+/* 이메일로 새로 가입하기는 없앴어요 — 새 회원은 "구글로 시작하기"로만 (가짜 이메일 가입 막기)
+   예전에 이메일로 가입한 회원은 위의 memberLogin 으로 계속 로그인할 수 있어요. */
 
 /* ---------- 내 프사 바꾸기 / 무프사로 (로그인한 회원 본인) ---------- */
 

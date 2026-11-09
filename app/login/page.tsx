@@ -48,7 +48,7 @@ export default async function LoginPage(props: PageProps<"/login">) {
           <SocialButtons next={nextPath} />
           <div className="mx-auto my-6 flex max-w-sm items-center gap-3 text-xs text-muted-foreground">
             <span className="h-px flex-1 bg-border" />
-            또는 이메일로
+            또는 예전 이메일 계정으로
             <span className="h-px flex-1 bg-border" />
           </div>
           <LoginForm next={nextPath} />
