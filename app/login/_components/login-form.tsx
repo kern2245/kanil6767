@@ -66,9 +66,9 @@ export function LoginForm({ next }: { next: string }) {
           <input
             name="password"
             type="password"
-            placeholder="비밀번호 (4글자 이상)"
+            placeholder="비밀번호 (8글자 이상, 글자+숫자)"
             required
-            minLength={4}
+            minLength={8}
             autoComplete="new-password"
             className={inputClass}
           />
@@ -77,7 +77,7 @@ export function LoginForm({ next }: { next: string }) {
             type="password"
             placeholder="비밀번호 한 번 더"
             required
-            minLength={4}
+            minLength={8}
             autoComplete="new-password"
             className={inputClass}
           />

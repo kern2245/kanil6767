@@ -6,7 +6,15 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { endArtistSession, getCurrentArtist, loginArtist, registerArtist } from "@/lib/admin-auth";
+import {
+  changeOwnArtistPassword,
+  changeOwnNickname,
+  checkNewPassword,
+  endArtistSession,
+  getCurrentArtist,
+  loginArtist,
+  registerArtist,
+} from "@/lib/admin-auth";
 import { getAdminClient, IMAGE_BUCKET } from "@/lib/supabase-admin";
 
 export type LoginState = { message?: string };
@@ -32,10 +40,8 @@ export async function memberSignup(_prev: LoginState, formData: FormData): Promi
   const password = String(formData.get("password") ?? "");
   const confirm = String(formData.get("confirm") ?? "");
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { message: "이메일 주소를 정확히 입력해 주세요." };
-  if (!name) return { message: "닉네임을 입력해 주세요." };
-  if (name.length > 20) return { message: "닉네임은 20글자까지 쓸 수 있어요." };
-  if (password.length < 4) return { message: "비밀번호는 4글자 이상으로 정해 주세요." };
-  if (password !== confirm) return { message: "두 칸의 비밀번호가 서로 다릅니다." };
+  const passwordError = checkNewPassword(password, confirm);
+  if (passwordError) return { message: passwordError };
 
   const result = await registerArtist(email, name, password);
   if (!result.ok) return { message: result.message };
@@ -82,6 +88,32 @@ export async function updateMyAvatar(formData: FormData): Promise<AvatarResult> 
 
   revalidatePath("/", "layout");
   return { ok: true, message: remove ? "무프사로 바꿨어요." : "프사를 바꿨어요." };
+}
+
+/* ---------- 설정: 닉네임 / 비밀번호 바꾸기 (로그인한 회원 본인) ---------- */
+
+export async function changeMyNickname(_prev: LoginState & { ok?: boolean }, formData: FormData) {
+  const me = await getCurrentArtist();
+  if (!me || me.status === "blocked") return { message: "로그인이 필요해요. 새로고침 후 다시 해 주세요." };
+  const result = await changeOwnNickname(me.id, String(formData.get("name") ?? ""));
+  if (!result.ok) return { message: result.message };
+  revalidatePath("/", "layout");
+  return { ok: true, message: "닉네임을 바꿨어요." };
+}
+
+export async function changeMyPassword(_prev: LoginState & { ok?: boolean }, formData: FormData) {
+  const me = await getCurrentArtist();
+  if (!me || me.status === "blocked") return { message: "로그인이 필요해요. 새로고침 후 다시 해 주세요." };
+  const current = String(formData.get("current") ?? "");
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirm") ?? "");
+  if (!current) return { message: "지금 비밀번호를 입력해 주세요." };
+  const passwordError = checkNewPassword(password, confirm);
+  if (passwordError) return { message: passwordError };
+  if (password === current) return { message: "지금 비밀번호와 다른 비밀번호로 정해 주세요." };
+  const result = await changeOwnArtistPassword(me.id, current, password);
+  if (!result.ok) return { message: result.message };
+  return { ok: true, message: "비밀번호를 바꿨어요. 다른 기기에서는 다시 로그인해야 해요." };
 }
 
 export async function memberLogout() {

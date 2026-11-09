@@ -89,7 +89,44 @@ export function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
-type ArtistRow = Artist & { password_hash: string };
+type ArtistRow = Artist & { password_hash: string; failed_logins?: number; locked_until?: string | null };
+
+/* ---------- 해킹 막기 규칙 ----------
+   - 새 비밀번호는 8글자 이상
+   - 로그인 비밀번호를 5번 연속 틀리면 10분 동안 그 계정 로그인 잠금
+   - 비밀번호를 바꾸려면 지금 비밀번호를 한 번 더 확인
+   - 비밀번호를 바꾸면 다른 기기의 로그인은 자동으로 풀림 (로그인 기억 값에 비밀번호 정보가 들어 있어서)
+   - 닉네임은 다른 회원과 겹치면 안 되고, "회장"·"관리자"처럼 사칭할 수 있는 이름은 못 씀 */
+
+export const MIN_PASSWORD_LENGTH = 8;
+const MAX_FAILED_LOGINS = 5;
+const LOCK_MINUTES = 10;
+const FORBIDDEN_NAMES = ["회장", "관리자", "운영자", "운영진", "admin", "administrator", "세카이", "sekai"];
+
+/** 새 비밀번호 검사 (괜찮으면 null, 아니면 안내 문구) */
+export function checkNewPassword(password: string, confirm: string): string | null {
+  if (password.length < MIN_PASSWORD_LENGTH) return `비밀번호는 ${MIN_PASSWORD_LENGTH}글자 이상으로 정해 주세요.`;
+  if (password.length > 100) return "비밀번호가 너무 길어요.";
+  if (!/[A-Za-z가-힣]/.test(password) || !/\d/.test(password)) return "비밀번호에 글자와 숫자를 섞어 주세요.";
+  if (password !== confirm) return "두 칸의 비밀번호가 서로 다릅니다.";
+  return null;
+}
+
+/** 닉네임 검사: 1~20글자, 사칭 금지, 다른 회원과 겹치면 안 됨 (괜찮으면 null) */
+export async function checkNickname(name: string, selfId?: string): Promise<string | null> {
+  const trimmed = name.trim();
+  if (!trimmed) return "닉네임을 입력해 주세요.";
+  if (trimmed.length > 20) return "닉네임은 20글자까지 쓸 수 있어요.";
+  const plain = trimmed.replace(/\s/g, "").toLowerCase();
+  if (FORBIDDEN_NAMES.some((w) => plain.includes(w))) return "그 닉네임은 쓸 수 없어요. (회장·관리자 등 사칭 방지)";
+  const supabase = getAdminClient();
+  if (!supabase) return "Supabase가 연결되지 않았습니다.";
+  // % 와 _ 는 검색 기호라서 글자 그대로 비교하도록 앞에 \ 를 붙임 (대소문자 무시하고 같은 이름 찾기)
+  const escaped = trimmed.replace(/[\\%_]/g, (c) => "\\" + c);
+  const { data } = await supabase.from("artists").select("id").ilike("name", escaped);
+  if ((data ?? []).some((row: { id: string }) => row.id !== selfId)) return "이미 다른 회원이 쓰는 닉네임이에요.";
+  return null;
+}
 
 /** 로그인 기억용 표시. 비밀번호를 바꾸면 값이 달라져서 다른 기기의 로그인은 풀립니다. */
 function artistSignature(id: string, passwordHash: string) {
@@ -151,6 +188,9 @@ type AuthResult = { ok: true } | { ok: false; message: string };
 export async function registerArtist(email: string, name: string, password: string): Promise<AuthResult> {
   const supabase = getAdminClient();
   if (!supabase) return { ok: false, message: "Supabase가 연결되지 않았습니다." };
+  if (password.length < MIN_PASSWORD_LENGTH) return { ok: false, message: `비밀번호는 ${MIN_PASSWORD_LENGTH}글자 이상으로 정해 주세요.` };
+  const nameError = await checkNickname(name);
+  if (nameError) return { ok: false, message: nameError };
 
   const passwordHash = hashForStorage(password);
   const { data, error } = await supabase
@@ -166,24 +206,71 @@ export async function registerArtist(email: string, name: string, password: stri
   return { ok: true };
 }
 
-/** 작가 로그인 (막힌 계정은 로그인 불가) */
+/** 회원 로그인 (막힌 계정은 로그인 불가, 5번 틀리면 10분 잠금) */
 export async function loginArtist(email: string, password: string): Promise<AuthResult> {
+  const wrong = { ok: false as const, message: "이메일 또는 비밀번호가 올바르지 않습니다." };
   const row = await getArtistRow("email", normalizeEmail(email));
-  if (!row || !matchesStored(password, row.password_hash)) {
-    return { ok: false, message: "이메일 또는 비밀번호가 올바르지 않습니다." };
+  if (!row) return wrong;
+
+  const supabase = getAdminClient();
+  const lockedUntil = row.locked_until ? new Date(row.locked_until).getTime() : 0;
+  if (lockedUntil > Date.now()) {
+    const minutes = Math.ceil((lockedUntil - Date.now()) / 60000);
+    return { ok: false, message: `비밀번호를 여러 번 틀려서 잠겼어요. ${minutes}분 뒤에 다시 해 주세요.` };
   }
+
+  if (!matchesStored(password, row.password_hash)) {
+    const failed = (row.failed_logins ?? 0) + 1;
+    if (supabase) {
+      await supabase
+        .from("artists")
+        .update(
+          failed >= MAX_FAILED_LOGINS
+            ? { failed_logins: 0, locked_until: new Date(Date.now() + LOCK_MINUTES * 60000).toISOString() }
+            : { failed_logins: failed },
+        )
+        .eq("id", row.id);
+    }
+    if (failed >= MAX_FAILED_LOGINS) {
+      return { ok: false, message: `비밀번호를 ${MAX_FAILED_LOGINS}번 틀려서 ${LOCK_MINUTES}분 동안 잠겼어요.` };
+    }
+    return { ok: false, message: `${wrong.message} (${MAX_FAILED_LOGINS - failed}번 더 틀리면 ${LOCK_MINUTES}분 잠금)` };
+  }
+
   if (row.status === "blocked") return { ok: false, message: "회장이 막은 계정이에요. 회장에게 문의해 주세요." };
+  if (supabase && ((row.failed_logins ?? 0) > 0 || row.locked_until)) {
+    await supabase.from("artists").update({ failed_logins: 0, locked_until: null }).eq("id", row.id);
+  }
   await startArtistSessionFor(row);
   return { ok: true };
 }
 
-/** 작가 본인 비밀번호 바꾸기 (바꾼 기기는 계속 로그인 상태) */
-export async function changeOwnArtistPassword(artistId: string, newPassword: string): Promise<AuthResult> {
+/** 본인 비밀번호 바꾸기 — 지금 비밀번호가 맞아야 함. 바꾼 기기는 계속 로그인, 다른 기기는 로그인 풀림 */
+export async function changeOwnArtistPassword(
+  artistId: string,
+  currentPassword: string,
+  newPassword: string,
+): Promise<AuthResult> {
   const supabase = getAdminClient();
   if (!supabase) return { ok: false, message: "Supabase가 연결되지 않았습니다." };
+  const row = await getArtistRow("id", artistId);
+  if (!row || !matchesStored(currentPassword, row.password_hash)) {
+    return { ok: false, message: "지금 비밀번호가 맞지 않아요." };
+  }
   const passwordHash = hashForStorage(newPassword);
   const { error } = await supabase.from("artists").update({ password_hash: passwordHash }).eq("id", artistId);
   if (error) return { ok: false, message: `저장 실패: ${error.message}` };
   await startArtistSessionFor({ id: artistId, password_hash: passwordHash });
+  return { ok: true };
+}
+
+/** 본인 닉네임 바꾸기 (겹침·사칭 검사) */
+export async function changeOwnNickname(artistId: string, name: string): Promise<AuthResult> {
+  const supabase = getAdminClient();
+  if (!supabase) return { ok: false, message: "Supabase가 연결되지 않았습니다." };
+  const nameError = await checkNickname(name, artistId);
+  if (nameError) return { ok: false, message: nameError };
+  const { error } = await supabase.from("artists").update({ name: name.trim() }).eq("id", artistId);
+  if (error) return { ok: false, message: `저장 실패: ${error.message}` };
   return { ok: true };
 }

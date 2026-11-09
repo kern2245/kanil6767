@@ -6,8 +6,7 @@ import { ArrowLeft, MessagesSquare } from "lucide-react";
 import { getCurrentArtist, isAdmin } from "@/lib/admin-auth";
 import { Container } from "@/components/layout/container";
 import { Button } from "@/components/ui/button";
-import { artistLogout, changeArtistPassword } from "@/app/admin/actions";
-import { ArtistPasswordForm } from "@/app/admin/_components/artist-password-form";
+import { artistLogout } from "@/app/admin/actions";
 import { WebtoonManager } from "@/app/admin/_components/webtoon-manager";
 
 /* 작가 페이지 (주소: /artist) — 맨 아래 "작가" 버튼으로 들어옴. 회장 페이지와 따로 움직입니다.
@@ -116,12 +115,14 @@ export default async function ArtistPage() {
 
       <WebtoonManager artistId={artist.id} />
 
-      {/* 내 비밀번호 바꾸기 */}
-      <details className="mt-10 max-w-xl rounded-xl border px-6 py-4">
-        <summary className="cursor-pointer text-sm font-medium">내 비밀번호 바꾸기</summary>
-        <p className="mt-3 mb-5 text-sm text-muted-foreground">로그인 이메일: {artist.email}</p>
-        <ArtistPasswordForm onSave={changeArtistPassword} buttonLabel="바꾸기" />
-      </details>
+      {/* 닉네임·비밀번호·프사는 설정 페이지에서 (해킹 막기 규칙 적용) */}
+      <p className="mt-10 text-sm text-muted-foreground">
+        닉네임·비밀번호·프사는{" "}
+        <Link href="/settings" className="underline underline-offset-4">
+          설정
+        </Link>
+        에서 바꿀 수 있어요.
+      </p>
     </Container>
   );
 }

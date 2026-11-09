@@ -2,7 +2,7 @@
 
 /* 관리자·작가 페이지의 버튼들이 실제로 하는 일 (서버에서 실행됨)
    - startGithubLogin / logout : 회장 GitHub 로그인 시작, 로그아웃
-   - artistSignup / artistLogin / artistLogout / changeArtistPassword : 작가 가입·로그인·로그아웃·비밀번호 바꾸기
+   - artistLogout : 회원 로그아웃 (가입·로그인·비밀번호·닉네임 바꾸기는 app/login/actions.ts — 해킹 막기 규칙 적용)
    - saveItem / deleteItem : 카드 추가·수정 / 삭제 (회장만)
    - saveHero            : 첫 화면(히어로) 글자 저장 (회장만)
    - saveContactTexts    : (예전) TEA TIME 칸 글자 저장 — 지금은 광고판으로 바뀌어 안 씀
@@ -22,16 +22,7 @@ import { redirect } from "next/navigation";
 
 import { siteConfig } from "@/site.config";
 import { getAuthClient } from "@/lib/supabase-auth";
-import {
-  changeOwnArtistPassword,
-  endAdminSession,
-  endArtistSession,
-  getApprovedArtistId,
-  getCurrentArtist,
-  isAdmin,
-  loginArtist,
-  registerArtist,
-} from "@/lib/admin-auth";
+import { endAdminSession, endArtistSession, getApprovedArtistId, isAdmin } from "@/lib/admin-auth";
 import { getAdminClient, IMAGE_BUCKET } from "@/lib/supabase-admin";
 import { formatPublishAt, nextPublishAt, parsePublishChoice } from "@/lib/publish-time";
 import type { Weekday } from "@/lib/types";
@@ -67,54 +58,11 @@ export async function logout() {
   redirect("/admin");
 }
 
-/* ---------- 작가 가입 / 로그인 / 로그아웃 ---------- */
-
-function readNewPassword(formData: FormData): { password?: string; message?: string } {
-  const password = String(formData.get("password") ?? "");
-  const confirm = String(formData.get("confirm") ?? "");
-  if (password.length < 4) return { message: "비밀번호는 4글자 이상으로 정해 주세요." };
-  if (password !== confirm) return { message: "두 칸의 비밀번호가 서로 다릅니다." };
-  return { password };
-}
-
-/** 작가 가입 → 승인 대기 상태로 로그인됨 (회장이 승인해야 웹툰을 올릴 수 있음) */
-export async function artistSignup(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const email = String(formData.get("email") ?? "").trim();
-  const name = String(formData.get("name") ?? "").trim();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { message: "이메일 주소를 정확히 입력해 주세요." };
-  if (!name) return { message: "작가 이름을 입력해 주세요." };
-  const { password, message } = readNewPassword(formData);
-  if (!password) return { message };
-
-  const result = await registerArtist(email, name, password);
-  if (!result.ok) return { message: result.message };
-  revalidatePath("/admin");
-  redirect("/artist");
-}
-
-export async function artistLogin(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const email = String(formData.get("email") ?? "");
-  const password = String(formData.get("password") ?? "");
-  const result = await loginArtist(email, password);
-  if (!result.ok) return { message: result.message };
-  redirect("/artist");
-}
+/* ---------- 회원 로그아웃 ---------- */
 
 export async function artistLogout() {
   await endArtistSession();
   redirect("/artist");
-}
-
-/** 작가 본인 비밀번호 바꾸기 */
-export async function changeArtistPassword(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const artist = await getCurrentArtist();
-  if (!artist || artist.status === "blocked") return { message: "로그인이 필요합니다. 새로고침 후 다시 로그인하세요." };
-  const { password, message } = readNewPassword(formData);
-  if (!password) return { message };
-
-  const result = await changeOwnArtistPassword(artist.id, password);
-  if (!result.ok) return { message: result.message };
-  return { ok: true, message: "비밀번호를 바꿨습니다." };
 }
 
 /* ---------- 웹툰을 다룰 수 있는 사람 확인 ----------

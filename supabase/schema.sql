@@ -333,3 +333,7 @@ create table if not exists public.episode_views (
 
 create index if not exists episode_views_episode_idx on public.episode_views (episode_id);
 alter table public.episode_views enable row level security;
+
+-- 22) 해킹 막기: 로그인 비밀번호를 5번 연속 틀리면 그 계정은 10분 동안 로그인 잠금
+alter table public.artists add column if not exists failed_logins integer not null default 0;
+alter table public.artists add column if not exists locked_until timestamptz;

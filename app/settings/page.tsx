@@ -7,10 +7,12 @@ import { getCurrentArtist } from "@/lib/admin-auth";
 import { Navbar } from "@/components/layout/navbar";
 import { Container } from "@/components/layout/container";
 import { AvatarChange } from "@/components/layout/avatar-change";
+import { NicknameForm, PasswordForm } from "./_components/account-forms";
 
 /* 내 설정 (주소: /settings) — 맨 위 프사 메뉴의 "설정"으로 들어옴
    - 내 프사 + 이름 + 독자/작가
    - 프사 바꾸기 / 무프사로
+   - 닉네임 바꾸기 (겹침·사칭 금지) / 비밀번호 바꾸기 (지금 비밀번호 확인, 8글자+글자·숫자)
    - 내 웹툰 스튜디오로 가기
    로그인 안 했으면 로그인 페이지로 보냄 */
 
@@ -69,6 +71,18 @@ export default async function SettingsPage() {
           <section className="mt-4 overflow-hidden rounded-2xl border">
             <h2 className="border-b px-4 py-3 text-sm font-semibold">프사</h2>
             <AvatarChange hasAvatar={Boolean(me.avatar_url)} />
+          </section>
+
+          {/* 닉네임 */}
+          <section className="mt-4 overflow-hidden rounded-2xl border">
+            <h2 className="border-b px-4 py-3 text-sm font-semibold">닉네임</h2>
+            <NicknameForm current={me.name} />
+          </section>
+
+          {/* 비밀번호 */}
+          <section className="mt-4 overflow-hidden rounded-2xl border">
+            <h2 className="border-b px-4 py-3 text-sm font-semibold">비밀번호</h2>
+            <PasswordForm />
           </section>
 
           {/* 내 웹툰 */}
