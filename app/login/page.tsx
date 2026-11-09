@@ -34,24 +34,37 @@ export default async function LoginPage(props: PageProps<"/login">) {
   return (
     <>
       <Navbar />
-      <main className="flex-1 py-16">
-        <Container>
-          <h1 className="text-center text-2xl font-semibold">세카이 로그인</h1>
-          <p className="mt-2 mb-8 text-center text-sm text-muted-foreground">
-            독자·작가 모두 같은 계정으로 로그인해요.
-          </p>
-          {errorMessage ? (
-            <p className="mx-auto mb-4 max-w-sm rounded-lg border border-destructive/40 p-3 text-center text-sm text-destructive">
-              {errorMessage}
+      <main className="relative flex flex-1 items-center overflow-hidden py-16">
+        {/* 뒤에 은은하게 퍼지는 보라 빛 */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute top-1/2 left-1/2 size-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/20 blur-3xl"
+        />
+        <Container className="relative">
+          {/* 로그인 카드 */}
+          <div className="mx-auto w-full max-w-sm rounded-3xl border bg-background/70 p-8 shadow-2xl backdrop-blur sm:p-10">
+            <p className="text-center text-xs font-medium tracking-[0.3em] text-primary uppercase">Welcome to</p>
+            <h1 className="title-gradient mt-2 text-center text-4xl font-bold tracking-tight">세카이</h1>
+            <p className="mt-3 text-center text-sm leading-relaxed text-muted-foreground">
+              웹툰을 보고, 댓글을 남기고,
+              <br />내 웹툰도 올려 보세요.
             </p>
-          ) : null}
-          <SocialButtons next={nextPath} />
-          <div className="mx-auto my-6 flex max-w-sm items-center gap-3 text-xs text-muted-foreground">
-            <span className="h-px flex-1 bg-border" />
-            또는 예전 이메일 계정으로
-            <span className="h-px flex-1 bg-border" />
+
+            {errorMessage ? (
+              <p className="mt-6 rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-center text-sm text-destructive">
+                {errorMessage}
+              </p>
+            ) : null}
+
+            <div className="mt-8">
+              <SocialButtons next={nextPath} />
+              <p className="mt-3 text-center text-xs text-muted-foreground">처음이면 바로 가입돼요 · 10초면 끝!</p>
+            </div>
+
+            <div className="my-7 h-px bg-border" />
+
+            <LoginForm next={nextPath} />
           </div>
-          <LoginForm next={nextPath} />
         </Container>
       </main>
     </>
