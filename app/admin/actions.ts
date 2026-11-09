@@ -589,6 +589,44 @@ export async function deleteEpisode(formData: FormData) {
   revalidatePath("/", "layout");
 }
 
+/* ---------- 신고 처리 (회장만) — 회장 페이지 "신고" 탭 ----------
+   - resolveReport: 처리 완료 (목록에서 빠짐)
+   - deleteReportedComment: 신고된 댓글 지우기 + 처리 완료
+   - hideReportedWebtoon: 신고된 웹툰(회차면 그 회차의 웹툰)을 사이트에서 숨기기 + 처리 완료 (지우지 않음, 웹툰 탭에서 되돌릴 수 있음) */
+
+async function markReportDone(reportId: string) {
+  const supabase = getAdminClient();
+  if (!supabase || !reportId) return;
+  await supabase.from("reports").update({ status: "done" }).eq("id", reportId);
+}
+
+export async function resolveReport(formData: FormData): Promise<void> {
+  if (!(await isAdmin())) return;
+  await markReportDone(String(formData.get("reportId") ?? ""));
+  revalidatePath("/admin");
+}
+
+export async function deleteReportedComment(formData: FormData): Promise<void> {
+  if (!(await isAdmin())) return;
+  const supabase = getAdminClient();
+  const commentId = String(formData.get("targetId") ?? "");
+  if (!supabase || !commentId) return;
+  await supabase.from("comments").delete().eq("id", commentId);
+  // 같은 댓글에 대한 신고는 모두 처리 완료
+  await supabase.from("reports").update({ status: "done" }).eq("target_type", "comment").eq("target_id", commentId);
+  revalidatePath("/", "layout");
+}
+
+export async function hideReportedWebtoon(formData: FormData): Promise<void> {
+  if (!(await isAdmin())) return;
+  const supabase = getAdminClient();
+  const webtoonId = String(formData.get("webtoonId") ?? "");
+  if (!supabase || !webtoonId) return;
+  await supabase.from("webtoons").update({ is_visible: false }).eq("id", webtoonId);
+  await markReportDone(String(formData.get("reportId") ?? ""));
+  revalidatePath("/", "layout");
+}
+
 /* ---------- 작가 커뮤니티 관리 (회장만) ----------
    회장 페이지 "커뮤니티" 탭: 글을 골라서 한꺼번에 지우기 / 글 하나 지우기 / 댓글 지우기
    (글을 지우면 그 글의 댓글도 함께 지워짐) */

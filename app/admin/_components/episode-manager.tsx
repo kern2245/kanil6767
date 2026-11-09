@@ -75,6 +75,8 @@ type EpisodeRow = {
   scheduledLabel: string | null;
   /** 회차 썸네일 (없으면 무프사) */
   thumbnailUrl: string | null;
+  /** 작가 통계: 조회수 · 좋아요 · 싫어요 · 댓글 수 */
+  stats: { views: number; likes: number; dislikes: number; comments: number };
 };
 
 /** 회차 썸네일 작은 그림. 없으면 무프사(그림 아이콘) */
@@ -229,6 +231,9 @@ export function EpisodeManager({
                     예약 · {ep.scheduledLabel} 공개
                   </span>
                 ) : null}
+                <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline" title="조회 · 좋아요 · 싫어요 · 댓글">
+                  👀 {ep.stats.views} · 👍 {ep.stats.likes} · 👎 {ep.stats.dislikes} · 💬 {ep.stats.comments}
+                </span>
                 <span className="shrink-0 text-xs text-muted-foreground">그림 {ep.imageCount}장</span>
                 {canDelete ? (
                 <form

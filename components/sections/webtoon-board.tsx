@@ -91,7 +91,12 @@ export function WebtoonBoard({
 }) {
   const [view, setView] = useState<"weekly" | "completed">("weekly");
   const [selected, setSelected] = useState<Weekday>(today);
+  // 정렬: 기본순(회장이 정한 순서) / 인기순(조회수 + 좋아요×3)
+  const [sort, setSort] = useState<"default" | "popular">("default");
   const current = columns.find((c) => c.key === selected) ?? columns[0];
+  // 인기순이면 인기 점수 높은 순으로 (같으면 원래 순서)
+  const sorted = (items: Webtoon[]) =>
+    sort === "popular" ? [...items].sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0)) : items;
   const views = [
     { key: "weekly", ...weekly },
     { key: "completed", ...completedHeading },
@@ -103,7 +108,8 @@ export function WebtoonBoard({
       <p className="text-sm font-medium uppercase tracking-[0.2em] text-muted-foreground">
         {view === "weekly" ? weekly.eyebrow : completedHeading.eyebrow}
       </p>
-      <div className="mt-3 flex flex-wrap items-baseline gap-x-5 gap-y-2" role="tablist" aria-label="웹툰 종류">
+      <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
+      <div className="flex flex-wrap items-baseline gap-x-5 gap-y-2" role="tablist" aria-label="웹툰 종류">
         {views.map((v) => (
           <button
             key={v.key}
@@ -121,16 +127,46 @@ export function WebtoonBoard({
         ))}
       </div>
 
+      {/* 정렬: 기본순 / 인기순 🔥 */}
+      <div className="flex shrink-0 gap-1 rounded-full bg-muted p-1 text-xs font-semibold" role="group" aria-label="정렬">
+        {(
+          [
+            ["default", "기본순"],
+            ["popular", "🔥 인기순"],
+          ] as const
+        ).map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            aria-pressed={sort === key}
+            onClick={() => setSort(key)}
+            className={cn(
+              "rounded-full px-3 py-1.5 transition-colors",
+              sort === key ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      </div>
+
       {view === "completed" ? (
         completed.length === 0 ? (
           <p className="py-16 text-center text-sm text-muted-foreground">{completedHeading.empty}</p>
         ) : (
           <div className="mt-8">
-            <WebtoonGrid items={completed} />
+            <WebtoonGrid items={sorted(completed)} />
           </div>
         )
       ) : (
-        <WeekdayTabs columns={columns} current={current} selected={selected} onSelect={setSelected} today={today} />
+        <WeekdayTabs
+          columns={columns}
+          current={{ ...current, items: sorted(current.items) }}
+          selected={selected}
+          onSelect={setSelected}
+          today={today}
+        />
       )}
     </div>
   );

@@ -3,6 +3,7 @@ import { Plus } from "lucide-react";
 import { siteConfig } from "@/site.config";
 import { getAdminClient } from "@/lib/supabase-admin";
 import { formatPublishAt, isScheduled, publishOptions } from "@/lib/publish-time";
+import { getViewCounts } from "@/lib/views";
 import type { Episode, Webtoon } from "@/lib/types";
 import { NewWebtoonForm } from "./webtoon-form";
 import { StudioCard } from "./studio-card";
@@ -51,6 +52,28 @@ export async function WebtoonManager({ artistId, ownerOnly = false }: { artistId
     .from("episodes")
     .select("id, webtoon_id, number, title, image_urls, publish_at, thumbnail_url")
     .order("number", { ascending: true });
+
+  // 작가 통계: 회차별 조회수 · 좋아요 · 싫어요 · 댓글 수
+  const allEpisodeIds = ((episodeRows ?? []) as { id: string }[]).map((ep) => ep.id);
+  const [viewCounts, reactionRows, commentRows] = await Promise.all([
+    getViewCounts(allEpisodeIds),
+    allEpisodeIds.length
+      ? supabase.from("episode_reactions").select("episode_id, reaction").in("episode_id", allEpisodeIds)
+      : Promise.resolve({ data: [] }),
+    allEpisodeIds.length
+      ? supabase.from("comments").select("episode_id").in("episode_id", allEpisodeIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+  const countBy = (rows: { episode_id: string }[] | null | undefined, filter?: (r: { episode_id: string; reaction?: string }) => boolean) => {
+    const map = new Map<string, number>();
+    for (const r of rows ?? []) if (!filter || filter(r)) map.set(r.episode_id, (map.get(r.episode_id) ?? 0) + 1);
+    return map;
+  };
+  const reactions = (reactionRows.data ?? []) as { episode_id: string; reaction: string }[];
+  const likeCounts = countBy(reactions, (r) => r.reaction === "like");
+  const dislikeCounts = countBy(reactions, (r) => r.reaction === "dislike");
+  const commentCounts = countBy((commentRows.data ?? []) as { episode_id: string }[]);
+
   const episodesOf = (webtoonId: string) =>
     (
       (episodeRows ?? []) as Pick<
@@ -67,6 +90,12 @@ export async function WebtoonManager({ artistId, ownerOnly = false }: { artistId
         // 아직 공개 전이면 "11월 14일(금) 0시" 같은 공개 예정 시간 (회차 목록에 "예약" 으로 보임)
         scheduledLabel: isScheduled(ep.publish_at) ? formatPublishAt(ep.publish_at as string) : null,
         thumbnailUrl: ep.thumbnail_url ?? null,
+        stats: {
+          views: viewCounts.get(ep.id) ?? 0,
+          likes: likeCounts.get(ep.id) ?? 0,
+          dislikes: dislikeCounts.get(ep.id) ?? 0,
+          comments: commentCounts.get(ep.id) ?? 0,
+        },
       }));
 
   return (

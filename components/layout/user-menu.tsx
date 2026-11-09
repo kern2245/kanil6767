@@ -4,6 +4,7 @@ import { LogIn, LogOut } from "lucide-react";
 import { siteConfig } from "@/site.config";
 import { getCurrentArtist, isAdmin } from "@/lib/admin-auth";
 import { memberLogout } from "@/app/login/actions";
+import { getFavorites } from "@/lib/member-extras";
 import { logout as ownerLogout } from "@/app/admin/actions";
 
 /* 맨 위 검색 칸 옆 "로그인" 자리 (서버에서 로그인 상태 확인)
@@ -63,6 +64,7 @@ function AvatarMenu({
   link,
   logout,
   hideHeader = false,
+  alert = false,
   extra,
 }: {
   avatar: React.ReactNode;
@@ -73,6 +75,8 @@ function AvatarMenu({
   logout: () => Promise<void>;
   /** true 면 메뉴 맨 위 이름 칸을 숨김 (회장) */
   hideHeader?: boolean;
+  /** true 면 프사 오른쪽 위에 빨간 점 (관심 웹툰 새 회차) */
+  alert?: boolean;
   /** 이름 칸 아래에 넣을 것 (회원: 프사 바꾸기) */
   extra?: React.ReactNode;
 }) {
@@ -83,7 +87,14 @@ function AvatarMenu({
         title={`${title}으로 로그인됨`}
         className="flex cursor-pointer list-none rounded-full transition-opacity hover:opacity-90 [&::-webkit-details-marker]:hidden"
       >
-        {avatar}
+        <span className="relative">
+          {avatar}
+          {alert ? (
+            <span className="absolute -top-0.5 -right-0.5 size-3 rounded-full border-2 border-background bg-destructive">
+              <span className="sr-only">관심 웹툰에 새 회차가 있어요</span>
+            </span>
+          ) : null}
+        </span>
       </summary>
       <div className="absolute right-0 z-50 mt-2 w-48 overflow-hidden rounded-xl border bg-background shadow-xl">
         {hideHeader ? null : (
@@ -94,8 +105,12 @@ function AvatarMenu({
         )}
         {extra}
         {link ? (
-          <Link href={link.href} className="block px-4 py-2.5 text-sm transition-colors hover:bg-muted">
+          <Link
+            href={link.href}
+            className="flex items-center justify-between px-4 py-2.5 text-sm transition-colors hover:bg-muted"
+          >
             {link.label}
+            {alert ? <span className="text-xs font-semibold text-destructive">새 회차</span> : null}
           </Link>
         ) : null}
         <form action={logout}>
@@ -119,6 +134,8 @@ export async function UserMenu() {
   // 회원 로그인 (회장보다 먼저: 회원 계정으로 쓰는 중이면 그 계정을 보여줌)
   if (member) {
     const isArtist = member.status === "approved";
+    // 관심 웹툰에 새 회차가 나왔으면 빨간 점 (설정 → 관심 웹툰에서 확인)
+    const hasNew = (await getFavorites(member.id)).some((f) => f.hasNew);
     return (
       <AvatarMenu
         avatar={<LetterAvatar name={member.name} artist={isArtist} url={member.avatar_url} />}
@@ -126,6 +143,7 @@ export async function UserMenu() {
         hideHeader
         link={{ href: "/settings", label: "설정" }}
         logout={memberLogout}
+        alert={hasNew}
       />
     );
   }

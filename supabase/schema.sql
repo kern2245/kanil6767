@@ -337,3 +337,36 @@ alter table public.episode_views enable row level security;
 -- 22) 해킹 막기: 로그인 비밀번호를 5번 연속 틀리면 그 계정은 10분 동안 로그인 잠금
 alter table public.artists add column if not exists failed_logins integer not null default 0;
 alter table public.artists add column if not exists locked_until timestamptz;
+
+-- 23) 신고하기 — 로그인한 회원이 웹툰·회차·댓글을 신고, 회장이 회장 페이지 "신고" 탭에서 처리
+create table if not exists public.reports (
+  id           uuid primary key default gen_random_uuid(),
+  target_type  text not null check (target_type in ('webtoon','episode','comment')),
+  target_id    uuid not null,
+  reporter_id  uuid references public.artists (id) on delete set null,
+  reason       text not null check (char_length(reason) between 1 and 300),
+  status       text not null default 'open' check (status in ('open','done')),
+  created_at   timestamptz not null default now()
+);
+create index if not exists reports_status_idx on public.reports (status, created_at desc);
+alter table public.reports enable row level security;
+
+-- 24) 관심 웹툰 ⭐ — last_seen_at: 그 웹툰 페이지를 마지막으로 본 시간 (이후 새 회차가 나오면 알림 빨간 점)
+create table if not exists public.favorites (
+  member_id     uuid not null references public.artists (id) on delete cascade,
+  webtoon_id    uuid not null references public.webtoons (id) on delete cascade,
+  last_seen_at  timestamptz not null default now(),
+  created_at    timestamptz not null default now(),
+  primary key (member_id, webtoon_id)
+);
+alter table public.favorites enable row level security;
+
+-- 25) 이어보기 📖 — 회원이 웹툰마다 마지막으로 본 회차
+create table if not exists public.reading_history (
+  member_id       uuid not null references public.artists (id) on delete cascade,
+  webtoon_id      uuid not null references public.webtoons (id) on delete cascade,
+  episode_number  integer not null,
+  updated_at      timestamptz not null default now(),
+  primary key (member_id, webtoon_id)
+);
+alter table public.reading_history enable row level security;

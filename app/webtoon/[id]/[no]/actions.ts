@@ -5,6 +5,7 @@
    - deleteComment : 댓글 지우기 (쓴 회원 본인 또는 회장)
    - toggleReaction : 회차 좋아요 / 싫어요 누르기·취소 (로그인한 회원)
    - recordView     : 조회수 기록 (하루 1번 · 작가 본인·봇 제외 · 5초 머문 뒤)
+   - toggleFavorite / rememberReading : 관심 웹툰 ⭐ 넣기·빼기 / 이어보기용 마지막 본 회차 기억
    로그인·가입은 맨 위 "로그인"(/login, app/login/actions.ts) */
 
 import { randomUUID } from "crypto";
@@ -176,4 +177,51 @@ export async function recordView(episodeId: string) {
       { episode_id: episodeId, viewer_key: viewerKey, view_date: today },
       { onConflict: "episode_id,viewer_key,view_date", ignoreDuplicates: true },
     );
+}
+
+/* ---------- 관심 웹툰 ⭐ / 이어보기 📖 (로그인한 회원) ---------- */
+
+/** 관심 웹툰 넣기 / 빼기 (누를 때마다 바뀜) */
+export async function toggleFavorite(formData: FormData) {
+  const me = await getCurrentArtist();
+  if (!me || me.status === "blocked") return;
+  const webtoonId = String(formData.get("webtoonId") ?? "");
+  const supabase = getAdminClient();
+  if (!supabase || !/^[0-9a-f-]{36}$/i.test(webtoonId)) return;
+
+  const { data: existing } = await supabase
+    .from("favorites")
+    .select("webtoon_id")
+    .eq("member_id", me.id)
+    .eq("webtoon_id", webtoonId)
+    .maybeSingle();
+  if (existing) {
+    await supabase.from("favorites").delete().eq("member_id", me.id).eq("webtoon_id", webtoonId);
+  } else {
+    await supabase.from("favorites").insert({ member_id: me.id, webtoon_id: webtoonId });
+  }
+  revalidatePath("/", "layout");
+}
+
+/** 이 회차를 봤다고 기억 (이어보기용) — 회차 화면에 들어오면 바로 한 번 */
+export async function rememberReading(episodeId: string) {
+  const me = await getCurrentArtist();
+  if (!me || me.status === "blocked" || !episodeId) return;
+  const supabase = getAdminClient();
+  if (!supabase) return;
+  const { data: episode } = await supabase
+    .from("episodes")
+    .select("webtoon_id, number")
+    .eq("id", episodeId)
+    .maybeSingle();
+  if (!episode) return;
+  await supabase.from("reading_history").upsert(
+    {
+      member_id: me.id,
+      webtoon_id: episode.webtoon_id,
+      episode_number: episode.number,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "member_id,webtoon_id" },
+  );
 }

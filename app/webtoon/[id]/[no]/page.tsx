@@ -9,6 +9,8 @@ import { EpisodeComments } from "@/components/sections/episode-comments";
 import { EpisodeReactions } from "@/components/sections/episode-reactions";
 import { EpisodeViewCounter } from "@/components/sections/episode-view-counter";
 import { formatViews, getViewCounts } from "@/lib/views";
+import { getCurrentArtist } from "@/lib/admin-auth";
+import { ReportButton } from "@/components/sections/report-button";
 
 /* 웹툰 뷰어 (주소: /webtoon/웹툰번호/회차번호)
    - 만화 그림을 위에서 아래로 이어 붙여 보여줌 (세로 스크롤)
@@ -76,6 +78,8 @@ export default async function EpisodeViewerPage(props: PageProps<"/webtoon/[id]/
   ]);
   if (!webtoon || !episode) notFound();
   const views = (await getViewCounts([episode.id])).get(episode.id) ?? 0;
+  const me = await getCurrentArtist();
+  const loggedIn = Boolean(me && me.status !== "blocked");
 
   const index = episodes.findIndex((ep) => ep.number === number);
   const prev = index > 0 ? episodes[index - 1].number : undefined;
@@ -96,6 +100,14 @@ export default async function EpisodeViewerPage(props: PageProps<"/webtoon/[id]/
             </span>
             <span className="ml-2 text-xs text-muted-foreground">· 조회 {formatViews(views)}</span>
           </p>
+          <div className="ml-auto shrink-0">
+            <ReportButton
+              targetType="episode"
+              targetId={episode.id}
+              loggedIn={loggedIn}
+              returnPath={`/webtoon/${id}/${number}`}
+            />
+          </div>
         </div>
       </header>
 

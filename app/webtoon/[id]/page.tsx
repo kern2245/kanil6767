@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronRight, ImageIcon } from "lucide-react";
+import { BookOpen, ChevronRight, ImageIcon, Star } from "lucide-react";
 
 import { siteConfig } from "@/site.config";
 import { getEpisodes, getWebtoon } from "@/lib/data";
@@ -10,13 +10,16 @@ import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { Container } from "@/components/layout/container";
 import { Button } from "@/components/ui/button";
+import { getCurrentArtist } from "@/lib/admin-auth";
+import { getMemberWebtoonState, markFavoriteSeen } from "@/lib/member-extras";
+import { toggleFavorite } from "@/app/webtoon/[id]/[no]/actions";
+import { ReportButton } from "@/components/sections/report-button";
 
 /* 웹툰 페이지 (주소: /webtoon/웹툰번호)
-   - 위쪽: 표지 + 제목 + 연재 요일 + "첫화 보기" 버튼
+   - 위쪽: 표지 + 제목 + 연재 요일 + "첫화 보기" / (로그인 회원) "이어보기 N화" · ⭐ 관심 웹툰 · 🚩 신고
    - 아래쪽: 회차 목록 (최신 회차가 위, 회차마다 썸네일 — 없으면 무프사)
    - 회차는 관리자 페이지 "웹툰" 탭 → 각 웹툰의 "회차 관리"에서 올립니다. */
 
-export const revalidate = 60;
 
 export default async function WebtoonPage(props: PageProps<"/webtoon/[id]">) {
   const { id } = await props.params;
@@ -28,6 +31,14 @@ export default async function WebtoonPage(props: PageProps<"/webtoon/[id]">) {
   const viewCounts = await getViewCounts(episodes.map((ep) => ep.id));
   const totalViews = [...viewCounts.values()].reduce((a, b) => a + b, 0);
   const dayLabel = siteConfig.webtoons.weekdays.find((d) => d.key === webtoon.weekday)?.label;
+
+  // 로그인 회원: 관심 웹툰 여부 · 이어보기 (관심 웹툰이면 "봤음" 기록 → 새 회차 알림 꺼짐)
+  const current = await getCurrentArtist();
+  const member = current && current.status !== "blocked" ? current : null;
+  const state = member ? await getMemberWebtoonState(member.id, id) : { favorite: false, lastEpisode: null };
+  if (member && state.favorite) await markFavoriteSeen(member.id, id);
+  const continueEpisode =
+    state.lastEpisode !== null && episodes.some((ep) => ep.number === state.lastEpisode) ? state.lastEpisode : null;
 
   return (
     <>
@@ -49,11 +60,38 @@ export default async function WebtoonPage(props: PageProps<"/webtoon/[id]">) {
               <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{webtoon.title}</h1>
               {dayLabel ? <p className="mt-2 text-sm text-muted-foreground">{dayLabel}요웹툰</p> : null}
               <p className="mt-1 text-sm text-muted-foreground">총 {episodes.length}화 · 조회 {formatViews(totalViews)}</p>
-              {episodes.length > 0 ? (
-                <Button asChild size="sm" className="mt-4 w-fit">
-                  <Link href={`/webtoon/${id}/${episodes[0].number}`}>첫화 보기</Link>
-                </Button>
-              ) : null}
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                {continueEpisode !== null ? (
+                  <Button asChild size="sm">
+                    <Link href={`/webtoon/${id}/${continueEpisode}`}>
+                      <BookOpen />
+                      이어보기 {continueEpisode}화
+                    </Link>
+                  </Button>
+                ) : null}
+                {episodes.length > 0 ? (
+                  <Button asChild size="sm" variant={continueEpisode !== null ? "outline" : "default"}>
+                    <Link href={`/webtoon/${id}/${episodes[0].number}`}>첫화 보기</Link>
+                  </Button>
+                ) : null}
+                {member ? (
+                  <form action={toggleFavorite}>
+                    <input type="hidden" name="webtoonId" value={id} />
+                    <Button type="submit" size="sm" variant="outline" aria-pressed={state.favorite}>
+                      <Star className={state.favorite ? "fill-current text-up" : ""} />
+                      {state.favorite ? "관심 웹툰" : "관심 추가"}
+                    </Button>
+                  </form>
+                ) : (
+                  <Button asChild size="sm" variant="outline">
+                    <Link href={`/login?next=/webtoon/${id}`}>
+                      <Star />
+                      관심 추가
+                    </Link>
+                  </Button>
+                )}
+                <ReportButton targetType="webtoon" targetId={id} loggedIn={member !== null} returnPath={`/webtoon/${id}`} />
+              </div>
             </div>
           </div>
 

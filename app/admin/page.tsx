@@ -1,22 +1,19 @@
 import Link from "next/link";
-import Image from "next/image";
 import { ArrowLeft, EyeOff, LogIn } from "lucide-react";
 
-import { siteConfig } from "@/site.config";
 import { isAdmin, isAdminPasswordSet } from "@/lib/admin-auth";
 import { getAdminClient } from "@/lib/supabase-admin";
 import { getHeroTexts } from "@/lib/data";
-import type { Ad, Item } from "@/lib/types";
+import type { Ad } from "@/lib/types";
 import { Container } from "@/components/layout/container";
 import { Button } from "@/components/ui/button";
 import { logout, startGithubLogin } from "./actions";
-import { ItemForm } from "./_components/item-form";
 import { HeroForm } from "./_components/hero-form";
 import { AdForm, DeleteAdButton } from "./_components/ad-form";
-import { DeleteButton } from "./_components/delete-button";
 import { WebtoonManager } from "./_components/webtoon-manager";
 import { ArtistList } from "./_components/artist-list";
 import { CommunityManager } from "./_components/community-manager";
+import { ReportList } from "./_components/report-list";
 import { getCommunityForOwner } from "@/lib/community";
 
 /* 관리자 페이지 (주소: /admin)
@@ -58,7 +55,7 @@ function AdminTopBar() {
   );
 }
 
-/** 탭: 맨 앞 "히어로" + site.config.ts 의 adminSections */
+/** 탭: 히어로 · 광고판 · 웹툰 · 회원 · 커뮤니티 · 신고 (예전 "기능" 예시 카드 탭은 사이트에 안 보여서 뺐어요) */
 function SectionTabs({ current }: { current: string }) {
   const tabs = [
     { key: "hero", label: "히어로" },
@@ -66,7 +63,7 @@ function SectionTabs({ current }: { current: string }) {
     { key: "webtoons", label: "웹툰" },
     { key: "artist", label: "회원" },
     { key: "community", label: "커뮤니티" },
-    ...siteConfig.adminSections,
+    { key: "reports", label: "신고" },
   ];
   return (
     <nav className="mt-8 flex flex-wrap gap-2">
@@ -142,10 +139,8 @@ export default async function AdminPage(props: PageProps<"/admin">) {
     );
   }
 
-  const sections = siteConfig.adminSections;
   const requested = typeof searchParams.section === "string" ? searchParams.section : undefined;
   const isHeroTab = requested === "hero";
-  const current = sections.find((s) => s.key === requested) ?? sections[0];
 
   // "히어로" 탭: 첫 화면 글자 수정
   if (isHeroTab) {
@@ -269,85 +264,29 @@ export default async function AdminPage(props: PageProps<"/admin">) {
     );
   }
 
-  // "웹툰" 탭: 요일별 웹툰 추가·수정·삭제
-  if (requested === "webtoons") {
+  // "신고" 탭: 회원이 신고한 웹툰·회차·댓글 처리
+  if (requested === "reports") {
     return (
       <Container className="py-10">
         <AdminTopBar />
-        <SectionTabs current="webtoons" />
-        <WebtoonManager />
+        <SectionTabs current="reports" />
+        <section className="mt-8 max-w-3xl">
+          <h2 className="text-lg font-semibold">신고</h2>
+          <p className="mt-1 mb-5 text-sm text-muted-foreground">
+            회원이 신고한 웹툰·회차·댓글이에요. 확인하고 지우거나 숨기거나, 문제가 없으면 &lsquo;처리 완료&rsquo;를 눌러 주세요.
+          </p>
+          <ReportList />
+        </section>
       </Container>
     );
   }
 
-  const { data, error } = await supabase
-    .from("items")
-    .select("*")
-    .eq("section", current.key)
-    .order("sort_order", { ascending: true })
-    .order("created_at", { ascending: true });
-  const items = (data ?? []) as Item[];
-
+  // "웹툰" 탭 (처음 들어오면 이 탭): 요일별 웹툰 추가·수정·삭제
   return (
     <Container className="py-10">
       <AdminTopBar />
-      <SectionTabs current={current.key} />
-
-      {error ? (
-        <p className="mt-6 rounded-lg border border-destructive/40 p-4 text-sm text-destructive">
-          데이터를 불러오지 못했습니다: {error.message}
-          <br />
-          supabase/schema.sql 을 Supabase SQL Editor 에서 실행했는지 확인하세요.
-        </p>
-      ) : null}
-
-      <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-        {/* 새 항목 추가 */}
-        <section className="h-fit rounded-xl border p-6">
-          <h2 className="mb-5 text-lg font-semibold">{current.label} 추가</h2>
-          <ItemForm section={current.key} />
-        </section>
-
-        {/* 등록된 항목 목록 */}
-        <section>
-          <h2 className="mb-5 text-lg font-semibold">
-            등록된 {current.label} <span className="text-muted-foreground">({items.length})</span>
-          </h2>
-          {items.length === 0 ? (
-            <p className="text-sm text-muted-foreground">아직 없습니다. 왼쪽에서 추가해 보세요.</p>
-          ) : (
-            <ul className="space-y-3">
-              {items.map((item) => (
-                <li key={item.id} className="rounded-xl border">
-                  <div className="flex items-center gap-4 p-4">
-                    <div className="relative size-14 shrink-0 overflow-hidden rounded-lg bg-muted">
-                      {item.image_url ? (
-                        <Image src={item.image_url} alt="" fill sizes="56px" className="object-cover" />
-                      ) : null}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="flex items-center gap-2 font-medium">
-                        <span className="truncate">{item.title}</span>
-                        {!item.is_visible ? (
-                          <EyeOff className="size-4 shrink-0 text-muted-foreground" aria-label="숨김" />
-                        ) : null}
-                      </p>
-                      <p className="text-xs text-muted-foreground">순서 {item.sort_order}</p>
-                    </div>
-                    <DeleteButton id={item.id} imageUrl={item.image_url} />
-                  </div>
-                  <details className="border-t px-4 py-3">
-                    <summary className="cursor-pointer text-sm text-muted-foreground">수정하기</summary>
-                    <div className="pt-4">
-                      <ItemForm section={current.key} item={item} />
-                    </div>
-                  </details>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </div>
+      <SectionTabs current="webtoons" />
+      <WebtoonManager />
     </Container>
   );
 }

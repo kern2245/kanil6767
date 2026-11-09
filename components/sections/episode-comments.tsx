@@ -7,6 +7,7 @@ import { getComments } from "@/lib/data";
 import { getAdminClient } from "@/lib/supabase-admin";
 import { Button } from "@/components/ui/button";
 import { CommentForm, CommentSheet } from "./comment-forms";
+import { ReportButton } from "./report-button";
 
 /* 회차 댓글 (웹툰 앱처럼)
    - 화면 아래에 항상 떠 있는 바: 이전화 · 목록 · 💬댓글 수 · 다음화
@@ -115,6 +116,9 @@ export async function EpisodeComments({ episodeId, path, listHref, prevHref, nex
                     </p>
                     <p className="mt-1 text-sm leading-relaxed break-words whitespace-pre-wrap">{comment.body}</p>
                   </div>
+                  {!canDelete ? (
+                    <ReportButton targetType="comment" targetId={comment.id} loggedIn={member !== null} returnPath={path} />
+                  ) : null}
                   {canDelete ? (
                     <form action={deleteComment}>
                       <input type="hidden" name="commentId" value={comment.id} />

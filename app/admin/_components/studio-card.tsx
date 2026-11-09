@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { CalendarClock, EyeOff, ImageIcon, Layers, Pencil, Settings2 } from "lucide-react";
+import { BarChart3, CalendarClock, EyeOff, ImageIcon, Layers, Pencil, Settings2 } from "lucide-react";
 
 import type { PublishOption } from "@/lib/publish-time";
 import type { Webtoon } from "@/lib/types";
@@ -21,6 +21,8 @@ type EpisodeRow = {
   imageCount: number;
   scheduledLabel: string | null;
   thumbnailUrl: string | null;
+  /** 작가 통계: 조회수 · 좋아요 · 싫어요 · 댓글 수 */
+  stats: { views: number; likes: number; dislikes: number; comments: number };
 };
 
 type Tab = "episodes" | "edit" | "settings";
@@ -51,6 +53,15 @@ export function StudioCard({
 }) {
   const [tab, setTab] = useState<Tab | null>(null);
   const nextScheduled = episodes.find((ep) => ep.scheduledLabel)?.scheduledLabel ?? null;
+  // 작가 통계 합계 (모든 회차)
+  const total = episodes.reduce(
+    (acc, ep) => ({
+      views: acc.views + ep.stats.views,
+      likes: acc.likes + ep.stats.likes,
+      comments: acc.comments + ep.stats.comments,
+    }),
+    { views: 0, likes: 0, comments: 0 },
+  );
 
   return (
     <li className="overflow-hidden rounded-2xl border bg-muted/20">
@@ -96,6 +107,15 @@ export function StudioCard({
               <dt className="sr-only">회차</dt>
               <dd>
                 총 <span className="font-semibold text-foreground">{episodes.length}</span>화
+              </dd>
+            </div>
+            <div className="flex items-center gap-1.5" title="모든 회차 합계: 조회 · 좋아요 · 댓글">
+              <BarChart3 className="size-4 shrink-0" />
+              <dt className="sr-only">통계</dt>
+              <dd>
+                조회 <span className="font-semibold text-foreground">{total.views}</span> · 👍{" "}
+                <span className="font-semibold text-foreground">{total.likes}</span> · 💬{" "}
+                <span className="font-semibold text-foreground">{total.comments}</span>
               </dd>
             </div>
             {nextScheduled ? (
