@@ -4,7 +4,10 @@
    독자·작가가 한 계정이에요. 가입하면 독자, 회장이 "작가로 승급"하면 작가. */
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+
+import { getAuthClient } from "@/lib/supabase-auth";
 
 import {
   changeOwnArtistPassword,
@@ -23,6 +26,36 @@ export type LoginState = { message?: string };
 function nextPath(formData: FormData) {
   const next = String(formData.get("next") ?? "");
   return next.startsWith("/") && !next.startsWith("//") ? next : "/";
+}
+
+/* ---------- 구글 · 카카오로 로그인 / 가입 ----------
+   누르면 구글/카카오 로그인 화면으로 갔다가 /auth/member-callback 으로 돌아옴 (app/auth/member-callback/route.ts) */
+
+export async function startSocialLogin(formData: FormData) {
+  const provider = String(formData.get("provider") ?? "");
+  if (provider !== "google" && provider !== "kakao") redirect("/login");
+  const next = nextPath(formData);
+
+  const supabase = await getAuthClient();
+  if (!supabase) redirect("/login?error=supabase");
+
+  // 지금 접속한 주소(내 컴퓨터 / 인터넷 사이트)로 다시 돌아오게
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host");
+  const proto = h.get("x-forwarded-proto") ?? (host?.startsWith("localhost") ? "http" : "https");
+  const redirectTo = `${proto}://${host}/auth/member-callback?next=${encodeURIComponent(next)}`;
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider,
+    options: {
+      redirectTo,
+      skipBrowserRedirect: true,
+      // 카카오는 이메일·닉네임·프사를 받으려면 이 항목들이 필요해요
+      ...(provider === "kakao" ? { scopes: "account_email profile_nickname profile_image" } : {}),
+    },
+  });
+  if (error || !data.url) redirect(`/login?error=${provider}`);
+  redirect(data.url);
 }
 
 export async function memberLogin(_prev: LoginState, formData: FormData): Promise<LoginState> {

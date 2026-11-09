@@ -274,3 +274,47 @@ export async function changeOwnNickname(artistId: string, name: string): Promise
   if (error) return { ok: false, message: `저장 실패: ${error.message}` };
   return { ok: true };
 }
+
+/* ---------- 구글 · 카카오로 로그인 (회원) ----------
+   - 구글/카카오가 "확인된 이메일"이라고 알려준 계정만 받음 (가짜 이메일 가입 막기)
+   - 같은 이메일로 이미 가입한 회원이 있으면 그 계정으로 로그인 (계정 하나로 이어짐)
+   - 처음이면 회원(독자)으로 새로 만듦: 닉네임은 구글/카카오 이름 (겹치거나 사칭이면 뒤에 숫자),
+     프사는 구글/카카오 프로필 사진, 비밀번호는 아무도 모르는 무작위 값 (이메일 로그인은 안 되고 소셜 로그인으로만) */
+
+export async function loginWithSocialAccount(input: {
+  email: string;
+  name: string;
+  avatarUrl: string | null;
+}): Promise<AuthResult> {
+  const supabase = getAdminClient();
+  if (!supabase) return { ok: false, message: "Supabase가 연결되지 않았습니다." };
+  const email = normalizeEmail(input.email);
+
+  const existing = await getArtistRow("email", email);
+  if (existing) {
+    if (existing.status === "blocked") return { ok: false, message: "회장이 막은 계정이에요. 회장에게 문의해 주세요." };
+    if (!existing.avatar_url && input.avatarUrl) {
+      await supabase.from("artists").update({ avatar_url: input.avatarUrl }).eq("id", existing.id);
+    }
+    await startArtistSessionFor(existing);
+    return { ok: true };
+  }
+
+  // 닉네임 정하기: 이름 그대로 → 안 되면 이름+숫자 → 그래도 안 되면 "회원+숫자"
+  const base = input.name.trim().slice(0, 16) || "회원";
+  let name = base;
+  for (let i = 0; i < 20 && (await checkNickname(name)); i++) {
+    name = `${i < 10 ? base : "회원"}${Math.floor(1000 + Math.random() * 9000)}`;
+  }
+  if (await checkNickname(name)) return { ok: false, message: "닉네임을 정하지 못했어요. 다시 시도해 주세요." };
+
+  const passwordHash = hashForStorage(randomBytes(24).toString("hex"));
+  const { data, error } = await supabase
+    .from("artists")
+    .insert({ email, name, password_hash: passwordHash, status: "member", avatar_url: input.avatarUrl })
+    .select("id")
+    .single();
+  if (error) return { ok: false, message: `가입 실패: ${error.message}` };
+  await startArtistSessionFor({ id: data.id as string, password_hash: passwordHash });
+  return { ok: true };
+}
