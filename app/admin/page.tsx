@@ -240,8 +240,8 @@ export default async function AdminPage(props: PageProps<"/admin">) {
         <section className="mt-8 max-w-3xl">
           <h2 className="text-lg font-semibold">회원 목록</h2>
           <p className="mt-1 mb-5 text-sm text-muted-foreground">
-            누구나 맨 위 &lsquo;로그인&rsquo;에서 가입하면 독자가 돼요(댓글 가능). <b>작가로 승급</b>한 회원만 웹툰을 올리고
-            작가 커뮤니티에 들어갈 수 있어요.
+            누구나 맨 위 &lsquo;로그인&rsquo;에서 가입하면 댓글도 달고 웹툰도 올릴 수 있어요. <b>작가로 승급</b>하면 이름 앞에
+            &lsquo;작가&rsquo; 표시가 붙고 작가 커뮤니티에 들어갈 수 있어요.
           </p>
           <ArtistList />
         </section>

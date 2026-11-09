@@ -112,13 +112,21 @@ export async function getCurrentArtist(): Promise<Artist | null> {
   if (!id || !signature) return null;
   const row = await getArtistRow("id", id);
   if (!row || artistSignature(row.id, row.password_hash) !== signature) return null;
-  return { id: row.id, email: row.email, name: row.name, status: row.status, created_at: row.created_at };
+  return {
+    id: row.id,
+    email: row.email,
+    name: row.name,
+    status: row.status,
+    created_at: row.created_at,
+    avatar_url: row.avatar_url ?? null,
+  };
 }
 
-/** 지금 접속한 사람이 '승인된' 작가인지 (승인된 작가만 웹툰을 올릴 수 있음) */
+/** 지금 접속한 회원이 웹툰을 올릴 수 있으면 그 회원 id (독자·작가 모두 가능, 막힌 계정만 안 됨)
+    ("작가" 승급은 이름 앞 "작가" 표시 + 작가 커뮤니티 입장) */
 export async function getApprovedArtistId(): Promise<string | null> {
   const artist = await getCurrentArtist();
-  return artist?.status === "approved" ? artist.id : null;
+  return artist && artist.status !== "blocked" ? artist.id : null;
 }
 
 async function startArtistSessionFor(row: Pick<ArtistRow, "id" | "password_hash">) {

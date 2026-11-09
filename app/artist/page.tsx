@@ -12,7 +12,7 @@ import { WebtoonManager } from "@/app/admin/_components/webtoon-manager";
 
 /* 작가 페이지 (주소: /artist) — 맨 아래 "작가" 버튼으로 들어옴. 회장 페이지와 따로 움직입니다.
    1) 로그인 안 했으면 → 맨 위 "로그인"과 같은 /login 으로 보냄 (독자·작가 한 계정)
-   2) 아직 독자(회장이 작가로 승급 안 함)면 → "작가 승급 전" 안내
+   2) 독자·작가 모두 → 내 웹툰 스튜디오 (웹툰 올리기 가능). 작가(회장이 승급)는 "작가님" + 작가 커뮤니티 버튼
    3) 회장이 막았으면 → "막힌 계정" 안내
    4) 승인됐으면 → 내가 올린 웹툰만 추가·수정·삭제 + 회차 올리기 + 내 비밀번호 바꾸기 + "작가 커뮤니티" 버튼
    회장으로 로그인돼 있고 작가 로그인을 안 했으면 → 회장이 직접 올린 웹툰만 관리 (다른 작가 웹툰은 안 보임, 회장 페이지에서 관리) */
@@ -91,22 +91,10 @@ export default async function ArtistPage() {
     redirect("/login?next=/artist");
   }
 
-  if (artist.status === "member" || artist.status === "pending") {
-    return (
-      <Container className="py-10">
-        <TopBar title={`${artist.name} 님`} showLogout />
-        <Notice title="아직 독자 계정이에요">
-          <p>지금은 웹툰을 읽고 댓글을 달 수 있어요.</p>
-          <p>웹툰을 올리고 싶으면 회장에게 <b>작가 승급</b>을 부탁하세요. 회장이 작가로 승급하면 이 페이지에서 바로 웹툰을 올릴 수 있어요.</p>
-        </Notice>
-      </Container>
-    );
-  }
-
   if (artist.status === "blocked") {
     return (
       <Container className="py-10">
-        <TopBar title={`${artist.name} 작가님`} showLogout />
+        <TopBar title={`${artist.name} 님`} showLogout />
         <Notice title="막힌 계정이에요">
           <p>회장이 이 계정을 막았어요. 궁금한 점은 회장에게 문의해 주세요.</p>
         </Notice>
@@ -116,9 +104,14 @@ export default async function ArtistPage() {
 
   return (
     <Container className="py-10">
-      <TopBar title={`${artist.name} 작가님`} showLogout showCommunity />
+      <TopBar
+        title={artist.status === "approved" ? `${artist.name} 작가님` : `${artist.name} 님의 스튜디오`}
+        showLogout
+        showCommunity={artist.status === "approved"}
+      />
       <p className="mt-2 text-sm text-muted-foreground">
         내가 올린 웹툰만 보여요. 웹툰을 추가하고, 회차(만화 그림·PDF)를 올리고, 지울 수 있어요.
+        {artist.status !== "approved" ? " 회장이 작가로 승급하면 이름 앞에 '작가' 표시가 붙고 작가 커뮤니티에 들어갈 수 있어요." : ""}
       </p>
 
       <WebtoonManager artistId={artist.id} />

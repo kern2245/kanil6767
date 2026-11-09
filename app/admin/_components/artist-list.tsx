@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { DeleteArtistButton } from "./delete-artist-button";
 
 /* 회장 페이지 "회원" 탭: 가입한 회원 목록 (독자·작가 한 계정)
-   - 독자 → "작가로 승급" (웹툰 올리기·작가 커뮤니티 가능)
+   - 독자 → "작가로 승급" ("작가" 표시 + 작가 커뮤니티 입장. 웹툰 올리기는 독자도 가능)
    - 작가 → "독자로 내리기"
    - 막기 / 막기 풀기(→ 독자) / 삭제
    작가가 맨 위, 그다음 독자, 막힌 회원은 맨 아래 */
@@ -89,7 +89,7 @@ export async function ArtistList() {
               </p>
               <p className="truncate text-xs text-muted-foreground">
                 {m.email}
-                {m.status === "approved" ? ` · 웹툰 ${countOf(m.id)}개` : ""} · 가입{" "}
+                {countOf(m.id) > 0 ? ` · 웹툰 ${countOf(m.id)}개` : ""} · 가입{" "}
                 {new Date(m.created_at).toLocaleDateString("ko-KR", { timeZone: "Asia/Seoul" })}
               </p>
             </div>

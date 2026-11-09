@@ -64,7 +64,7 @@ export type Episode = {
 };
 
 /** 회원(계정) 상태 — 독자·작가가 한 계정 (artists 표)
-    member: 독자(가입하면 기본, 댓글 가능) / approved: 작가(회장이 승급, 웹툰 올리기 가능)
+    member: 독자(가입하면 기본, 댓글·웹툰 올리기 가능) / approved: 작가(회장이 승급, "작가" 표시 + 작가 커뮤니티)
     pending: 예전 "승인 대기" (지금은 독자와 같음) / blocked: 막힘 */
 export type ArtistStatus = "member" | "pending" | "approved" | "blocked";
 
@@ -75,6 +75,8 @@ export type Artist = {
   name: string;
   status: ArtistStatus;
   created_at: string;
+  /** 프사 주소 (없으면 닉네임 첫 글자 동그라미) */
+  avatar_url?: string | null;
 };
 
 /** 회장 페이지에서 바꿀 수 있는 TEA TIME(연락처) 칸 글자. supabase/schema.sql 의 contact_texts 테이블과 같습니다. */

@@ -86,7 +86,7 @@ export function LoginForm({ next }: { next: string }) {
             {signupPending ? "가입 중..." : "가입하기"}
           </Button>
           <p className="text-xs leading-relaxed text-muted-foreground">
-            가입하면 독자로 시작해서 댓글을 달 수 있어요. 웹툰을 올리고 싶으면 회장에게 작가 승급을 부탁하세요.
+            가입하면 바로 댓글을 달고 웹툰도 올릴 수 있어요. 회장이 작가로 승급하면 이름 앞에 &quot;작가&quot; 표시가 붙어요.
           </p>
         </form>
       )}

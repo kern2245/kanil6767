@@ -1,57 +1,156 @@
 import Link from "next/link";
-import { LogIn, LogOut, PenSquare } from "lucide-react";
+import { LogIn, LogOut } from "lucide-react";
 
-import { getCurrentArtist } from "@/lib/admin-auth";
+import { siteConfig } from "@/site.config";
+import { getCurrentArtist, isAdmin } from "@/lib/admin-auth";
 import { memberLogout } from "@/app/login/actions";
+import { logout as ownerLogout } from "@/app/admin/actions";
+import { AvatarChange } from "@/components/layout/avatar-change";
 
 /* 맨 위 검색 칸 옆 "로그인" 자리 (서버에서 로그인 상태 확인)
-   - 로그인 안 함: "로그인" 버튼 → /login
-   - 로그인함: 내 닉네임 (작가면 "작가" 표시 + "작가 스튜디오" 버튼) + 로그아웃 */
-export async function UserMenu() {
-  const member = await getCurrentArtist();
+   - 아무 로그인도 안 함: "로그인" 버튼 → /login
+   - 로그인하면 동그란 프사만 보임 (회장: GitHub 프로필 사진 / 회원: 닉네임 첫 글자, 작가는 보라색)
+   - 프사를 누르면 작은 메뉴: 이름 · (회원) 프사 바꾸기·무프사로 · (회장 페이지 / 내 웹툰 스튜디오) · 로그아웃 */
 
-  if (!member || member.status === "blocked") {
+/** 회장 프사: GitHub 프로필 사진 (site.config.ts 의 ownerGithubLogin 계정) */
+function OwnerAvatar() {
+  return (
+    // GitHub 프로필 사진 주소라 일반 img 를 씀 (next/image 는 허용 주소 설정이 필요해서)
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={`https://github.com/${siteConfig.ownerGithubLogin}.png?size=64`}
+      alt=""
+      width={32}
+      height={32}
+      className="size-8 shrink-0 rounded-full border-2 border-primary object-cover"
+    />
+  );
+}
+
+/** 회원 프사: 올린 사진이 있으면 그 사진, 없으면 닉네임 첫 글자 동그라미 (작가는 보라 테두리/배경) */
+function LetterAvatar({ name, artist, url }: { name: string; artist: boolean; url?: string | null }) {
+  if (url) {
     return (
-      <Link
-        href="/login"
-        className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={url}
+        alt=""
+        width={32}
+        height={32}
+        className={`size-8 shrink-0 rounded-full object-cover ${artist ? "border-2 border-primary" : "border"}`}
+      />
+    );
+  }
+  return (
+    <span
+      aria-hidden
+      className={
+        artist
+          ? "flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground"
+          : "flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-bold text-foreground"
+      }
+    >
+      {name.trim().charAt(0) || "?"}
+    </span>
+  );
+}
+
+/** 프사만 보이고, 누르면 작은 메뉴가 열림 (이름 · 이동 · 로그아웃) */
+function AvatarMenu({
+  avatar,
+  title,
+  subtitle,
+  link,
+  logout,
+  hideHeader = false,
+  extra,
+}: {
+  avatar: React.ReactNode;
+  title: string;
+  /** 이름 아래 작은 글씨 (없으면 안 보임) */
+  subtitle?: string;
+  link: { href: string; label: string } | null;
+  logout: () => Promise<void>;
+  /** true 면 메뉴 맨 위 이름 칸을 숨김 (회장) */
+  hideHeader?: boolean;
+  /** 이름 칸 아래에 넣을 것 (회원: 프사 바꾸기) */
+  extra?: React.ReactNode;
+}) {
+  return (
+    <details className="relative shrink-0">
+      <summary
+        aria-label={`${title} 메뉴`}
+        title={`${title}으로 로그인됨`}
+        className="flex cursor-pointer list-none rounded-full transition-opacity hover:opacity-90 [&::-webkit-details-marker]:hidden"
       >
-        <LogIn className="size-4" />
-        로그인
-      </Link>
+        {avatar}
+      </summary>
+      <div className="absolute right-0 z-50 mt-2 w-48 overflow-hidden rounded-xl border bg-background shadow-xl">
+        {hideHeader ? null : (
+          <div className="border-b px-4 py-3">
+            <p className="truncate text-sm font-semibold">{title}</p>
+            {subtitle ? <p className="text-xs text-muted-foreground">{subtitle}</p> : null}
+          </div>
+        )}
+        {extra}
+        {link ? (
+          <Link href={link.href} className="block px-4 py-2.5 text-sm transition-colors hover:bg-muted">
+            {link.label}
+          </Link>
+        ) : null}
+        <form action={logout}>
+          <button
+            type="submit"
+            className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <LogOut className="size-4" />
+            로그아웃
+          </button>
+        </form>
+      </div>
+    </details>
+  );
+}
+
+export async function UserMenu() {
+  const [current, owner] = await Promise.all([getCurrentArtist(), isAdmin()]);
+  const member = current && current.status !== "blocked" ? current : null;
+
+  // 회원 로그인 (회장보다 먼저: 회원 계정으로 쓰는 중이면 그 계정을 보여줌)
+  if (member) {
+    const isArtist = member.status === "approved";
+    return (
+      <AvatarMenu
+        avatar={<LetterAvatar name={member.name} artist={isArtist} url={member.avatar_url} />}
+        title={member.name}
+        subtitle={isArtist ? "작가" : "독자"}
+        link={{ href: "/artist", label: "내 웹툰 스튜디오" }}
+        logout={memberLogout}
+        extra={<AvatarChange hasAvatar={Boolean(member.avatar_url)} />}
+      />
     );
   }
 
-  const isArtist = member.status === "approved";
+  // 회장 로그인 → 회장 프사만
+  if (owner) {
+    return (
+      <AvatarMenu
+        avatar={<OwnerAvatar />}
+        title="회장"
+        hideHeader
+        link={{ href: "/admin", label: "회장 페이지" }}
+        logout={ownerLogout}
+      />
+    );
+  }
+
   return (
-    <div className="flex shrink-0 items-center gap-2">
-      {isArtist ? (
-        <Link
-          href="/artist"
-          className="hidden h-9 items-center gap-1.5 rounded-full border px-3 text-sm font-medium transition-colors hover:bg-muted sm:inline-flex"
-        >
-          <PenSquare className="size-4" />
-          작가 스튜디오
-        </Link>
-      ) : null}
-      <span className="flex max-w-28 items-center gap-1 truncate text-sm font-semibold">
-        {isArtist ? (
-          <span className="shrink-0 rounded-full bg-primary px-1.5 text-[10px] font-bold leading-4 text-primary-foreground">
-            작가
-          </span>
-        ) : null}
-        <span className="truncate">{member.name}</span>
-      </span>
-      <form action={memberLogout}>
-        <button
-          type="submit"
-          aria-label="로그아웃"
-          title="로그아웃"
-          className="inline-flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-        >
-          <LogOut className="size-4" />
-        </button>
-      </form>
-    </div>
+    <Link
+      href="/login"
+      className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+    >
+      <LogIn className="size-4" />
+      로그인
+    </Link>
   );
 }

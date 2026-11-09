@@ -303,3 +303,6 @@ set artist_id = a.id, reader_id = null
 from public.readers r
 join public.artists a on a.email = r.email
 where c.reader_id = r.id;
+
+-- 19) 회원 프사 — 맨 위 프사 메뉴의 "프사 바꾸기"로 올림 (images 버킷의 avatars/ 폴더). 비어 있으면 닉네임 첫 글자 동그라미
+alter table public.artists add column if not exists avatar_url text;

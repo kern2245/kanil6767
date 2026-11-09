@@ -6,7 +6,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { endArtistSession, loginArtist, registerArtist } from "@/lib/admin-auth";
+import { endArtistSession, getCurrentArtist, loginArtist, registerArtist } from "@/lib/admin-auth";
+import { getAdminClient, IMAGE_BUCKET } from "@/lib/supabase-admin";
 
 export type LoginState = { message?: string };
 
@@ -40,6 +41,47 @@ export async function memberSignup(_prev: LoginState, formData: FormData): Promi
   if (!result.ok) return { message: result.message };
   revalidatePath("/", "layout");
   redirect(nextPath(formData));
+}
+
+/* ---------- 내 프사 바꾸기 / 무프사로 (로그인한 회원 본인) ---------- */
+
+const MAX_AVATAR_BYTES = 3 * 1024 * 1024; // 3MB
+
+export type AvatarResult = { ok?: boolean; message?: string };
+
+export async function updateMyAvatar(formData: FormData): Promise<AvatarResult> {
+  const me = await getCurrentArtist();
+  if (!me || me.status === "blocked") return { message: "로그인이 필요해요. 새로고침 후 다시 해 주세요." };
+  const supabase = getAdminClient();
+  if (!supabase) return { message: "Supabase가 연결되지 않았습니다." };
+
+  const remove = formData.get("remove") === "on";
+  const file = formData.get("avatar");
+  let newUrl: string | null = null;
+  if (!remove) {
+    if (!(file instanceof File) || file.size === 0) return { message: "프사로 쓸 그림을 골라 주세요." };
+    if (!file.type.startsWith("image/")) return { message: "이미지 파일만 올릴 수 있어요." };
+    if (file.size > MAX_AVATAR_BYTES) return { message: "프사는 3MB 이하만 올릴 수 있어요." };
+    const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const path = `avatars/${me.id}-${Date.now()}.${ext}`;
+    const { error: uploadError } = await supabase.storage
+      .from(IMAGE_BUCKET)
+      .upload(path, file, { contentType: file.type, upsert: false });
+    if (uploadError) return { message: `프사 올리기 실패: ${uploadError.message}` };
+    newUrl = supabase.storage.from(IMAGE_BUCKET).getPublicUrl(path).data.publicUrl;
+  }
+
+  const { error } = await supabase.from("artists").update({ avatar_url: newUrl }).eq("id", me.id);
+  if (error) return { message: `저장 실패: ${error.message}` };
+
+  // 예전 프사 파일 정리
+  const marker = `/object/public/${IMAGE_BUCKET}/`;
+  if (me.avatar_url && me.avatar_url.includes(marker)) {
+    await supabase.storage.from(IMAGE_BUCKET).remove([me.avatar_url.split(marker)[1]]);
+  }
+
+  revalidatePath("/", "layout");
+  return { ok: true, message: remove ? "무프사로 바꿨어요." : "프사를 바꿨어요." };
 }
 
 export async function memberLogout() {
