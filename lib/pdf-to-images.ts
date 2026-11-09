@@ -37,7 +37,9 @@ export async function pdfToImages(
     import.meta.url,
   ).toString();
 
-  const pdf = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise;
+  // pdfjs 6 부터는 다 쓴 PDF 를 "불러오기 작업(loadingTask)"으로 정리해요
+  const loadingTask = pdfjs.getDocument({ data: await file.arrayBuffer() });
+  const pdf = await loadingTask.promise;
   const base = file.name.replace(/\.pdf$/i, "");
   const images: File[] = [];
 
@@ -77,7 +79,7 @@ export async function pdfToImages(
       page.cleanup();
     }
   } finally {
-    await pdf.destroy();
+    await loadingTask.destroy();
   }
 
   return images;
