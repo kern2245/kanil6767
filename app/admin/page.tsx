@@ -55,10 +55,10 @@ function AdminTopBar() {
   );
 }
 
-/** 탭: 히어로 · 광고판 · 웹툰 · 회원 · 커뮤니티 · 신고 (예전 "기능" 예시 카드 탭은 사이트에 안 보여서 뺐어요) */
+/** 탭: 첫 화면 · 광고판 · 웹툰 · 회원 · 커뮤니티 · 신고 (예전 "기능" 예시 카드 탭은 사이트에 안 보여서 뺐어요) */
 function SectionTabs({ current }: { current: string }) {
   const tabs = [
-    { key: "hero", label: "히어로" },
+    { key: "hero", label: "첫 화면" },
     { key: "contact", label: "광고판" },
     { key: "webtoons", label: "웹툰" },
     { key: "artist", label: "회원" },
@@ -150,7 +150,7 @@ export default async function AdminPage(props: PageProps<"/admin">) {
         <AdminTopBar />
         <SectionTabs current="hero" />
         <section className="mt-8 max-w-2xl rounded-xl border p-6">
-          <h2 className="mb-5 text-lg font-semibold">첫 화면(히어로) 글자</h2>
+          <h2 className="mb-5 text-lg font-semibold">첫 화면 글자</h2>
           <HeroForm texts={heroTexts} />
         </section>
       </Container>
@@ -238,7 +238,7 @@ export default async function AdminPage(props: PageProps<"/admin">) {
             누구나 맨 위 &lsquo;로그인&rsquo;에서 가입하면 댓글도 달고 웹툰도 올릴 수 있어요. <b>작가로 승급</b>하면 이름 앞에
             &lsquo;작가&rsquo; 표시가 붙고 작가 커뮤니티에 들어갈 수 있어요.
           </p>
-          <ArtistList />
+          <ArtistList query={typeof searchParams.q === "string" ? searchParams.q : ""} />
         </section>
       </Container>
     );

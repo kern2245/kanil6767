@@ -45,14 +45,19 @@ function ActionButton({
   );
 }
 
-export async function ArtistList() {
+export async function ArtistList({ query = "" }: { query?: string }) {
   const supabase = getAdminClient();
   if (!supabase) return <p className="text-sm text-destructive">Supabase가 연결되지 않았습니다.</p>;
 
-  const { data, error } = await supabase
+  // 검색: 닉네임 또는 이메일에 검색어가 들어간 회원만
+  // (검색 문법에 쓰이는 기호 % _ , ( ) \ * 는 빼고 찾음 → 이상한 검색어로 목록이 깨지지 않게)
+  const q = query.trim().slice(0, 50).replace(/[%_,()\\*]/g, "");
+  let request = supabase
     .from("artists")
     .select("id, email, name, status, created_at")
     .order("created_at", { ascending: false });
+  if (q) request = request.or(`name.ilike.%${q}%,email.ilike.%${q}%`);
+  const { data, error } = await request;
   const { data: webtoonRows } = await supabase.from("webtoons").select("artist_id");
 
   if (error) {
@@ -68,14 +73,40 @@ export async function ArtistList() {
   const countOf = (id: string) => (webtoonRows ?? []).filter((w: { artist_id: string | null }) => w.artist_id === id).length;
   const artistCount = members.filter((m) => m.status === "approved").length;
 
+  const searchBox = (
+    <form action="/admin" className="mb-4 flex gap-2" role="search">
+      <input type="hidden" name="section" value="artist" />
+      <input
+        type="search"
+        name="q"
+        defaultValue={q}
+        placeholder="닉네임이나 이메일로 찾기"
+        aria-label="회원 찾기"
+        className="h-10 min-w-0 flex-1 rounded-lg border bg-background px-3 text-base outline-none focus:ring-2 focus:ring-ring/50 sm:text-sm"
+      />
+      <Button type="submit" size="sm" variant="outline" className="h-10">
+        찾기
+      </Button>
+    </form>
+  );
+
   if (members.length === 0) {
-    return <p className="text-sm text-muted-foreground">아직 가입한 회원이 없어요. 맨 위 &lsquo;로그인&rsquo;에서 가입하면 여기에 보여요.</p>;
+    return (
+      <>
+        {searchBox}
+        <p className="text-sm text-muted-foreground">
+          {q ? `"${q}"(이)가 들어간 회원이 없어요.` : "아직 가입한 회원이 없어요. 맨 위 ‘로그인’에서 가입하면 여기에 보여요."}
+        </p>
+      </>
+    );
   }
 
   return (
     <>
+      {searchBox}
       <p className="mb-3 text-sm text-muted-foreground">
-        전체 {members.length}명 · 작가 {artistCount}명
+        {q ? `"${q}" 검색 결과 ` : "전체 "}
+        {members.length}명 · 작가 {artistCount}명
       </p>
       <ul className="space-y-3">
         {members.map((m) => (

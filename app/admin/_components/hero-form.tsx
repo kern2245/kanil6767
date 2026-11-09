@@ -11,7 +11,8 @@ const inputClass =
 const textareaClass =
   "w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/50";
 
-/** 첫 화면(히어로) 글자 수정 칸. 칸을 비우고 저장하면 site.config.ts 의 기본 글자로 돌아갑니다. */
+/** 첫 화면 글자 수정 칸 (작은 윗글씨 · 큰 제목 · 소개 문장). 칸을 비우고 저장하면 site.config.ts 의 기본 글자로 돌아갑니다.
+    (예전 "버튼 글자" 칸 2개는 첫 화면에 버튼이 없어서 뺐어요) */
 export function HeroForm({ texts }: { texts: HeroTexts }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(saveHero, {});
 
@@ -32,17 +33,6 @@ export function HeroForm({ texts }: { texts: HeroTexts }) {
         <span className="font-medium">소개 문장</span>
         <textarea name="description" rows={3} defaultValue={texts.description} className={textareaClass} />
       </label>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="grid gap-1.5 text-sm">
-          <span className="font-medium">첫 번째 버튼 글자</span>
-          <input name="primary_label" defaultValue={texts.primaryLabel} className={inputClass} />
-        </label>
-        <label className="grid gap-1.5 text-sm">
-          <span className="font-medium">두 번째 버튼 글자</span>
-          <input name="secondary_label" defaultValue={texts.secondaryLabel} className={inputClass} />
-        </label>
-      </div>
 
       <p className="text-xs text-muted-foreground">칸을 비우고 저장하면 처음 기본 글자로 돌아갑니다.</p>
 
