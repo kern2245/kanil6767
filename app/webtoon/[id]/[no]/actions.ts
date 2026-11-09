@@ -1,14 +1,13 @@
 "use server";
 
 /* 회차 화면 아래 댓글 칸의 버튼들이 실제로 하는 일 (서버에서 실행됨)
-   - readerSignup / readerLogin / readerLogout : 독자 가입·로그인·로그아웃
-   - addComment    : 댓글 달기 (로그인한 독자 / 회장이 승인한 작가 계정 — "작가" 표시 / 회장 — "회장" 표시)
-   - deleteComment : 댓글 지우기 (쓴 독자·작가 본인 또는 회장) */
+   - addComment    : 댓글 달기 (로그인한 회원 — 독자·작가 한 계정, 작가면 "작가" 표시 / 회장 — "회장" 표시)
+   - deleteComment : 댓글 지우기 (쓴 회원 본인 또는 회장)
+   로그인·가입은 맨 위 "로그인"(/login, app/login/actions.ts) */
 
 import { revalidatePath } from "next/cache";
 
-import { getApprovedArtistId, getCurrentArtist, isAdmin } from "@/lib/admin-auth";
-import { endReaderSession, getCurrentReader, loginReader, registerReader } from "@/lib/reader-auth";
+import { getCurrentArtist, isAdmin } from "@/lib/admin-auth";
 import { getAdminClient } from "@/lib/supabase-admin";
 
 export type CommentActionState = { ok?: boolean; message?: string };
@@ -26,52 +25,14 @@ function refresh(formData: FormData) {
   if (path) revalidatePath(path);
 }
 
-/* ---------- 독자 가입 / 로그인 / 로그아웃 ---------- */
-
-export async function readerSignup(_prev: CommentActionState, formData: FormData): Promise<CommentActionState> {
-  const email = String(formData.get("email") ?? "").trim();
-  const nickname = String(formData.get("nickname") ?? "").trim();
-  const password = String(formData.get("password") ?? "");
-  const confirm = String(formData.get("confirm") ?? "");
-
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { message: "이메일 주소를 정확히 입력해 주세요." };
-  if (!nickname) return { message: "닉네임을 입력해 주세요." };
-  if (nickname.length > 20) return { message: "닉네임은 20글자까지 쓸 수 있어요." };
-  if (password.length < 4) return { message: "비밀번호는 4글자 이상으로 정해 주세요." };
-  if (password !== confirm) return { message: "두 칸의 비밀번호가 서로 다릅니다." };
-
-  const result = await registerReader(email, nickname, password);
-  if (!result.ok) return { message: result.message };
-  refresh(formData);
-  return { ok: true };
-}
-
-export async function readerLogin(_prev: CommentActionState, formData: FormData): Promise<CommentActionState> {
-  const email = String(formData.get("email") ?? "");
-  const password = String(formData.get("password") ?? "");
-  const result = await loginReader(email, password);
-  if (!result.ok) return { message: result.message };
-  refresh(formData);
-  return { ok: true };
-}
-
-export async function readerLogout(formData: FormData) {
-  await endReaderSession();
-  refresh(formData);
-}
-
 /* ---------- 댓글 달기 / 지우기 ---------- */
 
-/** 지금 댓글을 다는 사람: 승인된 작가 계정 → 작가 / 회장 로그인 → 회장 / 독자 로그인 → 독자 (이 순서) */
+/** 지금 댓글을 다는 사람: 로그인한 회원(막힌 계정 제외) → 회원 / 회장 로그인 → 회장 (이 순서)
+    회원 댓글은 artist_id 에 기록 (작가로 승급된 회원이면 화면에 "작가" 표시) */
 async function getCommenter() {
-  const artistId = await getApprovedArtistId();
-  if (artistId) {
-    const artist = await getCurrentArtist();
-    if (artist) return { kind: "artist" as const, id: artist.id, name: artist.name };
-  }
+  const member = await getCurrentArtist();
+  if (member && member.status !== "blocked") return { kind: "artist" as const, id: member.id, name: member.name };
   if (await isAdmin()) return { kind: "owner" as const, id: null, name: "회장" };
-  const reader = await getCurrentReader();
-  if (reader) return { kind: "reader" as const, id: reader.id, name: reader.nickname };
   return null;
 }
 
@@ -90,8 +51,7 @@ export async function addComment(_prev: CommentActionState, formData: FormData):
 
   const { error } = await supabase.from("comments").insert({
     episode_id: episodeId,
-    // 작가 댓글이면 artist_id, 독자 댓글이면 reader_id, 회장 댓글이면 is_owner 에 기록
-    reader_id: commenter.kind === "reader" ? commenter.id : null,
+    // 회원 댓글이면 artist_id, 회장 댓글이면 is_owner 에 기록
     artist_id: commenter.kind === "artist" ? commenter.id : null,
     ...(commenter.kind === "owner" ? { is_owner: true } : {}),
     author_name: commenter.name,
@@ -114,9 +74,8 @@ export async function deleteComment(formData: FormData) {
   } else {
     const commenter = await getCommenter();
     if (!commenter || commenter.kind === "owner") return;
-    // 내 댓글만 지워지도록 reader_id / artist_id 도 같이 확인
-    const column = commenter.kind === "artist" ? "artist_id" : "reader_id";
-    await supabase.from("comments").delete().eq("id", commentId).eq(column, commenter.id);
+    // 내 댓글만 지워지도록 artist_id 도 같이 확인
+    await supabase.from("comments").delete().eq("id", commentId).eq("artist_id", commenter.id);
   }
   refresh(formData);
 }

@@ -4,13 +4,12 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, List, MessageCircle, X } from "lucide-react";
 
-import { addComment, readerLogin, readerSignup, type CommentActionState } from "@/app/webtoon/[id]/[no]/actions";
+import { addComment, type CommentActionState } from "@/app/webtoon/[id]/[no]/actions";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 /* 댓글 칸에서 쓰는 화면 조각들
    - CommentSheet   : 화면 아래에 떠 있는 바(이전화 · 목록 · 💬댓글 · 다음화) + 💬를 누르면 아래에서 올라오는 댓글 창
-   - ReaderAuthForm : 로그인 안 한 독자에게 보이는 로그인 / 가입하기
    - CommentForm    : 로그인한 독자에게 보이는 댓글 쓰기 칸 */
 
 type SheetProps = {
@@ -130,92 +129,6 @@ export function CommentSheet({ count, listHref, prevHref, nextHref, children }: 
         </div>
       </div>
     </>
-  );
-}
-
-// 글자 크기 16px(text-base): 아이폰·아이패드 사파리는 이보다 작은 입력칸을 누르면 화면이 확대돼서 그걸 막음
-const inputClass =
-  "h-11 w-full rounded-lg border bg-background px-4 text-base outline-none focus:ring-2 focus:ring-ring/50";
-
-export function ReaderAuthForm({ path }: { path: string }) {
-  const [mode, setMode] = useState<"login" | "signup">("login");
-  const [loginState, loginAction, loginPending] = useActionState<CommentActionState, FormData>(readerLogin, {});
-  const [signupState, signupAction, signupPending] = useActionState<CommentActionState, FormData>(readerSignup, {});
-
-  return (
-    <div className="rounded-xl border bg-muted/40 p-5">
-      <p className="text-sm text-muted-foreground">댓글을 달려면 로그인해 주세요.</p>
-
-      <div className="mt-4 grid grid-cols-2 gap-2" role="tablist" aria-label="로그인 또는 가입">
-        {(
-          [
-            ["login", "로그인"],
-            ["signup", "가입하기"],
-          ] as const
-        ).map(([key, label]) => (
-          <button
-            key={key}
-            type="button"
-            role="tab"
-            aria-selected={mode === key}
-            onClick={() => setMode(key)}
-            className={cn(
-              "rounded-full py-2 text-sm font-semibold transition-colors",
-              mode === key ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {mode === "login" ? (
-        <form action={loginAction} className="mt-4 space-y-3">
-          <input type="hidden" name="path" value={path} />
-          <input name="email" type="email" placeholder="이메일" required autoComplete="email" className={inputClass} />
-          <input
-            name="password"
-            type="password"
-            placeholder="비밀번호"
-            required
-            autoComplete="current-password"
-            className={inputClass}
-          />
-          {loginState.message ? <p className="text-sm text-destructive">{loginState.message}</p> : null}
-          <Button type="submit" className="w-full" disabled={loginPending}>
-            {loginPending ? "확인 중..." : "로그인"}
-          </Button>
-        </form>
-      ) : (
-        <form action={signupAction} className="mt-4 space-y-3">
-          <input type="hidden" name="path" value={path} />
-          <input name="email" type="email" placeholder="이메일 (로그인할 때 써요)" required autoComplete="email" className={inputClass} />
-          <input name="nickname" placeholder="닉네임 (댓글에 보여요)" required maxLength={20} className={inputClass} />
-          <input
-            name="password"
-            type="password"
-            placeholder="비밀번호 (4글자 이상)"
-            required
-            minLength={4}
-            autoComplete="new-password"
-            className={inputClass}
-          />
-          <input
-            name="confirm"
-            type="password"
-            placeholder="비밀번호 한 번 더"
-            required
-            minLength={4}
-            autoComplete="new-password"
-            className={inputClass}
-          />
-          {signupState.message ? <p className="text-sm text-destructive">{signupState.message}</p> : null}
-          <Button type="submit" className="w-full" disabled={signupPending}>
-            {signupPending ? "가입 중..." : "가입하고 댓글 달기"}
-          </Button>
-        </form>
-      )}
-    </div>
   );
 }
 

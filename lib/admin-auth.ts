@@ -59,12 +59,15 @@ export async function endAdminSession() {
 }
 
 
-/* ---------- 작가 계정 (작가마다 이메일 + 비밀번호) ----------
-   - 작가가 작가 페이지에서 직접 가입 → 회장이 "작가" 탭에서 승인해야 웹툰을 올릴 수 있음
+/* ---------- 회원 계정 (독자·작가 한 계정, 이메일 + 비밀번호) ----------
+   - 누구나 맨 위 "로그인"(/login)에서 가입 → 독자(member). 댓글 가능
+   - 회장이 "회원" 탭에서 "작가로 승급"(approved) 해야 웹툰을 올릴 수 있음
    - 비밀번호는 Supabase 의 artists 표에 '알아볼 수 없게 바꾼 형태(scrypt)'로만 저장
    - 관리자(회장) 로그인과는 따로 기억합니다. 관리자 확인(isAdmin)은 위 그대로. */
 
 const ARTIST_COOKIE_NAME = "artist_session";
+/** 회원 로그인 유지 기간: 30일 */
+const MEMBER_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 
 /** 비밀번호 → 저장용 문자열 "scrypt$소금$결과" (원래 비밀번호는 저장하지 않음) */
 export function hashForStorage(password: string) {
@@ -125,7 +128,7 @@ async function startArtistSessionFor(row: Pick<ArtistRow, "id" | "password_hash"
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: MAX_AGE_SECONDS,
+    maxAge: MEMBER_MAX_AGE_SECONDS,
   });
 }
 
@@ -136,7 +139,7 @@ export async function endArtistSession() {
 
 type AuthResult = { ok: true } | { ok: false; message: string };
 
-/** 작가 가입 (승인 대기 상태로 만들고 바로 로그인 상태로 기억) */
+/** 회원 가입 (독자 = member 상태로 만들고 바로 로그인 상태로 기억. 작가 승급은 회장이 "회원" 탭에서) */
 export async function registerArtist(email: string, name: string, password: string): Promise<AuthResult> {
   const supabase = getAdminClient();
   if (!supabase) return { ok: false, message: "Supabase가 연결되지 않았습니다." };
@@ -144,7 +147,7 @@ export async function registerArtist(email: string, name: string, password: stri
   const passwordHash = hashForStorage(password);
   const { data, error } = await supabase
     .from("artists")
-    .insert({ email: normalizeEmail(email), name: name.trim(), password_hash: passwordHash })
+    .insert({ email: normalizeEmail(email), name: name.trim(), password_hash: passwordHash, status: "member" })
     .select("id")
     .single();
   if (error) {

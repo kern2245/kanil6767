@@ -3,9 +3,10 @@ import { Search } from "lucide-react";
 
 import { siteConfig } from "@/site.config";
 import { Container } from "@/components/layout/container";
+import { UserMenu } from "@/components/layout/user-menu";
 
 /** 상단 메뉴.
-    - 왼쪽: 사이트 이름 / 오른쪽: 웹툰 검색 칸 (관리자 '비밀 버튼'은 맨 아래 푸터에 있음)
+    - 왼쪽: 사이트 이름 / 오른쪽: 웹툰 검색 칸 + 로그인 (components/layout/user-menu.tsx)
     - 검색하면 /search?q=검색어 페이지로 이동 (app/search/page.tsx)
     - 메뉴 항목은 site.config.ts 의 nav 에서 바꿉니다. (지금은 비어 있음) */
 export function Navbar() {
@@ -16,7 +17,7 @@ export function Navbar() {
           {siteConfig.name}
         </Link>
 
-        <div className="flex min-w-0 items-center gap-6">
+        <div className="flex min-w-0 items-center gap-3 sm:gap-4">
           {siteConfig.nav.map((item) => (
             <a
               key={item.href}
@@ -35,9 +36,12 @@ export function Navbar() {
               name="q"
               placeholder="웹툰 검색"
               aria-label="웹툰 검색"
-              className="h-9 w-40 rounded-full bg-muted pr-3 pl-9 text-base outline-none transition-[width] focus:w-52 focus:ring-2 focus:ring-ring/50 sm:w-56 sm:focus:w-64"
+              className="h-9 w-32 rounded-full bg-muted pr-3 pl-9 text-base outline-none transition-[width] focus:w-40 focus:ring-2 focus:ring-ring/50 sm:w-56 sm:focus:w-64"
             />
           </form>
+
+          {/* 로그인 / 내 이름 · 로그아웃 */}
+          <UserMenu />
         </div>
       </Container>
     </header>

@@ -284,3 +284,22 @@ create table if not exists public.community_comments (
 
 create index if not exists community_comments_post_idx on public.community_comments (post_id, created_at);
 alter table public.community_comments enable row level security;
+
+-- 18) 독자·작가 계정 합치기 — 모든 회원은 artists 표 하나에 (맨 위 "로그인"으로 가입·로그인)
+--     status: member(독자, 가입하면 기본) / approved(작가 — 회장이 승급) / blocked(막힘)
+--     예전 pending(승인 대기)은 member 로 바꿈. 예전 독자(readers)는 비밀번호 그대로 회원으로 옮기고, 쓴 댓글도 이어 붙임.
+alter table public.artists drop constraint if exists artists_status_check;
+update public.artists set status = 'member' where status = 'pending';
+alter table public.artists add constraint artists_status_check check (status in ('member','pending','approved','blocked'));
+alter table public.artists alter column status set default 'member';
+
+insert into public.artists (email, name, password_hash, status, created_at)
+select r.email, r.nickname, r.password_hash, 'member', r.created_at
+from public.readers r
+where not exists (select 1 from public.artists a where a.email = r.email);
+
+update public.comments c
+set artist_id = a.id, reader_id = null
+from public.readers r
+join public.artists a on a.email = r.email
+where c.reader_id = r.id;

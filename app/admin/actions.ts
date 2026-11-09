@@ -13,7 +13,7 @@
    - updateEpisodeThumbnail : 회차 썸네일 바꾸기 / 무프사로 (회장 또는 그 웹툰의 작가)
    - updateEpisodePublishAt : 예약 회차 공개 날짜 바꾸기(1년 안) / 지금 바로 공개 (회장 또는 그 웹툰의 작가)
    - uploadEpisodeImage / saveEpisode / deleteEpisode : 회차 그림 올리기 / 저장 / 삭제 (회장 또는 그 웹툰의 작가)
-   - approveArtist / blockArtist / deleteArtist : 작가 계정 승인 / 막기 / 삭제 (회장만)
+   - approveArtist / demoteArtist / blockArtist / deleteArtist : 회원을 작가로 승급 / 독자로 / 막기 / 삭제 (회장만)
    - adminDeleteCommunityPosts / adminDeleteCommunityPost / adminDeleteCommunityComment : 작가 커뮤니티 글·댓글 지우기 (회장만) */
 
 import { revalidatePath } from "next/cache";
@@ -683,24 +683,29 @@ export async function adminDeleteCommunityComment(formData: FormData): Promise<v
 
 /* ---------- 작가 계정 관리 (회장만): 승인 / 막기 / 삭제 ---------- */
 
-async function setArtistStatus(formData: FormData, status: "approved" | "blocked") {
+async function setArtistStatus(formData: FormData, status: "member" | "approved" | "blocked") {
   if (!(await isAdmin())) return;
   const supabase = getAdminClient();
   if (!supabase) return;
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   await supabase.from("artists").update({ status }).eq("id", id);
-  revalidatePath("/admin");
+  revalidatePath("/", "layout");
 }
 
-/** 승인: 그 작가가 웹툰을 올릴 수 있게 됨 */
+/** 작가로 승급: 그 회원이 웹툰을 올리고 작가 커뮤니티에 들어갈 수 있게 됨 */
 export async function approveArtist(formData: FormData) {
   await setArtistStatus(formData, "approved");
 }
 
-/** 막기: 그 작가는 로그인도, 웹툰 올리기도 못 함 (올린 웹툰은 그대로 남음) */
+/** 막기: 그 회원은 로그인도, 댓글·웹툰 올리기도 못 함 (올린 웹툰은 그대로 남음) */
 export async function blockArtist(formData: FormData) {
   await setArtistStatus(formData, "blocked");
+}
+
+/** 독자로 내리기 (막기 풀기도 이걸로): 댓글만 달 수 있는 독자로 */
+export async function demoteArtist(formData: FormData) {
+  await setArtistStatus(formData, "member");
 }
 
 /** 삭제: 작가 계정을 지움. 그 작가가 올린 웹툰은 남고, 회장만 관리하는 웹툰이 됨 */

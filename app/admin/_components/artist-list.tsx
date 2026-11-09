@@ -1,22 +1,50 @@
 import { getAdminClient } from "@/lib/supabase-admin";
 import type { Artist, ArtistStatus } from "@/lib/types";
-import { approveArtist, blockArtist } from "@/app/admin/actions";
+import { approveArtist, blockArtist, demoteArtist } from "@/app/admin/actions";
 import { Button } from "@/components/ui/button";
 import { DeleteArtistButton } from "./delete-artist-button";
 
+/* 회장 페이지 "회원" 탭: 가입한 회원 목록 (독자·작가 한 계정)
+   - 독자 → "작가로 승급" (웹툰 올리기·작가 커뮤니티 가능)
+   - 작가 → "독자로 내리기"
+   - 막기 / 막기 풀기(→ 독자) / 삭제
+   작가가 맨 위, 그다음 독자, 막힌 회원은 맨 아래 */
+
 const STATUS_LABEL: Record<ArtistStatus, string> = {
-  pending: "승인 대기",
-  approved: "승인됨",
+  approved: "작가",
+  member: "독자",
+  pending: "독자",
   blocked: "막힘",
 };
 
 const STATUS_CLASS: Record<ArtistStatus, string> = {
-  pending: "border-up text-up",
-  approved: "border-primary text-primary",
+  approved: "border-primary bg-primary text-primary-foreground",
+  member: "border-muted-foreground/40 text-muted-foreground",
+  pending: "border-muted-foreground/40 text-muted-foreground",
   blocked: "border-destructive text-destructive",
 };
 
-/** 회장 페이지 "작가" 탭: 가입한 작가 목록 + 승인 / 막기 / 삭제 (승인 대기가 맨 위) */
+function ActionButton({
+  action,
+  id,
+  label,
+  variant = "outline",
+}: {
+  action: (formData: FormData) => Promise<void>;
+  id: string;
+  label: string;
+  variant?: "default" | "outline" | "ghost";
+}) {
+  return (
+    <form action={action}>
+      <input type="hidden" name="id" value={id} />
+      <Button type="submit" size="sm" variant={variant}>
+        {label}
+      </Button>
+    </form>
+  );
+}
+
 export async function ArtistList() {
   const supabase = getAdminClient();
   if (!supabase) return <p className="text-sm text-destructive">Supabase가 연결되지 않았습니다.</p>;
@@ -30,55 +58,55 @@ export async function ArtistList() {
   if (error) {
     return (
       <p className="rounded-lg border border-destructive/40 p-4 text-sm text-destructive">
-        작가 목록을 불러오지 못했습니다: {error.message}
+        회원 목록을 불러오지 못했습니다: {error.message}
       </p>
     );
   }
 
-  const order: ArtistStatus[] = ["pending", "approved", "blocked"];
-  const artists = ((data ?? []) as Artist[]).sort((a, b) => order.indexOf(a.status) - order.indexOf(b.status));
+  const order: ArtistStatus[] = ["approved", "member", "pending", "blocked"];
+  const members = ((data ?? []) as Artist[]).sort((a, b) => order.indexOf(a.status) - order.indexOf(b.status));
   const countOf = (id: string) => (webtoonRows ?? []).filter((w: { artist_id: string | null }) => w.artist_id === id).length;
+  const artistCount = members.filter((m) => m.status === "approved").length;
 
-  if (artists.length === 0) {
-    return <p className="text-sm text-muted-foreground">아직 가입한 작가가 없어요. 작가 페이지에서 가입하면 여기에 보여요.</p>;
+  if (members.length === 0) {
+    return <p className="text-sm text-muted-foreground">아직 가입한 회원이 없어요. 맨 위 &lsquo;로그인&rsquo;에서 가입하면 여기에 보여요.</p>;
   }
 
   return (
-    <ul className="space-y-3">
-      {artists.map((a) => (
-        <li key={a.id} className="flex flex-wrap items-center gap-3 rounded-xl border p-4">
-          <div className="min-w-0 flex-1">
-            <p className="flex items-center gap-2 font-medium">
-              <span className="truncate">{a.name}</span>
-              <span className={`shrink-0 rounded-full border px-2 text-xs leading-5 ${STATUS_CLASS[a.status]}`}>
-                {STATUS_LABEL[a.status]}
-              </span>
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {a.email} · 웹툰 {countOf(a.id)}개 · 가입 {new Date(a.created_at).toLocaleDateString("ko-KR")}
-            </p>
-          </div>
-          <div className="flex items-center gap-1">
-            {a.status !== "approved" ? (
-              <form action={approveArtist}>
-                <input type="hidden" name="id" value={a.id} />
-                <Button type="submit" size="sm">
-                  승인
-                </Button>
-              </form>
-            ) : null}
-            {a.status !== "blocked" ? (
-              <form action={blockArtist}>
-                <input type="hidden" name="id" value={a.id} />
-                <Button type="submit" size="sm" variant="outline">
-                  막기
-                </Button>
-              </form>
-            ) : null}
-            <DeleteArtistButton id={a.id} name={a.name} />
-          </div>
-        </li>
-      ))}
-    </ul>
+    <>
+      <p className="mb-3 text-sm text-muted-foreground">
+        전체 {members.length}명 · 작가 {artistCount}명
+      </p>
+      <ul className="space-y-3">
+        {members.map((m) => (
+          <li key={m.id} className="flex flex-wrap items-center gap-3 rounded-xl border p-4">
+            <div className="min-w-0 flex-1">
+              <p className="flex items-center gap-2 font-medium">
+                <span className="truncate">{m.name}</span>
+                <span className={`shrink-0 rounded-full border px-2 text-xs leading-5 ${STATUS_CLASS[m.status]}`}>
+                  {STATUS_LABEL[m.status]}
+                </span>
+              </p>
+              <p className="truncate text-xs text-muted-foreground">
+                {m.email}
+                {m.status === "approved" ? ` · 웹툰 ${countOf(m.id)}개` : ""} · 가입{" "}
+                {new Date(m.created_at).toLocaleDateString("ko-KR", { timeZone: "Asia/Seoul" })}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-1">
+              {m.status === "approved" ? (
+                <ActionButton action={demoteArtist} id={m.id} label="독자로 내리기" />
+              ) : m.status === "blocked" ? (
+                <ActionButton action={demoteArtist} id={m.id} label="막기 풀기" />
+              ) : (
+                <ActionButton action={approveArtist} id={m.id} label="작가로 승급" variant="default" />
+              )}
+              {m.status !== "blocked" ? <ActionButton action={blockArtist} id={m.id} label="막기" variant="ghost" /> : null}
+              <DeleteArtistButton id={m.id} name={m.name} />
+            </div>
+          </li>
+        ))}
+      </ul>
+    </>
   );
 }

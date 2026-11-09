@@ -64,7 +64,7 @@ function SectionTabs({ current }: { current: string }) {
     { key: "hero", label: "히어로" },
     { key: "contact", label: "광고판" },
     { key: "webtoons", label: "웹툰" },
-    { key: "artist", label: "작가" },
+    { key: "artist", label: "회원" },
     { key: "community", label: "커뮤니티" },
     ...siteConfig.adminSections,
   ];
@@ -231,17 +231,17 @@ export default async function AdminPage(props: PageProps<"/admin">) {
     );
   }
 
-  // "작가" 탭: 가입한 작가 목록 — 승인 / 막기 / 삭제
+  // "회원" 탭: 가입한 회원 목록 — 작가로 승급 / 독자로 / 막기 / 삭제
   if (requested === "artist") {
     return (
       <Container className="py-10">
         <AdminTopBar />
         <SectionTabs current="artist" />
         <section className="mt-8 max-w-3xl">
-          <h2 className="text-lg font-semibold">작가 목록</h2>
+          <h2 className="text-lg font-semibold">회원 목록</h2>
           <p className="mt-1 mb-5 text-sm text-muted-foreground">
-            작가는 맨 아래 &lsquo;{siteConfig.artistButton.label}&rsquo; 버튼에서 이메일로 직접 가입해요. 승인한 작가만
-            자기 웹툰을 올릴 수 있어요.
+            누구나 맨 위 &lsquo;로그인&rsquo;에서 가입하면 독자가 돼요(댓글 가능). <b>작가로 승급</b>한 회원만 웹툰을 올리고
+            작가 커뮤니티에 들어갈 수 있어요.
           </p>
           <ArtistList />
         </section>

@@ -63,8 +63,10 @@ export type Episode = {
   thumbnail_url?: string | null;
 };
 
-/** 작가 계정 상태: 승인 대기 / 승인됨 / 막힘 */
-export type ArtistStatus = "pending" | "approved" | "blocked";
+/** 회원(계정) 상태 — 독자·작가가 한 계정 (artists 표)
+    member: 독자(가입하면 기본, 댓글 가능) / approved: 작가(회장이 승급, 웹툰 올리기 가능)
+    pending: 예전 "승인 대기" (지금은 독자와 같음) / blocked: 막힘 */
+export type ArtistStatus = "member" | "pending" | "approved" | "blocked";
 
 /** 작가 계정 (비밀번호는 빼고). supabase/schema.sql 의 artists 테이블과 같습니다. */
 export type Artist = {
