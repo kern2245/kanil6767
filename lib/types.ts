@@ -88,19 +88,10 @@ export type ContactTexts = {
   description: string;
 };
 
-/** 독자 계정 (비밀번호는 빼고). supabase/schema.sql 의 readers 테이블과 같습니다. */
-export type Reader = {
-  id: string;
-  email: string;
-  nickname: string;
-};
-
 /** 회차 댓글 한 개. supabase/schema.sql 의 comments 테이블과 같습니다. */
 export type Comment = {
   id: string;
   episode_id: string;
-  /** 독자가 쓴 댓글이면 독자 id (작가 댓글이면 null) */
-  reader_id: string | null;
   /** 회장이 승인한 작가 계정으로 쓴 댓글이면 작가 id ("작가" 표시) */
   artist_id?: string | null;
   /** 회장이 쓴 댓글이면 true ("회장" 표시) */

@@ -370,3 +370,21 @@ create table if not exists public.reading_history (
   primary key (member_id, webtoon_id)
 );
 alter table public.reading_history enable row level security;
+
+-- 26) 예전 독자 표(readers) 정리 — 18) 에서 모든 독자를 회원(artists)으로 옮긴 뒤에만 지움
+--     안전장치: 옮겨지지 않은 독자나 아직 예전 독자에 연결된 댓글이 하나라도 있으면 지우지 않고 멈춤
+do $$
+begin
+  if to_regclass('public.readers') is null then
+    return; -- 이미 지워짐
+  end if;
+  if exists (select 1 from public.readers r where not exists (select 1 from public.artists a where a.email = r.email)) then
+    raise exception '회원으로 옮겨지지 않은 독자가 있어서 지우지 않았어요.';
+  end if;
+  if exists (select 1 from public.comments where reader_id is not null) then
+    raise exception '아직 예전 독자 계정에 연결된 댓글이 있어서 지우지 않았어요.';
+  end if;
+  alter table public.comments drop constraint if exists comments_reader_id_fkey;
+  alter table public.comments drop column if exists reader_id;
+  drop table public.readers;
+end $$;
