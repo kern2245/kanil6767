@@ -306,3 +306,15 @@ where c.reader_id = r.id;
 
 -- 19) 회원 프사 — 맨 위 프사 메뉴의 "프사 바꾸기"로 올림 (images 버킷의 avatars/ 폴더). 비어 있으면 닉네임 첫 글자 동그라미
 alter table public.artists add column if not exists avatar_url text;
+
+-- 20) 회차 좋아요 / 싫어요 — 로그인한 회원 1명당 회차마다 하나 (좋아요 또는 싫어요, 다시 누르면 취소)
+--     읽기 규칙 없음 → 서버의 비밀 키로만 읽고 씀 (누가 눌렀는지는 공개 안 함, 개수만 보여줌)
+create table if not exists public.episode_reactions (
+  episode_id  uuid not null references public.episodes (id) on delete cascade,
+  member_id   uuid not null references public.artists (id) on delete cascade,
+  reaction    text not null check (reaction in ('like','dislike')),
+  created_at  timestamptz not null default now(),
+  primary key (episode_id, member_id)
+);
+
+alter table public.episode_reactions enable row level security;

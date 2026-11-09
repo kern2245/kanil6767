@@ -3,6 +3,7 @@
 /* 회차 화면 아래 댓글 칸의 버튼들이 실제로 하는 일 (서버에서 실행됨)
    - addComment    : 댓글 달기 (로그인한 회원 — 독자·작가 한 계정, 작가면 "작가" 표시 / 회장 — "회장" 표시)
    - deleteComment : 댓글 지우기 (쓴 회원 본인 또는 회장)
+   - toggleReaction : 회차 좋아요 / 싫어요 누르기·취소 (로그인한 회원)
    로그인·가입은 맨 위 "로그인"(/login, app/login/actions.ts) */
 
 import { revalidatePath } from "next/cache";
@@ -76,6 +77,37 @@ export async function deleteComment(formData: FormData) {
     if (!commenter || commenter.kind === "owner") return;
     // 내 댓글만 지워지도록 artist_id 도 같이 확인
     await supabase.from("comments").delete().eq("id", commentId).eq("artist_id", commenter.id);
+  }
+  refresh(formData);
+}
+
+/* ---------- 좋아요 / 싫어요 ----------
+   로그인한 회원만. 회차마다 하나만 고를 수 있고, 같은 걸 한 번 더 누르면 취소, 다른 걸 누르면 바뀜 */
+
+export async function toggleReaction(formData: FormData) {
+  const me = await getCurrentArtist();
+  if (!me || me.status === "blocked") return;
+  const episodeId = String(formData.get("episodeId") ?? "");
+  const reaction = String(formData.get("reaction") ?? "");
+  if (!episodeId || (reaction !== "like" && reaction !== "dislike")) return;
+  const supabase = getAdminClient();
+  if (!supabase) return;
+
+  const { data: existing } = await supabase
+    .from("episode_reactions")
+    .select("reaction")
+    .eq("episode_id", episodeId)
+    .eq("member_id", me.id)
+    .maybeSingle();
+
+  if (existing?.reaction === reaction) {
+    // 같은 걸 다시 누름 → 취소
+    await supabase.from("episode_reactions").delete().eq("episode_id", episodeId).eq("member_id", me.id);
+  } else {
+    // 처음 누르거나 반대로 바꿈
+    await supabase
+      .from("episode_reactions")
+      .upsert({ episode_id: episodeId, member_id: me.id, reaction }, { onConflict: "episode_id,member_id" });
   }
   refresh(formData);
 }

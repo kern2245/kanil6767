@@ -1,7 +1,7 @@
 import { siteConfig } from "@/site.config";
 import { Container } from "@/components/layout/container";
 
-/** 맨 아래 영역. 오른쪽에 "회장" · "작가" 버튼 (예전 작은 점(•) 숨은 버튼은 회장 버튼과 같아서 뺐어요) */
+/** 맨 아래 영역. 오른쪽에 "회장" 버튼만 (작가 페이지는 맨 위 프사 → 설정 → 내 웹툰 스튜디오로 들어가요) */
 export function Footer() {
   return (
     <footer className="border-t border-border/60 py-10">
@@ -21,15 +21,6 @@ export function Footer() {
             className="hover:text-foreground"
           >
             {siteConfig.secretButton.label}
-          </a>
-          {/* 작가 버튼: 새 탭에서 작가 페이지 열기 (글자·주소는 site.config.ts 의 artistButton) */}
-          <a
-            href={siteConfig.artistButton.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-foreground"
-          >
-            {siteConfig.artistButton.label}
           </a>
         </div>
       </Container>

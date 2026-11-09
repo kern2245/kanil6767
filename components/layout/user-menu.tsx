@@ -5,12 +5,12 @@ import { siteConfig } from "@/site.config";
 import { getCurrentArtist, isAdmin } from "@/lib/admin-auth";
 import { memberLogout } from "@/app/login/actions";
 import { logout as ownerLogout } from "@/app/admin/actions";
-import { AvatarChange } from "@/components/layout/avatar-change";
 
 /* 맨 위 검색 칸 옆 "로그인" 자리 (서버에서 로그인 상태 확인)
    - 아무 로그인도 안 함: "로그인" 버튼 → /login
    - 로그인하면 동그란 프사만 보임 (회장: GitHub 프로필 사진 / 회원: 닉네임 첫 글자, 작가는 보라색)
-   - 프사를 누르면 작은 메뉴: 이름 · (회원) 프사 바꾸기·무프사로 · (회장 페이지 / 내 웹툰 스튜디오) · 로그아웃 */
+   - 프사를 누르면 작은 메뉴: (회원) 설정 / (회장) 회장 페이지 · 로그아웃
+     (이름·프사 바꾸기·내 웹툰 스튜디오는 "설정" 페이지 /settings 안에) */
 
 /** 회장 프사: GitHub 프로필 사진 (site.config.ts 의 ownerGithubLogin 계정) */
 function OwnerAvatar() {
@@ -123,10 +123,9 @@ export async function UserMenu() {
       <AvatarMenu
         avatar={<LetterAvatar name={member.name} artist={isArtist} url={member.avatar_url} />}
         title={member.name}
-        subtitle={isArtist ? "작가" : "독자"}
-        link={{ href: "/artist", label: "내 웹툰 스튜디오" }}
+        hideHeader
+        link={{ href: "/settings", label: "설정" }}
         logout={memberLogout}
-        extra={<AvatarChange hasAvatar={Boolean(member.avatar_url)} />}
       />
     );
   }

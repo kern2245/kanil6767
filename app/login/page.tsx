@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 
@@ -31,9 +30,6 @@ export default async function LoginPage(props: PageProps<"/login">) {
             독자·작가 모두 같은 계정으로 로그인해요.
           </p>
           <LoginForm next={nextPath} />
-          <p className="mt-8 text-center text-xs text-muted-foreground">
-            회장은 <Link href="/admin" className="underline underline-offset-4">회장 로그인</Link>을 써 주세요.
-          </p>
         </Container>
       </main>
     </>

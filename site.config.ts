@@ -19,7 +19,7 @@ export const siteConfig = {
   nav: [] as { label: string; href: string }[],
 
   /* 맨 아래(푸터)의 관리자 버튼 (누르면 새 탭에서 관리자 페이지가 열림) */
-  secretButton: { label: "회장", href: "/admin" },
+  secretButton: { label: "안녕하세요", href: "/admin" },
 
   /* 회장(관리자)으로 들어올 수 있는 GitHub 아이디 — 이 계정으로 "GitHub로 로그인" 했을 때만 회장 페이지가 열림 */
   ownerGithubLogin: "kern2245",
