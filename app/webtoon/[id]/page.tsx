@@ -39,6 +39,8 @@ export default async function WebtoonPage(props: PageProps<"/webtoon/[id]">) {
         ? ({ mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursday", fri: "Friday", sat: "Saturday", sun: "Sunday" } as const)[webtoon.weekday]
         : undefined;
   const tw = t.webtoon;
+  // 영어 화면이면 영어 제목 (없으면 원래 제목)
+  const title = lang === "en" && webtoon.title_en ? webtoon.title_en : webtoon.title;
 
   // 로그인 회원: 관심 웹툰 여부 · 이어보기 (관심 웹툰이면 "봤음" 기록 → 새 회차 알림 꺼짐)
   const current = await getCurrentArtist();
@@ -57,7 +59,7 @@ export default async function WebtoonPage(props: PageProps<"/webtoon/[id]">) {
           <div className="flex gap-5">
             <div className="relative aspect-[160/207] w-32 shrink-0 overflow-hidden rounded-md bg-muted sm:w-40">
               {webtoon.cover_url ? (
-                <Image src={webtoon.cover_url} alt={webtoon.title} fill sizes="160px" className="object-cover" />
+                <Image src={webtoon.cover_url} alt={title} fill sizes="160px" className="object-cover" />
               ) : (
                 <div className="flex h-full items-center justify-center text-muted-foreground">
                   <ImageIcon className="size-6" />
@@ -65,7 +67,7 @@ export default async function WebtoonPage(props: PageProps<"/webtoon/[id]">) {
               )}
             </div>
             <div className="flex min-w-0 flex-col justify-center">
-              <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{webtoon.title}</h1>
+              <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h1>
               {dayLabel ? <p className="mt-2 text-sm text-muted-foreground">{tw.dayWebtoon(dayLabel)}</p> : null}
               <p className="mt-1 text-sm text-muted-foreground">{tw.stats(episodes.length, formatViews(totalViews))}</p>
               <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -126,7 +128,7 @@ export default async function WebtoonPage(props: PageProps<"/webtoon/[id]">) {
                       )}
                     </div>
                     <span className="w-12 shrink-0 text-sm text-muted-foreground">{tw.ep(ep.number)}</span>
-                    <span className="min-w-0 flex-1 truncate font-medium">{ep.title}</span>
+                    <span className="min-w-0 flex-1 truncate font-medium">{lang === "en" && ep.title_en ? ep.title_en : ep.title}</span>
                     <span className="shrink-0 text-xs text-muted-foreground">
                       {tw.views(formatViews(viewCounts.get(ep.id) ?? 0))} ·{" "}
                       {new Date(ep.publish_at ?? ep.created_at).toLocaleDateString(tw.dateLocale, { timeZone: tw.timeZone })}

@@ -50,7 +50,7 @@ export async function WebtoonManager({ artistId, ownerOnly = false }: { artistId
   // 웹툰별 회차 목록 (회차 관리용)
   const { data: episodeRows } = await supabase
     .from("episodes")
-    .select("id, webtoon_id, number, title, image_urls, publish_at, thumbnail_url")
+    .select("id, webtoon_id, number, title, image_urls, publish_at, thumbnail_url, title_en, image_urls_en")
     .order("number", { ascending: true });
 
   // 작가 통계: 회차별 조회수 · 좋아요 · 싫어요 · 댓글 수
@@ -78,7 +78,7 @@ export async function WebtoonManager({ artistId, ownerOnly = false }: { artistId
     (
       (episodeRows ?? []) as Pick<
         Episode,
-        "id" | "webtoon_id" | "number" | "title" | "image_urls" | "publish_at" | "thumbnail_url"
+        "id" | "webtoon_id" | "number" | "title" | "image_urls" | "publish_at" | "thumbnail_url" | "title_en" | "image_urls_en"
       >[]
     )
       .filter((ep) => ep.webtoon_id === webtoonId)
@@ -87,6 +87,8 @@ export async function WebtoonManager({ artistId, ownerOnly = false }: { artistId
         number: ep.number,
         title: ep.title,
         imageCount: ep.image_urls.length,
+        titleEn: ep.title_en ?? "",
+        enImageCount: ep.image_urls_en?.length ?? 0,
         // 아직 공개 전이면 "11월 14일(금) 0시" 같은 공개 예정 시간 (회차 목록에 "예약" 으로 보임)
         scheduledLabel: isScheduled(ep.publish_at) ? formatPublishAt(ep.publish_at as string) : null,
         thumbnailUrl: ep.thumbnail_url ?? null,

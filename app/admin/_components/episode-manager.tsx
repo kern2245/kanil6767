@@ -75,6 +75,8 @@ type EpisodeRow = {
   scheduledLabel: string | null;
   /** 회차 썸네일 (없으면 무프사) */
   thumbnailUrl: string | null;
+  titleEn?: string;
+  enImageCount?: number;
   /** 작가 통계: 조회수 · 좋아요 · 싫어요 · 댓글 수 */
   stats: { views: number; likes: number; dislikes: number; comments: number };
 };

@@ -148,7 +148,7 @@ export async function getEpisodes(webtoonId: string): Promise<Omit<Episode, "ima
   if (!supabase) return [];
   const { data, error } = await supabase
     .from("episodes")
-    .select("id, webtoon_id, number, title, created_at, publish_at, thumbnail_url")
+    .select("id, webtoon_id, number, title, title_en, created_at, publish_at, thumbnail_url")
     .eq("webtoon_id", webtoonId)
     .order("number", { ascending: true });
   if (error) {
@@ -187,7 +187,8 @@ export async function searchWebtoons(query: string): Promise<Webtoon[]> {
     .from("webtoons")
     .select(WEBTOON_WITH_LATEST_EPISODE)
     .eq("is_visible", true)
-    .ilike("title", `%${escaped}%`)
+    // 한국어 제목 또는 영어 제목에 검색어가 들어간 웹툰
+    .or(`title.ilike.%${escaped}%,title_en.ilike.%${escaped}%`)
     .order("title", { ascending: true })
     .limit(60)
     .order("publish_at", { referencedTable: "episodes", ascending: false })

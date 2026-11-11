@@ -561,6 +561,67 @@ export async function updateEpisodeThumbnail(formData: FormData): Promise<Action
   return { ok: true, message: remove ? "무프사로 바꿨습니다." : "썸네일을 바꿨습니다." };
 }
 
+/* ---------- 영어판 🌐 (외국 독자용) — 스튜디오 "영어판" 탭 ---------- */
+
+/** 웹툰 영어 제목 저장 (비우면 영어 제목 없음 → 한국어 제목이 보임) */
+export async function saveWebtoonTitleEn(formData: FormData): Promise<ActionState> {
+  const editor = await getEditor();
+  if (!editor) return { message: "로그인이 필요합니다. 새로고침 후 다시 로그인하세요." };
+  const supabase = getAdminClient();
+  if (!supabase) return { message: "Supabase가 연결되지 않았습니다." };
+  const id = String(formData.get("id") ?? "");
+  const titleEn = String(formData.get("title_en") ?? "").trim().slice(0, 100);
+  if (!id || !(await canEditWebtoon(editor, id))) return { message: NO_PERMISSION };
+  const { error } = await supabase.from("webtoons").update({ title_en: titleEn || null }).eq("id", id);
+  if (error) return { message: `저장 실패: ${error.message}` };
+  revalidatePath("/", "layout");
+  return { ok: true, message: titleEn ? "영어 제목을 저장했어요." : "영어 제목을 비웠어요." };
+}
+
+/** 회차 영어판 저장
+    - titleEn: 영어 회차 제목 (빈 글자면 지움)
+    - imageUrls: 새 영어판 그림 주소들 (undefined 면 그림은 그대로, [] 면 영어판 그림 빼기)
+    바꾸거나 뺀 예전 영어판 그림 파일은 정리 */
+export async function saveEpisodeEnglish(input: {
+  episodeId: string;
+  titleEn: string;
+  imageUrls?: string[];
+}): Promise<ActionState> {
+  const editor = await getEditor();
+  if (!editor) return { message: "로그인이 필요합니다. 새로고침 후 다시 로그인하세요." };
+  const supabase = getAdminClient();
+  if (!supabase) return { message: "Supabase가 연결되지 않았습니다." };
+
+  const { data: episode } = await supabase
+    .from("episodes")
+    .select("webtoon_id, number, image_urls_en")
+    .eq("id", input.episodeId)
+    .maybeSingle();
+  if (!episode || !(await canEditWebtoon(editor, episode.webtoon_id as string))) return { message: NO_PERMISSION };
+
+  const update: { title_en: string | null; image_urls_en?: string[] } = {
+    title_en: input.titleEn.trim().slice(0, 100) || null,
+  };
+  if (input.imageUrls) update.image_urls_en = input.imageUrls;
+  const { error } = await supabase.from("episodes").update(update).eq("id", input.episodeId);
+  if (error) return { message: `저장 실패: ${error.message}` };
+
+  // 예전 영어판 그림 파일 정리 (그림을 바꾸거나 뺐을 때만)
+  if (input.imageUrls) {
+    const marker = `/object/public/${IMAGE_BUCKET}/`;
+    const old = ((episode.image_urls_en as string[] | null) ?? []).filter(
+      (url) => url.includes(marker) && !input.imageUrls!.includes(url),
+    );
+    if (old.length > 0) await supabase.storage.from(IMAGE_BUCKET).remove(old.map((url) => url.split(marker)[1]));
+  }
+
+  revalidatePath("/", "layout");
+  const n = episode.number as number;
+  if (input.imageUrls && input.imageUrls.length === 0) return { ok: true, message: `${n}화 영어판 그림을 뺐어요.` };
+  if (input.imageUrls) return { ok: true, message: `${n}화 영어판을 저장했어요. (그림 ${input.imageUrls.length}장)` };
+  return { ok: true, message: `${n}화 영어 제목을 저장했어요.` };
+}
+
 /** 회차 삭제 (그림 파일도 함께 정리) */
 export async function deleteEpisode(formData: FormData) {
   // 삭제는 회장 또는 그 웹툰을 올린 작가만
@@ -574,7 +635,7 @@ export async function deleteEpisode(formData: FormData) {
 
   const { data } = await supabase
     .from("episodes")
-    .select("image_urls, webtoon_id, thumbnail_url")
+    .select("*")
     .eq("id", id)
     .maybeSingle();
   if (!data || !(await canEditWebtoon(editor, data.webtoon_id as string))) return;
@@ -582,7 +643,11 @@ export async function deleteEpisode(formData: FormData) {
 
   // 만화 그림 + 썸네일 파일 정리
   const marker = `/object/public/${IMAGE_BUCKET}/`;
-  const paths = [...((data?.image_urls as string[] | undefined) ?? []), (data?.thumbnail_url as string | null) ?? ""]
+  const paths = [
+    ...((data?.image_urls as string[] | undefined) ?? []),
+    ...((data?.image_urls_en as string[] | undefined) ?? []),
+    (data?.thumbnail_url as string | null) ?? "",
+  ]
     .filter((url) => url.includes(marker))
     .map((url) => url.split(marker)[1]);
   if (paths.length > 0) await supabase.storage.from(IMAGE_BUCKET).remove(paths);

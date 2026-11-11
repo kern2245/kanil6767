@@ -86,6 +86,11 @@ export default async function EpisodeViewerPage(props: PageProps<"/webtoon/[id]/
   const loggedIn = Boolean(me && me.status !== "blocked");
   const { lang, t } = await getT();
   const tv = t.viewer;
+  // 영어 화면: 영어 제목 · 영어판 그림이 있으면 그걸로 (없으면 원래 것)
+  const en = lang === "en";
+  const webtoonTitle = en && webtoon.title_en ? webtoon.title_en : webtoon.title;
+  const episodeTitle = en && episode.title_en ? episode.title_en : episode.title;
+  const pages = en && episode.image_urls_en && episode.image_urls_en.length > 0 ? episode.image_urls_en : episode.image_urls;
 
   const index = episodes.findIndex((ep) => ep.number === number);
   const prev = index > 0 ? episodes[index - 1].number : undefined;
@@ -100,9 +105,9 @@ export default async function EpisodeViewerPage(props: PageProps<"/webtoon/[id]/
             <ChevronLeft className="size-5" />
           </Link>
           <p className="min-w-0 truncate text-sm">
-            <span className="font-semibold">{webtoon.title}</span>
+            <span className="font-semibold">{webtoonTitle}</span>
             <span className="ml-2 text-muted-foreground">
-              {t.webtoon.ep(episode.number)} {episode.title}
+              {t.webtoon.ep(episode.number)} {episodeTitle}
             </span>
             <span className="ml-2 text-xs text-muted-foreground">· {t.webtoon.views(formatViews(views))}</span>
           </p>
@@ -120,10 +125,10 @@ export default async function EpisodeViewerPage(props: PageProps<"/webtoon/[id]/
 
       {/* 만화 그림 (세로로 이어 붙이기) */}
       <div className="mx-auto max-w-3xl">
-        {episode.image_urls.length === 0 ? (
+        {pages.length === 0 ? (
           <p className="py-24 text-center text-sm text-muted-foreground">{tv.noImages}</p>
         ) : (
-          episode.image_urls.map((url, i) => (
+          pages.map((url, i) => (
             <Image
               key={url}
               src={url}

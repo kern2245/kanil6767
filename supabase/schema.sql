@@ -388,3 +388,10 @@ begin
   alter table public.comments drop column if exists reader_id;
   drop table public.readers;
 end $$;
+
+-- 27) 영어판 🌐 — 외국 독자용 영어 제목 · 영어판 그림
+--     영어 화면(맨 위 EN)에서: 영어 제목이 있으면 영어 제목, 영어판 그림이 있으면 영어판 그림을 보여줌
+--     (없으면 원래 한국어 제목·그림 그대로). 작가 스튜디오의 "영어판" 탭에서 올림
+alter table public.webtoons add column if not exists title_en text;
+alter table public.episodes add column if not exists title_en text;
+alter table public.episodes add column if not exists image_urls_en text[] not null default '{}';

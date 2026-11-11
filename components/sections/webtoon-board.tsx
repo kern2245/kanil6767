@@ -25,7 +25,7 @@ export function WebtoonCard({ webtoon, lang = "ko" }: { webtoon: Webtoon; lang?:
         {webtoon.cover_url ? (
           <Image
             src={webtoon.cover_url}
-            alt={webtoon.title}
+            alt={lang === "en" && webtoon.title_en ? webtoon.title_en : webtoon.title}
             fill
             sizes="(min-width: 768px) 14vw, 33vw"
             className="object-cover transition-transform duration-300 group-hover:scale-105"
@@ -47,7 +47,7 @@ export function WebtoonCard({ webtoon, lang = "ko" }: { webtoon: Webtoon; lang?:
             {t.done}
           </span>
         ) : null}
-        <span className="truncate">{webtoon.title}</span>
+        <span className="truncate">{lang === "en" && webtoon.title_en ? webtoon.title_en : webtoon.title}</span>
       </h3>
     </article>
   );

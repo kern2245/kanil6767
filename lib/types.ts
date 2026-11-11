@@ -30,6 +30,8 @@ export type Weekday = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
 export type Webtoon = {
   id: string;
   title: string;
+  /** 영어 제목 (외국 독자용, 없으면 title) — 스튜디오 "영어판" 탭 */
+  title_en?: string | null;
   weekday: Weekday;
   cover_url: string | null;
   /** 올린 작가 (없으면 회장이 관리하는 웹툰) */
@@ -58,6 +60,10 @@ export type Episode = {
   title: string;
   /** 만화 그림 주소들 (위에서 아래 순서) */
   image_urls: string[];
+  /** 영어 회차 제목 (없으면 title) */
+  title_en?: string | null;
+  /** 영어판 그림 주소들 — 영어 화면에서 있으면 이걸 보여줌 (없으면 image_urls) */
+  image_urls_en?: string[] | null;
   created_at: string;
   /** 독자에게 공개되는 시간 (연재 요일이 아닌 날 올리면 다음 연재 요일 0시 — lib/publish-time.ts) */
   publish_at?: string;

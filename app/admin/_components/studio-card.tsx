@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { BarChart3, CalendarClock, EyeOff, ImageIcon, Layers, Pencil, Settings2 } from "lucide-react";
+import { BarChart3, CalendarClock, EyeOff, Globe, ImageIcon, Layers, Pencil, Settings2 } from "lucide-react";
 
 import type { PublishOption } from "@/lib/publish-time";
 import type { Webtoon } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { CompleteButton, CoverButtons, DeleteWebtoonButton, WebtoonForm } from "./webtoon-form";
 import { EpisodeManager } from "./episode-manager";
+import { EnglishManager } from "./english-manager";
 
 /* 작가 스튜디오 — 웹툰 한 개 카드 (회장 페이지 "웹툰" 탭, 작가 페이지가 같이 씀)
    - 왼쪽: 큰 표지 / 오른쪽: 제목, 요일·완결, 회차 수, 다음 공개 예약
@@ -21,14 +22,18 @@ type EpisodeRow = {
   imageCount: number;
   scheduledLabel: string | null;
   thumbnailUrl: string | null;
+  /** 영어판: 영어 회차 제목 / 영어판 그림 장수 */
+  titleEn: string;
+  enImageCount: number;
   /** 작가 통계: 조회수 · 좋아요 · 싫어요 · 댓글 수 */
   stats: { views: number; likes: number; dislikes: number; comments: number };
 };
 
-type Tab = "episodes" | "edit" | "settings";
+type Tab = "episodes" | "english" | "edit" | "settings";
 
 const TABS: { key: Tab; label: string; icon: typeof Layers }[] = [
   { key: "episodes", label: "회차 관리", icon: Layers },
+  { key: "english", label: "영어판", icon: Globe },
   { key: "edit", label: "정보 수정", icon: Pencil },
   { key: "settings", label: "표지·설정", icon: Settings2 },
 ];
@@ -132,7 +137,7 @@ export function StudioCard({
       </div>
 
       {/* 탭 */}
-      <div className="grid grid-cols-3 border-t" role="tablist" aria-label={`${webtoon.title} 관리`}>
+      <div className="grid grid-cols-4 border-t" role="tablist" aria-label={`${webtoon.title} 관리`}>
         {TABS.map(({ key, label, icon: Icon }) => (
           <button
             key={key}
@@ -141,7 +146,7 @@ export function StudioCard({
             aria-selected={tab === key}
             onClick={() => setTab(tab === key ? null : key)}
             className={cn(
-              "flex items-center justify-center gap-1.5 border-b-2 py-3 text-sm font-medium transition-colors",
+              "flex flex-col items-center justify-center gap-1 border-b-2 py-3 text-xs font-medium transition-colors sm:flex-row sm:gap-1.5 sm:text-sm",
               tab === key
                 ? "border-primary text-foreground"
                 : "border-transparent text-muted-foreground hover:text-foreground",
@@ -158,6 +163,8 @@ export function StudioCard({
         <div className="border-t bg-background/40 p-4 sm:p-5">
           {tab === "episodes" ? (
             <EpisodeManager webtoonId={webtoon.id} episodes={episodes} publishChoices={publishChoices} />
+          ) : tab === "english" ? (
+            <EnglishManager webtoonId={webtoon.id} titleEn={webtoon.title_en ?? ""} episodes={episodes} />
           ) : tab === "edit" ? (
             <WebtoonForm webtoon={webtoon} />
           ) : (

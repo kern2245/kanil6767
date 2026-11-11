@@ -17,6 +17,41 @@ export type EpisodeUpload = {
   publishAt?: string;
 };
 
+/** 고른 그림·PDF 를 정렬 → PDF 는 그림으로 바꿈 → 한 장씩 올려서 주소 목록을 돌려줌 (영어판 올리기도 같이 씀) */
+export async function uploadPages(
+  webtoonId: string,
+  pickedFiles: File[],
+  onStatus: (message: string) => void,
+): Promise<{ ok: true; urls: string[] } | { ok: false; message: string }> {
+  const picked = pickedFiles
+    .filter((f) => f.size > 0)
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+  if (picked.length === 0) return { ok: false, message: "만화 그림이나 PDF를 하나 이상 골라 주세요." };
+  const files: File[] = [];
+  for (const f of picked) {
+    if (f.type === "application/pdf" || /\.pdf$/i.test(f.name)) {
+      try {
+        files.push(...(await pdfToImages(f, (p, total) => onStatus(`PDF를 그림으로 바꾸는 중… ${f.name} ${p} / ${total}쪽`))));
+      } catch {
+        return { ok: false, message: `${f.name}: PDF를 읽지 못했습니다. 다른 PDF로 해 보거나 그림 파일로 올려 주세요.` };
+      }
+    } else {
+      files.push(f);
+    }
+  }
+  const urls: string[] = [];
+  for (let i = 0; i < files.length; i++) {
+    onStatus(`그림 올리는 중… ${i + 1} / ${files.length}`);
+    const one = new FormData();
+    one.set("webtoon_id", webtoonId);
+    one.set("file", files[i]);
+    const result = await uploadEpisodeImage(one);
+    if (!result.ok) return { ok: false, message: result.message };
+    urls.push(result.url);
+  }
+  return { ok: true, urls };
+}
+
 export async function uploadEpisode(input: EpisodeUpload, onStatus: (message: string) => void): Promise<ActionState> {
   // 파일 이름 순서대로 정렬 (1, 2, 10 처럼 숫자도 자연스럽게)
   const picked = input.picked
