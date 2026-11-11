@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- 세카이 탭 아이콘: 보라→분홍 둥근 네모 + 흰색 "セ" (직접 그린 선이라 글꼴이 없어도 똑같이 보여요) -->
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#a855f7"/>
+      <stop offset="1" stop-color="#fa897b"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="8" fill="url(#g)"/>
+  <g fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M7 13.5 H24.5 L20 18.5"/>
+    <path d="M13 7.5 V21.5 Q13 25 16.5 25 H24"/>
+  </g>
+</svg>
