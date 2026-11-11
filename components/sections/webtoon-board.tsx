@@ -166,11 +166,6 @@ export function WebtoonBoard({
           selected={selected}
           onSelect={setSelected}
           today={today}
-          // 고른 요일이 비었을 때 대신 보여줄 웹툰: 다른 요일 연재작을 인기순으로 7개
-          suggestions={columns
-            .flatMap((c) => c.items)
-            .sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0))
-            .slice(0, 7)}
         />
       )}
     </div>
@@ -184,14 +179,12 @@ function WeekdayTabs({
   selected,
   onSelect,
   today,
-  suggestions,
 }: {
   columns: BoardTab[];
   current: BoardTab;
   selected: Weekday;
   onSelect: (day: Weekday) => void;
   today: Weekday;
-  suggestions: Webtoon[];
 }) {
   const setSelected = onSelect;
   return (
@@ -225,17 +218,7 @@ function WeekdayTabs({
 
       {/* 고른 요일의 웹툰만 */}
       {current.items.length === 0 ? (
-        suggestions.length === 0 ? (
-          <p className="py-16 text-center text-sm text-muted-foreground">준비 중입니다.</p>
-        ) : (
-          // 이 요일엔 연재작이 없으면 → 텅 빈 화면 대신 다른 요일 인기 웹툰 추천
-          <div className="mt-8">
-            <p className="text-sm text-muted-foreground">
-              {current.label}요일엔 아직 연재 웹툰이 없어요. 이런 웹툰은 어때요? 🔥
-            </p>
-            <WebtoonGrid items={suggestions} />
-          </div>
-        )
+        <p className="py-16 text-center text-sm text-muted-foreground">준비 중입니다.</p>
       ) : (
         <WebtoonGrid items={current.items} />
       )}
