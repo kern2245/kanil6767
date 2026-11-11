@@ -94,6 +94,16 @@ export const siteConfig = {
     copyright: "© 2026 My Studio. All rights reserved.",
   },
 
+  /* 이용약관(/terms) · 개인정보처리방침(/privacy) 에 들어가는 운영자 정보
+     사업자 등록을 하면 businessNumber 에 등록번호를 넣으세요 (비어 있으면 안 보임) */
+  legal: {
+    serviceName: "세카이",
+    operator: "세카이 운영자",
+    email: "kern2245@gmail.com",
+    businessNumber: "",
+    effectiveDate: "2026년 11월 11일",
+  },
+
   /* 관리자 페이지에서 관리할 섹션 목록.
      key  = 데이터베이스에 저장되는 이름(영문 소문자),
      label = 관리자 화면에 보이는 이름.
