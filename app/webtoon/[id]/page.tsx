@@ -14,6 +14,7 @@ import { getCurrentArtist } from "@/lib/admin-auth";
 import { getMemberWebtoonState, markFavoriteSeen } from "@/lib/member-extras";
 import { toggleFavorite } from "@/app/webtoon/[id]/[no]/actions";
 import { ReportButton } from "@/components/sections/report-button";
+import { getT } from "@/lib/lang";
 
 /* 웹툰 페이지 (주소: /webtoon/웹툰번호)
    - 위쪽: 표지 + 제목 + 연재 요일 + "첫화 보기" / (로그인 회원) "이어보기 N화" · ⭐ 관심 웹툰 · 🚩 신고
@@ -30,7 +31,14 @@ export default async function WebtoonPage(props: PageProps<"/webtoon/[id]">) {
   const newestFirst = [...episodes].reverse();
   const viewCounts = await getViewCounts(episodes.map((ep) => ep.id));
   const totalViews = [...viewCounts.values()].reduce((a, b) => a + b, 0);
-  const dayLabel = siteConfig.webtoons.weekdays.find((d) => d.key === webtoon.weekday)?.label;
+  const { lang, t } = await getT();
+  const dayLabel =
+    lang === "ko"
+      ? siteConfig.webtoons.weekdays.find((d) => d.key === webtoon.weekday)?.label
+      : webtoon.weekday
+        ? ({ mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursday", fri: "Friday", sat: "Saturday", sun: "Sunday" } as const)[webtoon.weekday]
+        : undefined;
+  const tw = t.webtoon;
 
   // 로그인 회원: 관심 웹툰 여부 · 이어보기 (관심 웹툰이면 "봤음" 기록 → 새 회차 알림 꺼짐)
   const current = await getCurrentArtist();
@@ -58,20 +66,20 @@ export default async function WebtoonPage(props: PageProps<"/webtoon/[id]">) {
             </div>
             <div className="flex min-w-0 flex-col justify-center">
               <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{webtoon.title}</h1>
-              {dayLabel ? <p className="mt-2 text-sm text-muted-foreground">{dayLabel}요웹툰</p> : null}
-              <p className="mt-1 text-sm text-muted-foreground">총 {episodes.length}화 · 조회 {formatViews(totalViews)}</p>
+              {dayLabel ? <p className="mt-2 text-sm text-muted-foreground">{tw.dayWebtoon(dayLabel)}</p> : null}
+              <p className="mt-1 text-sm text-muted-foreground">{tw.stats(episodes.length, formatViews(totalViews))}</p>
               <div className="mt-4 flex flex-wrap items-center gap-2">
                 {continueEpisode !== null ? (
                   <Button asChild size="sm">
                     <Link href={`/webtoon/${id}/${continueEpisode}`}>
                       <BookOpen />
-                      이어보기 {continueEpisode}화
+                      {tw.continue(continueEpisode)}
                     </Link>
                   </Button>
                 ) : null}
                 {episodes.length > 0 ? (
                   <Button asChild size="sm" variant={continueEpisode !== null ? "outline" : "default"}>
-                    <Link href={`/webtoon/${id}/${episodes[0].number}`}>첫화 보기</Link>
+                    <Link href={`/webtoon/${id}/${episodes[0].number}`}>{tw.first}</Link>
                   </Button>
                 ) : null}
                 {member ? (
@@ -79,26 +87,26 @@ export default async function WebtoonPage(props: PageProps<"/webtoon/[id]">) {
                     <input type="hidden" name="webtoonId" value={id} />
                     <Button type="submit" size="sm" variant="outline" aria-pressed={state.favorite}>
                       <Star className={state.favorite ? "fill-current text-up" : ""} />
-                      {state.favorite ? "관심 웹툰" : "관심 추가"}
+                      {state.favorite ? tw.favorite : tw.addFavorite}
                     </Button>
                   </form>
                 ) : (
                   <Button asChild size="sm" variant="outline">
                     <Link href={`/login?next=/webtoon/${id}`}>
                       <Star />
-                      관심 추가
+                      {tw.addFavorite}
                     </Link>
                   </Button>
                 )}
-                <ReportButton targetType="webtoon" targetId={id} loggedIn={member !== null} returnPath={`/webtoon/${id}`} />
+                <ReportButton targetType="webtoon" targetId={id} loggedIn={member !== null} returnPath={`/webtoon/${id}`} lang={lang} />
               </div>
             </div>
           </div>
 
           {/* 회차 목록 */}
-          <h2 className="mt-10 border-b pb-3 text-lg font-semibold">회차</h2>
+          <h2 className="mt-10 border-b pb-3 text-lg font-semibold">{tw.episodes}</h2>
           {newestFirst.length === 0 ? (
-            <p className="py-12 text-center text-sm text-muted-foreground">아직 올라온 회차가 없습니다.</p>
+            <p className="py-12 text-center text-sm text-muted-foreground">{tw.noEpisodes}</p>
           ) : (
             <ul className="divide-y">
               {newestFirst.map((ep) => (
@@ -117,11 +125,11 @@ export default async function WebtoonPage(props: PageProps<"/webtoon/[id]">) {
                         </div>
                       )}
                     </div>
-                    <span className="w-12 shrink-0 text-sm text-muted-foreground">{ep.number}화</span>
+                    <span className="w-12 shrink-0 text-sm text-muted-foreground">{tw.ep(ep.number)}</span>
                     <span className="min-w-0 flex-1 truncate font-medium">{ep.title}</span>
                     <span className="shrink-0 text-xs text-muted-foreground">
-                      조회 {formatViews(viewCounts.get(ep.id) ?? 0)} ·{" "}
-                      {new Date(ep.publish_at ?? ep.created_at).toLocaleDateString("ko-KR", { timeZone: "Asia/Seoul" })}
+                      {tw.views(formatViews(viewCounts.get(ep.id) ?? 0))} ·{" "}
+                      {new Date(ep.publish_at ?? ep.created_at).toLocaleDateString(tw.dateLocale, { timeZone: tw.timeZone })}
                     </span>
                     <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
                   </Link>

@@ -6,6 +6,8 @@ import { getCurrentArtist, isAdmin } from "@/lib/admin-auth";
 import { memberLogout } from "@/app/login/actions";
 import { getFavorites } from "@/lib/member-extras";
 import { logout as ownerLogout } from "@/app/admin/actions";
+import { getT } from "@/lib/lang";
+import type { Dict } from "@/lib/i18n";
 
 /* 맨 위 검색 칸 옆 "로그인" 자리 (서버에서 로그인 상태 확인)
    - 아무 로그인도 안 함: "로그인" 버튼 → /login
@@ -66,7 +68,9 @@ function AvatarMenu({
   hideHeader = false,
   alert = false,
   extra,
+  t,
 }: {
+  t: Dict;
   avatar: React.ReactNode;
   title: string;
   /** 이름 아래 작은 글씨 (없으면 안 보임) */
@@ -83,15 +87,15 @@ function AvatarMenu({
   return (
     <details className="relative shrink-0">
       <summary
-        aria-label={`${title} 메뉴`}
-        title={`${title}으로 로그인됨`}
+        aria-label={`${title} ${t.nav.menu}`}
+        title={title}
         className="flex cursor-pointer list-none rounded-full transition-opacity hover:opacity-90 [&::-webkit-details-marker]:hidden"
       >
         <span className="relative">
           {avatar}
           {alert ? (
             <span className="absolute -top-0.5 -right-0.5 size-3 rounded-full border-2 border-background bg-destructive">
-              <span className="sr-only">관심 웹툰에 새 회차가 있어요</span>
+              <span className="sr-only">{t.nav.newEpisodeAlert}</span>
             </span>
           ) : null}
         </span>
@@ -110,7 +114,7 @@ function AvatarMenu({
             className="flex items-center justify-between px-4 py-2.5 text-sm transition-colors hover:bg-muted"
           >
             {link.label}
-            {alert ? <span className="text-xs font-semibold text-destructive">새 회차</span> : null}
+            {alert ? <span className="text-xs font-semibold text-destructive">{t.nav.newEpisode}</span> : null}
           </Link>
         ) : null}
         <form action={logout}>
@@ -119,7 +123,7 @@ function AvatarMenu({
             className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             <LogOut className="size-4" />
-            로그아웃
+            {t.nav.logout}
           </button>
         </form>
       </div>
@@ -128,7 +132,7 @@ function AvatarMenu({
 }
 
 export async function UserMenu() {
-  const [current, owner] = await Promise.all([getCurrentArtist(), isAdmin()]);
+  const [current, owner, { t }] = await Promise.all([getCurrentArtist(), isAdmin(), getT()]);
   const member = current && current.status !== "blocked" ? current : null;
 
   // 회원 로그인 (회장보다 먼저: 회원 계정으로 쓰는 중이면 그 계정을 보여줌)
@@ -141,7 +145,8 @@ export async function UserMenu() {
         avatar={<LetterAvatar name={member.name} artist={isArtist} url={member.avatar_url} />}
         title={member.name}
         hideHeader
-        link={{ href: "/settings", label: "설정" }}
+        link={{ href: "/settings", label: t.nav.settings }}
+        t={t}
         logout={memberLogout}
         alert={hasNew}
       />
@@ -153,9 +158,10 @@ export async function UserMenu() {
     return (
       <AvatarMenu
         avatar={<OwnerAvatar />}
-        title="회장"
+        title={t.comments.owner}
         hideHeader
-        link={{ href: "/admin", label: "회장 페이지" }}
+        link={{ href: "/admin", label: t.nav.ownerPage }}
+        t={t}
         logout={ownerLogout}
       />
     );
@@ -167,7 +173,7 @@ export async function UserMenu() {
       className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
     >
       <LogIn className="size-4" />
-      로그인
+      {t.nav.login}
     </Link>
   );
 }

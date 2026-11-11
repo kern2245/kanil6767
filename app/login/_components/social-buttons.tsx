@@ -1,4 +1,7 @@
+import Link from "next/link";
+
 import { startSocialLogin } from "../actions";
+import type { Dict } from "@/lib/i18n";
 
 /* 구글로 시작하기 버튼 (로그인과 가입이 한 번에 — 처음이면 자동으로 회원 가입)
    진짜 구글 계정만 쓸 수 있어서 가짜 이메일 가입을 막아요.
@@ -27,17 +30,33 @@ function GoogleLogo() {
   );
 }
 
-export function SocialButtons({ next }: { next: string }) {
+/* 나이 확인 + 약관 동의 체크 (체크해야 구글 버튼이 눌림 — 서버에서도 한 번 더 확인)
+   한국어: 만 14세 이상 (한국 개인정보 보호법) / 영어: 13세 이상 (미국 어린이 개인정보 보호법 COPPA) */
+export function SocialButtons({ next, t }: { next: string; t: Dict["login"] }) {
   return (
-    <form action={startSocialLogin}>
+    <form action={startSocialLogin} className="space-y-4">
       <input type="hidden" name="provider" value="google" />
       <input type="hidden" name="next" value={next} />
+      <label className="flex cursor-pointer items-start gap-2.5 text-left text-xs leading-relaxed text-muted-foreground">
+        <input type="checkbox" name="agree" value="yes" required className="mt-0.5 size-4 shrink-0 accent-primary" />
+        <span>
+          {t.agePrefix}
+          <Link href="/terms" target="_blank" className="underline hover:text-foreground">
+            {t.ageTerms}
+          </Link>
+          {t.ageAnd}
+          <Link href="/privacy" target="_blank" className="underline hover:text-foreground">
+            {t.agePrivacy}
+          </Link>
+          {t.ageSuffix}
+        </span>
+      </label>
       <button
         type="submit"
         className="flex h-12 w-full items-center justify-center gap-3 rounded-full bg-white text-[15px] font-semibold text-neutral-900 shadow-lg shadow-black/20 transition-transform hover:-translate-y-0.5 active:translate-y-0"
       >
         <GoogleLogo />
-        구글로 시작하기
+        {t.google}
       </button>
     </form>
   );

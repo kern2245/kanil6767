@@ -35,6 +35,8 @@ export async function startSocialLogin(formData: FormData) {
   const provider = String(formData.get("provider") ?? "");
   if (provider !== "google") redirect("/login"); // 지금은 구글만
   const next = nextPath(formData);
+  // 나이 확인·약관 동의 체크가 없으면 다시 로그인 화면으로
+  if (formData.get("agree") !== "yes") redirect(`/login?error=age&next=${encodeURIComponent(next)}`);
 
   const supabase = await getAuthClient();
   if (!supabase) redirect("/login?error=supabase");

@@ -5,13 +5,22 @@ import { toggleReaction } from "@/app/webtoon/[id]/[no]/actions";
 import { getCurrentArtist } from "@/lib/admin-auth";
 import { getAdminClient } from "@/lib/supabase-admin";
 import { cn } from "@/lib/utils";
+import { getDict, type Dict } from "@/lib/i18n";
 
 /* 회차 좋아요 / 싫어요 (만화 그림 바로 아래)
    - 누구나 개수를 볼 수 있음
    - 로그인한 회원만 누를 수 있음 (같은 걸 다시 누르면 취소, 다른 걸 누르면 바뀜) — 내가 누른 쪽은 보라색
    - 로그인 안 했으면 버튼을 누르면 로그인 페이지로 (로그인 뒤 이 회차로 돌아옴) */
 
-export async function EpisodeReactions({ episodeId, path }: { episodeId: string; path: string }) {
+export async function EpisodeReactions({
+  episodeId,
+  path,
+  t = getDict("ko").viewer,
+}: {
+  episodeId: string;
+  path: string;
+  t?: Dict["viewer"];
+}) {
   const supabase = getAdminClient();
   const me = await getCurrentArtist();
   const member = me && me.status !== "blocked" ? me : null;
@@ -25,8 +34,8 @@ export async function EpisodeReactions({ episodeId, path }: { episodeId: string;
   const mine = member ? rows.find((r) => r.member_id === member.id)?.reaction : undefined;
 
   const buttons = [
-    { reaction: "like" as const, label: "좋아요", count: likes, Icon: ThumbsUp },
-    { reaction: "dislike" as const, label: "싫어요", count: dislikes, Icon: ThumbsDown },
+    { reaction: "like" as const, label: t.like, count: likes, Icon: ThumbsUp },
+    { reaction: "dislike" as const, label: t.dislike, count: dislikes, Icon: ThumbsDown },
   ];
   const baseClass =
     "inline-flex h-12 min-w-28 items-center justify-center gap-2 rounded-full border px-5 text-sm font-semibold transition-colors";
@@ -51,7 +60,7 @@ export async function EpisodeReactions({ episodeId, path }: { episodeId: string;
             <input type="hidden" name="episodeId" value={episodeId} />
             <input type="hidden" name="reaction" value={reaction} />
             <input type="hidden" name="path" value={path} />
-            <button type="submit" aria-pressed={active} title={active ? `${label} 취소` : label} className={className}>
+            <button type="submit" aria-pressed={active} title={active ? t.undo(label) : label} className={className}>
               {inner}
             </button>
           </form>
@@ -59,7 +68,7 @@ export async function EpisodeReactions({ episodeId, path }: { episodeId: string;
           <Link
             key={reaction}
             href={`/login?next=${encodeURIComponent(path)}`}
-            title={`로그인하고 ${label} 누르기`}
+            title={t.loginTo(label)}
             className={className}
           >
             {inner}

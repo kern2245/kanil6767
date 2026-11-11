@@ -1,11 +1,20 @@
 import { LegalPage } from "@/components/sections/legal-page";
 import { siteConfig } from "@/site.config";
+import { getLang } from "@/lib/lang";
+import { privacyEn } from "@/components/sections/legal-en";
 
 /* 개인정보처리방침 (주소: /privacy) — 운영자 이름·이메일은 site.config.ts 의 legal 에서 바꿔요 */
 
-export const metadata = { title: "개인정보처리방침" };
+export async function generateMetadata() {
+  return { title: (await getLang()) === "ko" ? "개인정보처리방침" : "Privacy Policy" };
+}
 
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  // 영어 화면이면 영어 약관 (components/sections/legal-en.tsx)
+  if ((await getLang()) === "en") {
+    const en = privacyEn(siteConfig.legal.email);
+    return <LegalPage lang="en" title="Privacy Policy" intro={en.intro} sections={en.sections} />;
+  }
   const { serviceName, operator, email } = siteConfig.legal;
   return (
     <LegalPage

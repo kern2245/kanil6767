@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight, List, MessageCircle, X } from "lucide-react"
 import { addComment, type CommentActionState } from "@/app/webtoon/[id]/[no]/actions";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { getDict, type Lang } from "@/lib/i18n";
 
 /* 댓글 칸에서 쓰는 화면 조각들
    - CommentSheet   : 화면 아래에 떠 있는 바(이전화 · 목록 · 💬댓글 · 다음화) + 💬를 누르면 아래에서 올라오는 댓글 창
@@ -18,6 +19,7 @@ type SheetProps = {
   prevHref?: string;
   nextHref?: string;
   children: React.ReactNode;
+  lang?: Lang;
 };
 
 function BarLink({ href, children, label }: { href?: string; children: React.ReactNode; label: string }) {
@@ -38,7 +40,8 @@ function BarLink({ href, children, label }: { href?: string; children: React.Rea
   );
 }
 
-export function CommentSheet({ count, listHref, prevHref, nextHref, children }: SheetProps) {
+export function CommentSheet({ count, listHref, prevHref, nextHref, children, lang = "ko" }: SheetProps) {
+  const t = getDict(lang);
   const [open, setOpen] = useState(false);
 
   // 창이 열려 있는 동안: 뒤 화면 스크롤 막기 + Esc 키로 닫기
@@ -60,14 +63,14 @@ export function CommentSheet({ count, listHref, prevHref, nextHref, children }: 
     <>
       {/* 화면 아래에 항상 떠 있는 바 */}
       <nav
-        aria-label="회차 이동과 댓글"
+        aria-label={t.viewer.barLabel}
         className="fixed inset-x-0 bottom-0 z-40 border-t border-border/60 bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur"
       >
         <div className="mx-auto flex max-w-3xl items-stretch px-2">
-          <BarLink href={prevHref} label="이전화">
+          <BarLink href={prevHref} label={t.viewer.prev}>
             <ChevronLeft className="size-5" />
           </BarLink>
-          <BarLink href={listHref} label="목록">
+          <BarLink href={listHref} label={t.viewer.list}>
             <List className="size-5" />
           </BarLink>
           <button
@@ -78,9 +81,9 @@ export function CommentSheet({ count, listHref, prevHref, nextHref, children }: 
             className="flex flex-1 flex-col items-center gap-0.5 py-2 text-xs text-muted-foreground hover:text-foreground"
           >
             <MessageCircle className="size-5" />
-            댓글 {count}
+            {lang === "ko" ? t.comments.count(count) : `${t.comments.title} ${count}`}
           </button>
-          <BarLink href={nextHref} label="다음화">
+          <BarLink href={nextHref} label={t.viewer.next}>
             <ChevronRight className="size-5" />
           </BarLink>
         </div>
@@ -100,7 +103,7 @@ export function CommentSheet({ count, listHref, prevHref, nextHref, children }: 
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="댓글"
+        aria-label={t.comments.title}
         aria-hidden={!open}
         inert={!open}
         className={cn(
@@ -113,12 +116,12 @@ export function CommentSheet({ count, listHref, prevHref, nextHref, children }: 
         <div className="relative flex items-center justify-center border-b px-4 py-3">
           <span className="absolute top-1.5 h-1 w-10 rounded-full bg-muted-foreground/30" aria-hidden />
           <h2 className="mt-1 text-base font-semibold">
-            댓글 <span className="text-muted-foreground">{count}</span>
+            {t.comments.title} <span className="text-muted-foreground">{count}</span>
           </h2>
           <button
             type="button"
             onClick={() => setOpen(false)}
-            aria-label="댓글 닫기"
+            aria-label={t.comments.close}
             className="absolute right-3 rounded-full p-2 text-muted-foreground hover:text-foreground"
           >
             <X className="size-5" />
@@ -132,7 +135,8 @@ export function CommentSheet({ count, listHref, prevHref, nextHref, children }: 
   );
 }
 
-export function CommentForm({ episodeId, path }: { episodeId: string; path: string }) {
+export function CommentForm({ episodeId, path, lang = "ko" }: { episodeId: string; path: string; lang?: Lang }) {
+  const t = getDict(lang).comments;
   const [state, action, pending] = useActionState<CommentActionState, FormData>(addComment, {});
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -150,13 +154,13 @@ export function CommentForm({ episodeId, path }: { episodeId: string; path: stri
         required
         maxLength={500}
         rows={3}
-        placeholder="댓글을 남겨 주세요 (500자까지)"
+        placeholder={t.placeholder}
         className="w-full resize-y rounded-lg border bg-background px-4 py-3 text-base outline-none focus:ring-2 focus:ring-ring/50"
       />
       {state.message ? <p className="text-sm text-destructive">{state.message}</p> : null}
       <div className="flex justify-end">
         <Button type="submit" size="sm" disabled={pending}>
-          {pending ? "올리는 중..." : "댓글 달기"}
+          {pending ? t.posting : t.post}
         </Button>
       </div>
     </form>

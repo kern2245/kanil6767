@@ -4,6 +4,7 @@ import { getPopularity } from "@/lib/views";
 import type { Webtoon, Weekday } from "@/lib/types";
 import { Container } from "@/components/layout/container";
 import { WebtoonBoard, type BoardTab } from "@/components/sections/webtoon-board";
+import { getLang } from "@/lib/lang";
 
 /* 요일별 웹툰 목록 섹션.
    - 제목/요일 이름: site.config.ts 의 webtoons
@@ -26,6 +27,7 @@ export function todayInKorea(): Weekday {
 export async function WebtoonWeekly() {
   const { webtoons } = siteConfig;
   const loaded = await getWebtoons();
+  const lang = await getLang();
   // 인기 점수 붙이기 (예시 웹툰은 0)
   const scores = await getPopularity(loaded.filter((w) => !w.id.startsWith("sample-")).map((w) => w.id));
   const all = loaded.map((w) => ({ ...w, popularity: scores.get(w.id) ?? 0 }));
@@ -46,6 +48,7 @@ export async function WebtoonWeekly() {
           today={todayInKorea()}
           weekly={{ eyebrow: webtoons.eyebrow, title: webtoons.title }}
           completedHeading={siteConfig.completedWebtoons}
+          lang={lang}
         />
       </Container>
     </section>

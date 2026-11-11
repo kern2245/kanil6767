@@ -8,6 +8,7 @@ import { getAdminClient } from "@/lib/supabase-admin";
 import { Button } from "@/components/ui/button";
 import { CommentForm, CommentSheet } from "./comment-forms";
 import { ReportButton } from "./report-button";
+import { getDict, type Lang } from "@/lib/i18n";
 
 /* 회차 댓글 (웹툰 앱처럼)
    - 화면 아래에 항상 떠 있는 바: 이전화 · 목록 · 💬댓글 수 · 다음화
@@ -18,22 +19,23 @@ import { ReportButton } from "./report-button";
    - 지우기 버튼: 내가 쓴 댓글 또는 회장에게만 보임 */
 
 /** 작가로 승급된 회원이 쓴 댓글에 붙는 "작가" 표시 */
-function ArtistBadge() {
+function ArtistBadge({ label }: { label: string }) {
   return (
-    <span className="rounded-full bg-primary px-1.5 text-[10px] font-bold leading-4 text-primary-foreground">작가</span>
+    <span className="rounded-full bg-primary px-1.5 text-[10px] font-bold leading-4 text-primary-foreground">{label}</span>
   );
 }
 
 /** 회장이 쓴 댓글에 붙는 "회장" 표시 */
-function OwnerBadge() {
+function OwnerBadge({ label }: { label: string }) {
   return (
-    <span className="rounded-full border border-primary px-1.5 text-[10px] font-bold leading-4 text-primary">회장</span>
+    <span className="rounded-full border border-primary px-1.5 text-[10px] font-bold leading-4 text-primary">{label}</span>
   );
 }
 
-function formatDate(value: string) {
-  return new Date(value).toLocaleString("ko-KR", {
-    timeZone: "Asia/Seoul",
+function formatDate(value: string, lang: Lang) {
+  const w = getDict(lang).webtoon;
+  return new Date(value).toLocaleString(w.dateLocale, {
+    timeZone: w.timeZone,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -57,42 +59,44 @@ type Props = {
   listHref: string;
   prevHref?: string;
   nextHref?: string;
+  lang?: Lang;
 };
 
-export async function EpisodeComments({ episodeId, path, listHref, prevHref, nextHref }: Props) {
+export async function EpisodeComments({ episodeId, path, listHref, prevHref, nextHref, lang = "ko" }: Props) {
+  const t = getDict(lang).comments;
   const [comments, admin, current] = await Promise.all([getComments(episodeId), isAdmin(), getCurrentArtist()]);
   const member = current && current.status !== "blocked" ? current : null;
   const artistIds = await artistIdsAmong(comments.map((c) => c.artist_id));
 
   return (
-    <CommentSheet count={comments.length} listHref={listHref} prevHref={prevHref} nextHref={nextHref}>
+    <CommentSheet count={comments.length} listHref={listHref} prevHref={prevHref} nextHref={nextHref} lang={lang}>
       <div className="space-y-5">
         {/* 댓글 쓰기 / 로그인 */}
         {member ? (
           <div className="space-y-2">
             <p className="flex items-center gap-1.5 text-sm">
-              {member.status === "approved" ? <ArtistBadge /> : null}
+              {member.status === "approved" ? <ArtistBadge label={t.artist} /> : null}
               <span className="font-semibold">{member.name}</span>
-              <span className="text-muted-foreground"> 님으로 댓글 달기</span>
+              <span className="text-muted-foreground">{t.as}</span>
             </p>
-            <CommentForm episodeId={episodeId} path={path} />
+            <CommentForm episodeId={episodeId} path={path} lang={lang} />
           </div>
         ) : admin ? (
           // 회장 로그인 → "회장"으로 댓글 달기
           <div className="space-y-2">
             <p className="flex items-center gap-1.5 text-sm">
-              <OwnerBadge />
-              <span className="text-muted-foreground">회장으로 댓글 달기</span>
+              <OwnerBadge label={t.owner} />
+              <span className="text-muted-foreground">{t.asOwner}</span>
             </p>
-            <CommentForm episodeId={episodeId} path={path} />
+            <CommentForm episodeId={episodeId} path={path} lang={lang} />
           </div>
         ) : (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-muted/40 p-4">
-            <p className="text-sm text-muted-foreground">댓글을 달려면 로그인해 주세요.</p>
+            <p className="text-sm text-muted-foreground">{t.needLogin}</p>
             <Button asChild size="sm">
               <Link href={`/login?next=${encodeURIComponent(path)}`}>
                 <LogIn />
-                로그인하고 댓글 달기
+                {t.loginButton}
               </Link>
             </Button>
           </div>
@@ -100,7 +104,7 @@ export async function EpisodeComments({ episodeId, path, listHref, prevHref, nex
 
         {/* 댓글 목록 */}
         {comments.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">아직 댓글이 없어요. 첫 댓글을 남겨 보세요!</p>
+          <p className="py-6 text-center text-sm text-muted-foreground">{t.empty}</p>
         ) : (
           <ul className="divide-y border-t">
             {comments.map((comment) => {
@@ -109,21 +113,21 @@ export async function EpisodeComments({ episodeId, path, listHref, prevHref, nex
                 <li key={comment.id} className="flex gap-3 py-4">
                   <div className="min-w-0 flex-1">
                     <p className="flex flex-wrap items-center gap-1.5 text-sm">
-                      {comment.artist_id && artistIds.has(comment.artist_id) ? <ArtistBadge /> : null}
-                      {comment.is_owner ? <OwnerBadge /> : null}
+                      {comment.artist_id && artistIds.has(comment.artist_id) ? <ArtistBadge label={t.artist} /> : null}
+                      {comment.is_owner ? <OwnerBadge label={t.owner} /> : null}
                       <span className="font-semibold">{comment.author_name}</span>
-                      <span className="ml-1 text-xs text-muted-foreground">{formatDate(comment.created_at)}</span>
+                      <span className="ml-1 text-xs text-muted-foreground">{formatDate(comment.created_at, lang)}</span>
                     </p>
                     <p className="mt-1 text-sm leading-relaxed break-words whitespace-pre-wrap">{comment.body}</p>
                   </div>
                   {!canDelete ? (
-                    <ReportButton targetType="comment" targetId={comment.id} loggedIn={member !== null} returnPath={path} />
+                    <ReportButton targetType="comment" targetId={comment.id} loggedIn={member !== null} returnPath={path} lang={lang} />
                   ) : null}
                   {canDelete ? (
                     <form action={deleteComment}>
                       <input type="hidden" name="commentId" value={comment.id} />
                       <input type="hidden" name="path" value={path} />
-                      <Button type="submit" variant="ghost" size="icon" aria-label="댓글 지우기">
+                      <Button type="submit" variant="ghost" size="icon" aria-label={t.delete}>
                         <Trash2 />
                       </Button>
                     </form>

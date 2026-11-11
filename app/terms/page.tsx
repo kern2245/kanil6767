@@ -1,11 +1,20 @@
 import { LegalPage } from "@/components/sections/legal-page";
 import { siteConfig } from "@/site.config";
+import { getLang } from "@/lib/lang";
+import { termsEn } from "@/components/sections/legal-en";
 
 /* 이용약관 (주소: /terms) — 운영자 이름·이메일은 site.config.ts 의 legal 에서 바꿔요 */
 
-export const metadata = { title: "이용약관" };
+export async function generateMetadata() {
+  return { title: (await getLang()) === "ko" ? "이용약관" : "Terms of Service" };
+}
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  // 영어 화면이면 영어 약관 (components/sections/legal-en.tsx)
+  if ((await getLang()) === "en") {
+    const en = termsEn(siteConfig.legal.email);
+    return <LegalPage lang="en" title="Terms of Service" intro={en.intro} sections={en.sections} />;
+  }
   const { serviceName, email } = siteConfig.legal;
   return (
     <LegalPage
