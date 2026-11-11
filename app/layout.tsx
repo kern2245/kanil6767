@@ -7,8 +7,17 @@ import "./globals.css";
 /* 모든 페이지를 감싸는 가장 바깥 틀. 보통은 수정할 일이 거의 없습니다.
    다크 모드로 시작하고 싶으면 <html> 의 className 에 "dark" 를 추가하세요. */
 export const metadata: Metadata = {
-  title: siteConfig.title,
+  // 첫 화면 탭 이름은 title, 다른 페이지는 "페이지 이름 | 세카이" 로 보임
+  title: { default: siteConfig.title, template: `%s | ${siteConfig.legal.serviceName}` },
   description: siteConfig.description,
+  // 카톡·SNS 에 주소를 공유할 때 보이는 제목·소개
+  openGraph: {
+    title: siteConfig.title,
+    description: siteConfig.description,
+    siteName: siteConfig.legal.serviceName,
+    locale: "ko_KR",
+    type: "website",
+  },
 };
 
 /* 휴대폰·태블릿 화면 설정

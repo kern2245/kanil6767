@@ -11,8 +11,8 @@ import type { Item, Webtoon, Weekday } from "@/lib/types";
 export const siteConfig = {
   /* 브라우저 탭 제목과 검색 결과에 보이는 정보 */
   name: "セカイ",
-  title: "My Studio — 나의 첫 웹사이트",
-  description: "바이브 코딩으로 만든 나의 웹사이트입니다.",
+  title: "세카이 — 누구나 웹툰 작가가 되는 곳",
+  description: "직접 그린 웹툰을 올리고, 요일별로 연재하고, 독자와 댓글로 만나는 웹툰 사이트 세카이.",
 
   /* 상단 메뉴 (href 의 #이름 은 아래 섹션의 id 와 같아야 해당 위치로 이동)
      지금은 비어 있음. 다시 넣으려면 예) { label: "웹툰", href: "#webtoons" } */
@@ -33,8 +33,9 @@ export const siteConfig = {
     title: "생각을 바로\n화면으로 만듭니다",
     description:
       "이 문장을 바꿔 나를 소개해 보세요. site.config.ts 파일에서 글자만 바꾸면 여기가 바뀝니다.",
-    primaryCta: { label: "더 알아보기", href: "#features" },
-    secondaryCta: { label: "연락하기", href: "#contact" },
+    /* 첫 화면 버튼 2개 (글자·이동할 주소) */
+    primaryCta: { label: "웹툰 보러 가기", href: "#webtoons" },
+    secondaryCta: { label: "내 웹툰 올리기", href: "/artist" },
   },
 
   /* 소개 섹션 */
@@ -91,7 +92,7 @@ export const siteConfig = {
 
   /* 맨 아래(푸터) */
   footer: {
-    copyright: "© 2026 My Studio. All rights reserved.",
+    copyright: "© 2026 세카이. All rights reserved.",
   },
 
   /* 이용약관(/terms) · 개인정보처리방침(/privacy) 에 들어가는 운영자 정보
