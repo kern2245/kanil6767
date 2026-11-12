@@ -16,6 +16,8 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     // 공유 그림(app/opengraph-image.tsx) 등 주소의 기준
     metadataBase: new URL(siteConfig.url),
+    // 구글 서치 콘솔 "이 사이트 주인 맞아요" 확인 코드 (지우면 서치 콘솔 연결이 끊김)
+    verification: { google: "LdBktxmSgq-cUYW7848SYpUBQjXYB6wV4-GwmyvhKB0" },
     // 첫 화면 탭 이름은 title, 다른 페이지는 "페이지 이름 | 세카이" 로 보임
     title: { default: title, template: `%s | ${name}` },
     description,
