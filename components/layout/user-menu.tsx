@@ -170,7 +170,7 @@ export async function UserMenu() {
   return (
     <Link
       href="/login"
-      className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+      className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-primary px-3 text-sm sm:px-4 font-semibold text-primary-foreground transition-opacity hover:opacity-90"
     >
       <LogIn className="size-4" />
       {t.nav.login}

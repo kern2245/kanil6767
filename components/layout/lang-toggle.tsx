@@ -18,7 +18,7 @@ export function LangToggle({ lang, label }: { lang: Lang; label: string }) {
       }}
       aria-label={label}
       title={label}
-      className="inline-flex h-9 shrink-0 items-center gap-1 rounded-full px-2 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+      className="inline-flex h-9 shrink-0 items-center gap-1 rounded-full px-1.5 sm:px-2 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
     >
       <Globe className="size-4" />
       {next === "en" ? "EN" : "한"}
