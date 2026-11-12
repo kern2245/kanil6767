@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -21,6 +22,27 @@ import { getT } from "@/lib/lang";
    - 아래쪽: 회차 목록 (최신 회차가 위, 회차마다 썸네일 — 없으면 무프사)
    - 회차는 관리자 페이지 "웹툰" 탭 → 각 웹툰의 "회차 관리"에서 올립니다. */
 
+
+/* 탭 제목·카톡 공유 미리보기: 웹툰 제목 + 표지 그림 */
+export async function generateMetadata(props: PageProps<"/webtoon/[id]">): Promise<Metadata> {
+  const { id } = await props.params;
+  const [webtoon, { lang }] = await Promise.all([getWebtoon(id), getT()]);
+  if (!webtoon) return {};
+  const title = lang === "en" && webtoon.title_en ? webtoon.title_en : webtoon.title;
+  const description =
+    lang === "en" ? `Read "${title}" free on Sekai.` : `세카이에서 웹툰 「${title}」을 무료로 보세요.`;
+  return {
+    title,
+    description,
+    alternates: { canonical: `/webtoon/${id}` },
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      images: [webtoon.cover_url ?? "/opengraph-image"],
+    },
+  };
+}
 
 export default async function WebtoonPage(props: PageProps<"/webtoon/[id]">) {
   const { id } = await props.params;

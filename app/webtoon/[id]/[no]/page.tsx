@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -68,6 +69,31 @@ function EpisodeNav({
       </Button>
     </div>
   );
+}
+
+/* 탭 제목·카톡 공유 미리보기: "3화 제목 - 웹툰 제목" + 회차 썸네일(없으면 표지) */
+export async function generateMetadata(props: PageProps<"/webtoon/[id]/[no]">): Promise<Metadata> {
+  const { id, no } = await props.params;
+  const number = Number(no);
+  if (!Number.isInteger(number)) return {};
+  const [webtoon, episode, { lang }] = await Promise.all([getWebtoon(id), getEpisode(id, number), getT()]);
+  if (!webtoon || !episode) return {};
+  const en = lang === "en";
+  const wTitle = en && webtoon.title_en ? webtoon.title_en : webtoon.title;
+  const eTitle = en && episode.title_en ? episode.title_en : episode.title;
+  const title = en ? `Ep. ${number} ${eTitle} - ${wTitle}` : `${number}화 ${eTitle} - ${wTitle}`;
+  const description = en ? `Read episode ${number} of "${wTitle}" free on Sekai.` : `세카이에서 「${wTitle}」 ${number}화를 무료로 보세요.`;
+  return {
+    title,
+    description,
+    alternates: { canonical: `/webtoon/${id}/${number}` },
+    openGraph: {
+      title,
+      description,
+      type: "article",
+      images: [episode.thumbnail_url ?? webtoon.cover_url ?? "/opengraph-image"],
+    },
+  };
 }
 
 export default async function EpisodeViewerPage(props: PageProps<"/webtoon/[id]/[no]">) {

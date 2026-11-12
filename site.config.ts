@@ -11,6 +11,8 @@ import type { Item, Webtoon, Weekday } from "@/lib/types";
 export const siteConfig = {
   /* 브라우저 탭 제목과 검색 결과에 보이는 정보 */
   name: "セカイ",
+  /* 사이트 주소 (카톡 공유 그림·검색 지도(sitemap)에 쓰임 — 도메인을 바꾸면 여기도 바꾸세요) */
+  url: "https://kanil67676.vercel.app",
   title: "세카이 — 누구나 웹툰 작가가 되는 곳",
   description: "직접 그린 웹툰을 올리고, 요일별로 연재하고, 독자와 댓글로 만나는 웹툰 사이트 세카이.",
 

@@ -14,6 +14,8 @@ export async function generateMetadata(): Promise<Metadata> {
   const description = lang === "ko" ? siteConfig.description : t.site.description;
   const name = lang === "ko" ? siteConfig.legal.serviceName : "Sekai";
   return {
+    // 공유 그림(app/opengraph-image.tsx) 등 주소의 기준
+    metadataBase: new URL(siteConfig.url),
     // 첫 화면 탭 이름은 title, 다른 페이지는 "페이지 이름 | 세카이" 로 보임
     title: { default: title, template: `%s | ${name}` },
     description,
