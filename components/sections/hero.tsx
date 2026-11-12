@@ -18,27 +18,33 @@ export async function Hero() {
 
   return (
     <section id="top" className="relative overflow-hidden">
-      {/* 높이: 화면의 절반쯤 (예전 80% → 너무 비어 보여서 줄임) */}
-      <Container className="flex min-h-[55svh] flex-col justify-center py-16">
-        <p className="text-sm font-medium uppercase tracking-[0.2em] text-primary">
+      {/* 휴대폰에서만: 제목 뒤에 은은한 보라 빛 (컴퓨터 화면은 예전 그대로) */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute top-6 left-1/2 size-72 -translate-x-1/2 rounded-full bg-primary/25 blur-3xl sm:hidden"
+      />
+      {/* 높이: 컴퓨터는 화면의 절반쯤 / 휴대폰은 글자 높이만큼 (아래 빈 공간 줄임)
+          휴대폰: 가운데 정렬 + 버튼이 화면 폭 가득 / 컴퓨터(sm 이상): 왼쪽 정렬 */}
+      <Container className="relative flex flex-col items-center py-12 text-center sm:min-h-[55svh] sm:items-start sm:justify-center sm:py-16 sm:text-left">
+        <p className="text-xs font-medium uppercase tracking-[0.3em] text-primary sm:text-sm sm:tracking-[0.2em]">
           {texts.eyebrow}
         </p>
-        <h1 className="title-gradient mt-5 max-w-4xl whitespace-pre-line text-5xl font-semibold leading-[1.1] tracking-tight sm:text-6xl lg:text-7xl">
+        <h1 className="title-gradient mt-4 max-w-4xl whitespace-pre-line text-[2.6rem] font-bold leading-[1.15] tracking-tight [word-break:keep-all] sm:mt-5 sm:text-6xl sm:font-semibold sm:leading-[1.1] lg:text-7xl">
           {texts.title}
         </h1>
-        <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
+        <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground [word-break:keep-all] sm:mt-6 sm:text-lg">
           {texts.description}
         </p>
 
         {/* 버튼 2개: 웹툰 보러 가기 / 내 웹툰 올리기 (글자·주소: site.config.ts 의 hero) */}
-        <div className="mt-8 flex flex-wrap gap-3">
-          <Button asChild size="lg">
+        <div className="mt-8 flex w-full max-w-sm flex-col gap-3 sm:w-auto sm:max-w-none sm:flex-row sm:flex-wrap">
+          <Button asChild size="lg" className="w-full sm:w-auto">
             <a href={siteConfig.hero.primaryCta.href}>
               <BookOpen />
               {lang === "ko" ? siteConfig.hero.primaryCta.label : t.hero.read}
             </a>
           </Button>
-          <Button asChild size="lg" variant="outline">
+          <Button asChild size="lg" variant="outline" className="w-full sm:w-auto">
             <Link href={siteConfig.hero.secondaryCta.href}>
               <PenLine />
               {lang === "ko" ? siteConfig.hero.secondaryCta.label : t.hero.create}
