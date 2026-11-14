@@ -42,6 +42,8 @@ export function WebtoonForm({ webtoon }: { webtoon?: Webtoon }) {
         <input name="title" required defaultValue={webtoon?.title ?? ""} className={inputClass} />
       </label>
 
+      <LangSelect defaultValue={webtoon?.lang ?? "ko"} />
+
       <label className="grid gap-1.5 text-sm">
         <span className="font-medium">연재 요일 *</span>
         <select name="weekday" defaultValue={webtoon?.weekday ?? "mon"} className={inputClass}>
@@ -82,6 +84,19 @@ export function WebtoonForm({ webtoon }: { webtoon?: Webtoon }) {
         ) : null}
       </div>
     </form>
+  );
+}
+
+/** 한국판 / 영어판 고르기 — 서로 따로인 웹툰이라, 한국어 화면엔 한국판만 · 영어 화면(EN)엔 영어판만 보여요 */
+function LangSelect({ defaultValue }: { defaultValue: "ko" | "en" }) {
+  return (
+    <label className="grid gap-1.5 text-sm">
+      <span className="font-medium">언어 *</span>
+      <select name="lang" defaultValue={defaultValue} className={inputClass}>
+        <option value="ko">한국판 (한국어 화면에 보임)</option>
+        <option value="en">영어판 (영어 화면 EN 에 보임)</option>
+      </select>
+    </label>
   );
 }
 
@@ -150,6 +165,8 @@ export function NewWebtoonForm() {
         <span className="font-medium">제목 *</span>
         <input name="title" required className={inputClass} />
       </label>
+
+      <LangSelect defaultValue="ko" />
 
       <label className="grid gap-1.5 text-sm">
         <span className="font-medium">연재 요일 *</span>

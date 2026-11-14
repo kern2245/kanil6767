@@ -79,8 +79,8 @@ export async function generateMetadata(props: PageProps<"/webtoon/[id]/[no]">): 
   const [webtoon, episode, { lang }] = await Promise.all([getWebtoon(id), getEpisode(id, number), getT()]);
   if (!webtoon || !episode) return {};
   const en = lang === "en";
-  const wTitle = en && webtoon.title_en ? webtoon.title_en : webtoon.title;
-  const eTitle = en && episode.title_en ? episode.title_en : episode.title;
+  const wTitle = webtoon.title;
+  const eTitle = episode.title;
   const title = en ? `Ep. ${number} ${eTitle} - ${wTitle}` : `${number}화 ${eTitle} - ${wTitle}`;
   const description = en ? `Read episode ${number} of "${wTitle}" free on Sekai.` : `세카이에서 「${wTitle}」 ${number}화를 무료로 보세요.`;
   return {
@@ -112,11 +112,10 @@ export default async function EpisodeViewerPage(props: PageProps<"/webtoon/[id]/
   const loggedIn = Boolean(me && me.status !== "blocked");
   const { lang, t } = await getT();
   const tv = t.viewer;
-  // 영어 화면: 영어 제목 · 영어판 그림이 있으면 그걸로 (없으면 원래 것)
-  const en = lang === "en";
-  const webtoonTitle = en && webtoon.title_en ? webtoon.title_en : webtoon.title;
-  const episodeTitle = en && episode.title_en ? episode.title_en : episode.title;
-  const pages = en && episode.image_urls_en && episode.image_urls_en.length > 0 ? episode.image_urls_en : episode.image_urls;
+  // 한국판·영어판은 서로 따로인 웹툰 → 그 웹툰 자기 제목·그림을 그대로 보여줌
+  const webtoonTitle = webtoon.title;
+  const episodeTitle = episode.title;
+  const pages = episode.image_urls;
 
   const index = episodes.findIndex((ep) => ep.number === number);
   const prev = index > 0 ? episodes[index - 1].number : undefined;

@@ -19,8 +19,9 @@ export async function generateMetadata() {
 export default async function SearchPage(props: PageProps<"/search">) {
   const { q } = await props.searchParams;
   const query = typeof q === "string" ? q.trim() : "";
-  const results = query ? await searchWebtoons(query) : [];
   const { lang, t } = await getT();
+  // 지금 화면 언어의 웹툰만 검색 (한국판 / 영어판)
+  const results = query ? await searchWebtoons(query, lang) : [];
 
   return (
     <>

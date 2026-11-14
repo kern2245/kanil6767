@@ -28,7 +28,7 @@ export async function generateMetadata(props: PageProps<"/webtoon/[id]">): Promi
   const { id } = await props.params;
   const [webtoon, { lang }] = await Promise.all([getWebtoon(id), getT()]);
   if (!webtoon) return {};
-  const title = lang === "en" && webtoon.title_en ? webtoon.title_en : webtoon.title;
+  const title = webtoon.title;
   const description =
     lang === "en" ? `Read "${title}" free on Sekai.` : `세카이에서 웹툰 「${title}」을 무료로 보세요.`;
   return {
@@ -62,7 +62,7 @@ export default async function WebtoonPage(props: PageProps<"/webtoon/[id]">) {
         : undefined;
   const tw = t.webtoon;
   // 영어 화면이면 영어 제목 (없으면 원래 제목)
-  const title = lang === "en" && webtoon.title_en ? webtoon.title_en : webtoon.title;
+  const title = webtoon.title;
 
   // 로그인 회원: 관심 웹툰 여부 · 이어보기 (관심 웹툰이면 "봤음" 기록 → 새 회차 알림 꺼짐)
   const current = await getCurrentArtist();
@@ -150,7 +150,7 @@ export default async function WebtoonPage(props: PageProps<"/webtoon/[id]">) {
                       )}
                     </div>
                     <span className="w-12 shrink-0 text-sm text-muted-foreground">{tw.ep(ep.number)}</span>
-                    <span className="min-w-0 flex-1 truncate font-medium">{lang === "en" && ep.title_en ? ep.title_en : ep.title}</span>
+                    <span className="min-w-0 flex-1 truncate font-medium">{ep.title}</span>
                     <span className="shrink-0 text-xs text-muted-foreground">
                       {tw.views(formatViews(viewCounts.get(ep.id) ?? 0))} ·{" "}
                       {new Date(ep.publish_at ?? ep.created_at).toLocaleDateString(tw.dateLocale, { timeZone: tw.timeZone })}

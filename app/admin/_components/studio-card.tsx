@@ -9,11 +9,11 @@ import type { Webtoon } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { CompleteButton, CoverButtons, DeleteWebtoonButton, WebtoonForm } from "./webtoon-form";
 import { EpisodeManager } from "./episode-manager";
-import { EnglishManager } from "./english-manager";
 
 /* 작가 스튜디오 — 웹툰 한 개 카드 (회장 페이지 "웹툰" 탭, 작가 페이지가 같이 씀)
    - 왼쪽: 큰 표지 / 오른쪽: 제목, 요일·완결, 회차 수, 다음 공개 예약
-   - 아래 탭 3개: 회차 관리 · 정보 수정 · 표지·설정 (누르면 열리고, 한 번 더 누르면 닫힘) */
+   - 아래 탭 3개: 회차 관리 · 정보 수정 · 표지·설정 (누르면 열리고, 한 번 더 누르면 닫힘)
+   - 한국판 / 영어판은 서로 따로인 웹툰 (예전 "영어판" 탭은 없앰 — english-manager.tsx 는 안 씀) */
 
 type EpisodeRow = {
   id: string;
@@ -29,11 +29,10 @@ type EpisodeRow = {
   stats: { views: number; likes: number; dislikes: number; comments: number };
 };
 
-type Tab = "episodes" | "english" | "edit" | "settings";
+type Tab = "episodes" | "edit" | "settings";
 
 const TABS: { key: Tab; label: string; icon: typeof Layers }[] = [
   { key: "episodes", label: "회차 관리", icon: Layers },
-  { key: "english", label: "영어판", icon: Globe },
   { key: "edit", label: "정보 수정", icon: Pencil },
   { key: "settings", label: "표지·설정", icon: Settings2 },
 ];
@@ -97,6 +96,16 @@ export function StudioCard({
             ) : (
               <span className="rounded-full bg-primary/15 px-2 py-0.5 font-medium text-primary">{dayLabel}</span>
             )}
+            {/* 한국판 / 영어판 */}
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium",
+                webtoon.lang === "en" ? "border border-primary/60 text-primary" : "bg-muted text-muted-foreground",
+              )}
+            >
+              <Globe className="size-3" />
+              {webtoon.lang === "en" ? "영어판" : "한국판"}
+            </span>
             {!webtoon.is_visible ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-muted-foreground">
                 <EyeOff className="size-3" />
@@ -137,7 +146,7 @@ export function StudioCard({
       </div>
 
       {/* 탭 */}
-      <div className="grid grid-cols-4 border-t" role="tablist" aria-label={`${webtoon.title} 관리`}>
+      <div className="grid grid-cols-3 border-t" role="tablist" aria-label={`${webtoon.title} 관리`}>
         {TABS.map(({ key, label, icon: Icon }) => (
           <button
             key={key}
@@ -163,8 +172,6 @@ export function StudioCard({
         <div className="border-t bg-background/40 p-4 sm:p-5">
           {tab === "episodes" ? (
             <EpisodeManager webtoonId={webtoon.id} episodes={episodes} publishChoices={publishChoices} />
-          ) : tab === "english" ? (
-            <EnglishManager webtoonId={webtoon.id} titleEn={webtoon.title_en ?? ""} episodes={episodes} />
           ) : tab === "edit" ? (
             <WebtoonForm webtoon={webtoon} />
           ) : (

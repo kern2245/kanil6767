@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { siteConfig } from "@/site.config";
 import { getWebtoons } from "@/lib/data";
+import { getLang } from "@/lib/lang";
 import { Container } from "@/components/layout/container";
 import { SectionHeader } from "@/components/layout/section-header";
 import { WebtoonCard } from "@/components/sections/webtoon-board";
@@ -13,7 +14,7 @@ import { WebtoonCard } from "@/components/sections/webtoon-board";
 
 export async function WebtoonCompleted() {
   const { completedWebtoons } = siteConfig;
-  const completed = (await getWebtoons()).filter((w) => w.is_completed);
+  const completed = (await getWebtoons(await getLang())).filter((w) => w.is_completed);
 
   return (
     <section id="completed" className="scroll-mt-16 py-16">

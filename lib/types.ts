@@ -30,7 +30,9 @@ export type Weekday = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
 export type Webtoon = {
   id: string;
   title: string;
-  /** 영어 제목 (외국 독자용, 없으면 title) — 스튜디오 "영어판" 탭 */
+  /** 언어: "ko" 한국판 / "en" 영어판 — 서로 따로인 웹툰. 한국어 화면엔 한국판만, 영어 화면엔 영어판만 보임 */
+  lang?: "ko" | "en";
+  /** (예전) 한국판 안에 붙어 있던 영어 제목 — 지금은 안 씀 (supabase/english-split.sql 로 영어판 웹툰으로 옮김) */
   title_en?: string | null;
   weekday: Weekday;
   cover_url: string | null;

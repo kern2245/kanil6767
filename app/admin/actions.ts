@@ -226,6 +226,27 @@ export async function saveContactTexts(_prev: ActionState, formData: FormData): 
   return { ok: true, message: "저장했습니다." };
 }
 
+/* ---------- 그림 파일 정리 (같이 쓰는 그림은 남겨 둠) ----------
+   영어판 웹툰을 따로 만들 때(supabase/english-split.sql) 표지·썸네일 그림 파일을
+   한국판과 같이 쓰기 시작해서, 한쪽에서 바꾸거나 지울 때 다른 쪽 그림이 사라지지 않게
+   "아직 어디선가 쓰는 그림"은 저장소에서 지우지 않습니다. */
+async function removeUnusedFiles(supabase: NonNullable<ReturnType<typeof getAdminClient>>, urls: string[]) {
+  const marker = `/object/public/${IMAGE_BUCKET}/`;
+  const unused: string[] = [];
+  for (const url of new Set(urls.filter((u) => u && u.includes(marker)))) {
+    const [covers, thumbs, pages, enPages] = await Promise.all([
+      supabase.from("webtoons").select("id", { count: "exact", head: true }).eq("cover_url", url),
+      supabase.from("episodes").select("id", { count: "exact", head: true }).eq("thumbnail_url", url),
+      supabase.from("episodes").select("id", { count: "exact", head: true }).contains("image_urls", [url]),
+      supabase.from("episodes").select("id", { count: "exact", head: true }).contains("image_urls_en", [url]),
+    ]);
+    const used = (covers.count ?? 0) + (thumbs.count ?? 0) + (pages.count ?? 0) + (enPages.count ?? 0);
+    // 확인이 실패하면(에러) 안전하게 지우지 않음
+    if (!covers.error && !thumbs.error && !pages.error && !enPages.error && used === 0) unused.push(url.split(marker)[1]);
+  }
+  if (unused.length > 0) await supabase.storage.from(IMAGE_BUCKET).remove(unused);
+}
+
 /* ---------- 웹툰 저장 (추가 / 수정) ---------- */
 
 const WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
@@ -243,17 +264,21 @@ export async function saveWebtoon(_prev: ActionState, formData: FormData): Promi
   const title = String(formData.get("title") ?? "").trim();
   const weekday = String(formData.get("weekday") ?? "");
   const isVisible = formData.get("is_visible") === "on";
+  // 언어: 한국판(ko) / 영어판(en) — 폼에 칸이 없으면(예전 화면) 바꾸지 않음
+  const langValue = formData.get("lang");
   const removeCover = formData.get("remove_cover") === "on";
   const cover = formData.get("cover");
 
   if (!title) return { message: "제목을 입력하세요." };
   if (!WEEKDAYS.includes(weekday)) return { message: "요일을 골라 주세요." };
+  if (langValue !== null && langValue !== "ko" && langValue !== "en") return { message: "한국판/영어판을 골라 주세요." };
 
   const row: Record<string, unknown> = {
     title,
     weekday,
     is_visible: isVisible,
   };
+  if (langValue === "ko" || langValue === "en") row.lang = langValue;
   // 완결 상태는 여기서 안 바꿈 → 회장 페이지의 "완결로 넘기기" 버튼(setWebtoonCompleted)으로만
 
   // 새 표지를 올린 경우 → Supabase 저장소의 webtoons/ 폴더에 업로드
@@ -332,11 +357,8 @@ export async function updateWebtoonCover(formData: FormData): Promise<ActionStat
   const { error } = await supabase.from("webtoons").update({ cover_url: newUrl }).eq("id", id);
   if (error) return { message: `저장 실패: ${error.message}` };
 
-  // 예전 표지 파일 정리
-  const marker = `/object/public/${IMAGE_BUCKET}/`;
-  if (oldUrl && oldUrl.includes(marker)) {
-    await supabase.storage.from(IMAGE_BUCKET).remove([oldUrl.split(marker)[1]]);
-  }
+  // 예전 표지 파일 정리 (다른 웹툰이 아직 같이 쓰면 남겨 둠)
+  if (oldUrl) await removeUnusedFiles(supabase, [oldUrl]);
 
   revalidatePath("/", "layout");
   return { ok: true, message: remove ? "무프사로 바꿨습니다." : "표지를 바꿨습니다." };
@@ -371,11 +393,8 @@ export async function deleteWebtoon(formData: FormData) {
 
   await supabase.from("webtoons").delete().eq("id", id);
 
-  // 연결된 표지 파일도 저장소에서 정리
-  const marker = `/object/public/${IMAGE_BUCKET}/`;
-  if (coverUrl.includes(marker)) {
-    await supabase.storage.from(IMAGE_BUCKET).remove([coverUrl.split(marker)[1]]);
-  }
+  // 연결된 표지 파일도 저장소에서 정리 (한국판·영어판이 같이 쓰는 표지면 남겨 둠)
+  if (coverUrl) await removeUnusedFiles(supabase, [coverUrl]);
 
   revalidatePath("/");
   revalidatePath("/admin");
@@ -550,12 +569,9 @@ export async function updateEpisodeThumbnail(formData: FormData): Promise<Action
   const { error } = await supabase.from("episodes").update({ thumbnail_url: newUrl }).eq("id", id);
   if (error) return { message: `저장 실패: ${error.message}` };
 
-  // 예전 썸네일 파일 정리
+  // 예전 썸네일 파일 정리 (다른 회차가 아직 같이 쓰면 남겨 둠)
   const oldUrl = (episode.thumbnail_url as string | null) ?? null;
-  const marker = `/object/public/${IMAGE_BUCKET}/`;
-  if (oldUrl && oldUrl.includes(marker)) {
-    await supabase.storage.from(IMAGE_BUCKET).remove([oldUrl.split(marker)[1]]);
-  }
+  if (oldUrl) await removeUnusedFiles(supabase, [oldUrl]);
 
   revalidatePath("/", "layout");
   return { ok: true, message: remove ? "무프사로 바꿨습니다." : "썸네일을 바꿨습니다." };
@@ -641,16 +657,12 @@ export async function deleteEpisode(formData: FormData) {
   if (!data || !(await canEditWebtoon(editor, data.webtoon_id as string))) return;
   await supabase.from("episodes").delete().eq("id", id);
 
-  // 만화 그림 + 썸네일 파일 정리
-  const marker = `/object/public/${IMAGE_BUCKET}/`;
-  const paths = [
+  // 만화 그림 + 썸네일 파일 정리 (한국판·영어판이 같이 쓰는 그림이면 남겨 둠)
+  await removeUnusedFiles(supabase, [
     ...((data?.image_urls as string[] | undefined) ?? []),
     ...((data?.image_urls_en as string[] | undefined) ?? []),
     (data?.thumbnail_url as string | null) ?? "",
-  ]
-    .filter((url) => url.includes(marker))
-    .map((url) => url.split(marker)[1]);
-  if (paths.length > 0) await supabase.storage.from(IMAGE_BUCKET).remove(paths);
+  ]);
 
   revalidatePath("/", "layout");
 }

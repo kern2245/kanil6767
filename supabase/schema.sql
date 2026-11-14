@@ -395,3 +395,11 @@ end $$;
 alter table public.webtoons add column if not exists title_en text;
 alter table public.episodes add column if not exists title_en text;
 alter table public.episodes add column if not exists image_urls_en text[] not null default '{}';
+
+-- 28) 한국판 / 영어판 나누기 — 웹툰마다 언어(lang): 'ko' 한국판 / 'en' 영어판 (서로 따로인 웹툰)
+--     한국어 화면엔 한국판만, 영어 화면(EN)엔 영어판만 보임.
+--     예전에 한국판 안에 붙어 있던 영어판을 따로 옮기는 것까지: supabase/english-split.sql 을 실행하세요.
+alter table public.webtoons add column if not exists lang text not null default 'ko';
+alter table public.webtoons drop constraint if exists webtoons_lang_check;
+alter table public.webtoons add constraint webtoons_lang_check check (lang in ('ko', 'en'));
+create index if not exists webtoons_lang_idx on public.webtoons (lang);

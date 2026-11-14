@@ -81,14 +81,16 @@ export async function getHeroTexts(): Promise<HeroTexts> {
  * - Supabase가 연결 안 됐거나, 웹툰이 하나도 없으면: site.config.ts 의 예시 웹툰을 보여줌
  * - 있으면: '보이기'로 설정된 웹툰만 순서대로 가져옴
  */
-export async function getWebtoons(): Promise<Webtoon[]> {
+export async function getWebtoons(lang?: "ko" | "en"): Promise<Webtoon[]> {
+  // lang 을 주면 그 언어 웹툰만 (한국판 / 영어판), 안 주면 전부 (sitemap 용)
+  // 예시 웹툰(sample)은 한국어 화면에서만 보여줌
+  const samples = lang === "en" ? [] : sampleWebtoons;
   const supabase = getPublicClient();
-  if (!supabase) return sampleWebtoons;
+  if (!supabase) return samples;
 
-  const { data, error } = await supabase
-    .from("webtoons")
-    .select(WEBTOON_WITH_LATEST_EPISODE)
-    .eq("is_visible", true)
+  let query = supabase.from("webtoons").select(WEBTOON_WITH_LATEST_EPISODE).eq("is_visible", true);
+  if (lang) query = query.eq("lang", lang);
+  const { data, error } = await query
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true })
     .order("publish_at", { referencedTable: "episodes", ascending: false })
@@ -96,9 +98,9 @@ export async function getWebtoons(): Promise<Webtoon[]> {
 
   if (error) {
     console.error("[getWebtoons] Supabase 읽기 실패:", error.message);
-    return sampleWebtoons;
+    return samples;
   }
-  return data && data.length > 0 ? data.map(withNewFlag) : sampleWebtoons;
+  return data && data.length > 0 ? data.map(withNewFlag) : samples;
 }
 
 /* ---------- UP 표시 (새 회차) ----------
@@ -176,19 +178,21 @@ export async function getEpisode(webtoonId: string, number: number): Promise<Epi
 }
 
 /** 웹툰 제목 검색 (검색 페이지용). 대소문자 구분 없이 제목에 검색어가 들어간 웹툰. */
-export async function searchWebtoons(query: string): Promise<Webtoon[]> {
+export async function searchWebtoons(query: string, lang?: "ko" | "en"): Promise<Webtoon[]> {
   const q = query.trim();
   const supabase = getPublicClient();
   if (!q || !supabase) return [];
 
   // % 와 _ 는 검색 기호라서 글자 그대로 찾도록 앞에 \ 를 붙임
   const escaped = q.replace(/[\\%_]/g, (c) => "\\" + c);
-  const { data, error } = await supabase
+  // 지금 화면 언어의 웹툰 중에서 제목에 검색어가 들어간 웹툰
+  let search = supabase
     .from("webtoons")
     .select(WEBTOON_WITH_LATEST_EPISODE)
     .eq("is_visible", true)
-    // 한국어 제목 또는 영어 제목에 검색어가 들어간 웹툰
-    .or(`title.ilike.%${escaped}%,title_en.ilike.%${escaped}%`)
+    .ilike("title", `%${escaped}%`);
+  if (lang) search = search.eq("lang", lang);
+  const { data, error } = await search
     .order("title", { ascending: true })
     .limit(60)
     .order("publish_at", { referencedTable: "episodes", ascending: false })
