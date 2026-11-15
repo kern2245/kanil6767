@@ -170,9 +170,10 @@ export async function UserMenu() {
   return (
     <Link
       href="/login"
-      className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-primary px-3 text-sm sm:px-4 font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+      className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-2 text-sm font-semibold text-foreground transition-opacity hover:opacity-90 sm:bg-primary sm:px-4 sm:text-primary-foreground"
     >
-      <LogIn className="size-4" />
+      {/* 휴대폰: 글자만 (네이버 MY 처럼) / 컴퓨터: 보라 버튼 */}
+      <LogIn className="hidden size-4 sm:block" />
       {t.nav.login}
     </Link>
   );

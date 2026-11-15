@@ -1,6 +1,5 @@
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
-import { Hero } from "@/components/sections/hero";
 import { WebtoonWeekly } from "@/components/sections/webtoon-weekly";
 import { AdBoard } from "@/components/sections/ad-board";
 
@@ -17,7 +16,8 @@ export default function HomePage() {
     <>
       <Navbar />
       <main className="flex-1">
-        <Hero />
+        {/* 첫 화면 큰 제목(Hero)은 뺐어요. 다시 넣으려면 맨 위에
+            import { Hero } from "@/components/sections/hero"; 를 넣고 여기에 <Hero /> 한 줄 추가 */}
         {/* 완결 웹툰은 요일별 웹툰 제목 옆 버튼으로 봄.
             따로 큰 칸으로 보이고 싶으면 components/sections/webtoon-completed.tsx 의 WebtoonCompleted 를 여기 넣기 */}
         <WebtoonWeekly />

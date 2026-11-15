@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { PenLine, Search } from "lucide-react";
 
 import { siteConfig } from "@/site.config";
 import { Container } from "@/components/layout/container";
@@ -15,26 +15,24 @@ export async function Navbar() {
   const { lang, t } = await getT();
   return (
     <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur">
-      {/* 휴대폰: 1줄 = 사이트 이름 · 언어 · 로그인 / 2줄 = 화면 폭 꽉 찬 검색 칸
-          컴퓨터(sm 이상): 한 줄에 이름 · 검색 · 언어 · 로그인 */}
-      <Container className="flex flex-wrap items-center gap-x-2 gap-y-2 py-2 sm:h-16 sm:flex-nowrap sm:gap-4 sm:py-0">
+      {/* 휴대폰: 네이버처럼 한 줄로 깔끔하게 — 이름 · 돋보기 아이콘 · 언어 · 로그인(글자만)
+          돋보기를 누르면 검색 페이지(/search)로 가서 거기서 검색
+          컴퓨터(sm 이상): 이름 · 검색 칸 · 언어 · 로그인 버튼 */}
+      <Container className="flex h-14 items-center gap-1 sm:h-16 sm:gap-4">
         <Link href="/" className="shrink-0 text-lg font-semibold tracking-tight">
           {siteConfig.name}
         </Link>
 
-        {/* 웹툰 검색 (휴대폰에서는 맨 아래 줄로 내려가 폭을 꽉 채움) */}
-        <form action="/search" role="search" className="relative order-last w-full sm:order-none sm:ml-auto sm:w-auto">
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            type="search"
-            name="q"
-            placeholder={t.nav.search}
-            aria-label={t.nav.search}
-            className="h-10 w-full min-w-0 rounded-full bg-muted pr-3 pl-9 text-base outline-none transition-[width] focus:ring-2 focus:ring-ring/50 sm:h-9 sm:w-56 sm:focus:w-64"
-          />
-        </form>
+        {/* 내 웹툰 올리기 (사이트 이름 바로 옆) */}
+        <Link
+          href={siteConfig.hero.secondaryCta.href}
+          className="ml-2 inline-flex h-8 shrink-0 items-center gap-1 rounded-full border border-border px-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted sm:ml-3 sm:h-9 sm:px-3.5 sm:text-sm"
+        >
+          <PenLine className="size-3.5 sm:size-4" />
+          {lang === "ko" ? siteConfig.hero.secondaryCta.label : t.hero.create}
+        </Link>
 
-        <div className="ml-auto flex shrink-0 items-center gap-2 sm:ml-0 sm:gap-4">
+        <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-4">
           {siteConfig.nav.map((item) => (
             <a
               key={item.href}
@@ -44,6 +42,28 @@ export async function Navbar() {
               {item.label}
             </a>
           ))}
+
+          {/* 휴대폰: 돋보기 아이콘만 */}
+          <Link
+            href="/search"
+            aria-label={t.nav.search}
+            title={t.nav.search}
+            className="inline-flex size-9 items-center justify-center rounded-full text-foreground transition-colors hover:bg-muted sm:hidden"
+          >
+            <Search className="size-5" />
+          </Link>
+
+          {/* 컴퓨터: 웹툰 검색 칸 */}
+          <form action="/search" role="search" className="relative hidden sm:block">
+            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="search"
+              name="q"
+              placeholder={t.nav.search}
+              aria-label={t.nav.search}
+              className="h-9 w-56 rounded-full bg-muted pr-3 pl-9 text-base outline-none transition-[width] focus:w-64 focus:ring-2 focus:ring-ring/50"
+            />
+          </form>
 
           {/* 언어 바꾸기 (한국어 ↔ 영어) */}
           <LangToggle lang={lang} label={t.nav.switchTo} />

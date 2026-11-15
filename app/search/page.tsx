@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Search } from "lucide-react";
 
 import { searchWebtoons } from "@/lib/data";
 import { Navbar } from "@/components/layout/navbar";
@@ -26,8 +27,22 @@ export default async function SearchPage(props: PageProps<"/search">) {
   return (
     <>
       <Navbar />
-      <main className="flex-1 py-10">
+      <main className="flex-1 py-6 sm:py-10">
         <Container>
+          {/* 휴대폰: 맨 위 메뉴엔 돋보기만 있으니, 여기 검색 칸을 보여줌 */}
+          <form action="/search" role="search" className="relative mb-6 sm:hidden">
+            <Search className="pointer-events-none absolute top-1/2 left-3.5 size-5 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="search"
+              name="q"
+              defaultValue={query}
+              autoFocus={!query}
+              placeholder={t.nav.search}
+              aria-label={t.nav.search}
+              className="h-12 w-full rounded-full bg-muted pr-4 pl-11 text-base outline-none focus:ring-2 focus:ring-ring/50"
+            />
+          </form>
+
           <h1 className="text-2xl font-semibold tracking-tight">
             {query ? (
               <>
