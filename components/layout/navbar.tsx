@@ -5,6 +5,7 @@ import { siteConfig } from "@/site.config";
 import { Container } from "@/components/layout/container";
 import { UserMenu } from "@/components/layout/user-menu";
 import { LangToggle } from "@/components/layout/lang-toggle";
+import { MobileSearch } from "@/components/layout/mobile-search";
 import { getT } from "@/lib/lang";
 
 /** 상단 메뉴.
@@ -26,10 +27,12 @@ export async function Navbar() {
         {/* 내 웹툰 올리기 (사이트 이름 바로 옆) */}
         <Link
           href={siteConfig.hero.secondaryCta.href}
-          className="ml-2 inline-flex h-8 shrink-0 items-center gap-1 rounded-full border border-border px-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted sm:ml-3 sm:h-9 sm:px-3.5 sm:text-sm"
+          className="ml-1.5 inline-flex h-7 shrink-0 items-center gap-1 rounded-full border border-border px-2 text-[11px] font-semibold text-foreground transition-colors hover:bg-muted sm:ml-3 sm:h-9 sm:px-3.5 sm:text-sm"
         >
-          <PenLine className="size-3.5 sm:size-4" />
-          {lang === "ko" ? siteConfig.hero.secondaryCta.label : t.hero.create}
+          <PenLine className="size-3 sm:size-4" />
+          {/* 휴대폰: 짧게 "올리기" / 컴퓨터: "내 웹툰 올리기" */}
+          <span className="sm:hidden">{lang === "ko" ? "올리기" : "Publish"}</span>
+          <span className="hidden sm:inline">{lang === "ko" ? siteConfig.hero.secondaryCta.label : t.hero.create}</span>
         </Link>
 
         <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-4">
@@ -43,15 +46,8 @@ export async function Navbar() {
             </a>
           ))}
 
-          {/* 휴대폰: 돋보기 아이콘만 */}
-          <Link
-            href="/search"
-            aria-label={t.nav.search}
-            title={t.nav.search}
-            className="inline-flex size-9 items-center justify-center rounded-full text-foreground transition-colors hover:bg-muted sm:hidden"
-          >
-            <Search className="size-5" />
-          </Link>
+          {/* 휴대폰: 돋보기 → 누르면 메뉴 아래에 검색 칸이 뜸 */}
+          <MobileSearch placeholder={t.nav.search} closeLabel={lang === "ko" ? "닫기" : "Close"} />
 
           {/* 컴퓨터: 웹툰 검색 칸 */}
           <form action="/search" role="search" className="relative hidden sm:block">
