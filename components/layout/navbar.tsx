@@ -5,7 +5,6 @@ import { siteConfig } from "@/site.config";
 import { Container } from "@/components/layout/container";
 import { UserMenu } from "@/components/layout/user-menu";
 import { LangToggle } from "@/components/layout/lang-toggle";
-import { MobileSearch } from "@/components/layout/mobile-search";
 import { getT } from "@/lib/lang";
 
 /** 상단 메뉴.
@@ -15,10 +14,10 @@ import { getT } from "@/lib/lang";
 export async function Navbar() {
   const { lang, t } = await getT();
   return (
+    <>
     <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur">
-      {/* 휴대폰: 네이버처럼 한 줄로 깔끔하게 — 이름 · 돋보기 아이콘 · 언어 · 로그인(글자만)
-          돋보기를 누르면 검색 페이지(/search)로 가서 거기서 검색
-          컴퓨터(sm 이상): 이름 · 검색 칸 · 언어 · 로그인 버튼 */}
+      {/* 휴대폰: 이름 · 올리기 · 언어 · 로그인(글자만) — 검색은 메뉴 아래 네이버식 검색창
+          컴퓨터(sm 이상): 이름 · 올리기 · 검색 칸 · 언어 · 로그인 버튼 */}
       <Container className="flex h-14 items-center gap-1 sm:h-16 sm:gap-4">
         <Link href="/" className="shrink-0 text-lg font-semibold tracking-tight">
           {siteConfig.name}
@@ -46,9 +45,6 @@ export async function Navbar() {
             </a>
           ))}
 
-          {/* 휴대폰: 돋보기 → 누르면 메뉴 아래에 검색 칸이 뜸 */}
-          <MobileSearch placeholder={t.nav.search} closeLabel={lang === "ko" ? "닫기" : "Close"} />
-
           {/* 컴퓨터: 웹툰 검색 칸 */}
           <form action="/search" role="search" className="relative hidden sm:block">
             <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -69,5 +65,31 @@ export async function Navbar() {
         </div>
       </Container>
     </header>
+
+    {/* 휴대폰 전용: 네이버처럼 둥근 긴 검색창 (메뉴 바로 아래, 항상 보임)
+        글자 칸 · 오른쪽 보라 돋보기 버튼 → /search?q=검색어 */}
+    <Container className="pt-3 pb-1 sm:hidden">
+      <form
+        action="/search"
+        role="search"
+        className="flex h-13 items-center gap-2 rounded-full border border-border/60 bg-muted pr-1.5 pl-5 shadow-sm focus-within:ring-2 focus-within:ring-ring/50"
+      >
+        <input
+          type="search"
+          name="q"
+          placeholder={t.nav.search}
+          aria-label={t.nav.search}
+          className="h-full min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
+        />
+        <button
+          type="submit"
+          aria-label={t.nav.search}
+          className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-opacity hover:opacity-90"
+        >
+          <Search className="size-5" />
+        </button>
+      </form>
+    </Container>
+    </>
   );
 }
