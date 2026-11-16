@@ -265,7 +265,9 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
   const EASY = 1;   // 1 스테이지만 연습 구간 (쉽게), 2부터 하드코어
   const mDmg = (st, boss) => Math.ceil(mHp(st) * 0.27 * (boss ? 3 : 1) * (st <= EASY ? 0.35 : 1));   // 하드코어: 악당이 세게 때림 (1~5는 약하게)
   // 체력은 강화로 못 올림: 스테이지가 오르면 저절로 늘고, 직업마다 배수가 다름
-  const maxHp = () => Math.max(80, Math.floor(mHp(S.stage) * 4 * jm("hp")));   // 체력 너프 (5.4 → 4)
+  // 보스를 잡을 때마다(= 스테이지가 오를 때마다) 최대 체력 +5% 보너스 (쓰러지면 스테이지 1로 가서 같이 사라짐)
+  const BOSS_HP = 0.05;
+  const maxHp = () => Math.max(80, Math.floor(mHp(S.stage) * 4 * jm("hp") * (1 + BOSS_HP * (S.stage - 1))));   // 체력 너프 (5.4 → 4)
 
   const UPS = [
     { id: "jsk", ic: "", nm: "", job: true, ef: () => (J() ? JSK[S.job].ef(S.jsk || 0) : ""), cost: (l) => (J() ? JSK[S.job].cost(l) : 1e99), get max() { return J() ? JSK[S.job].max : 1; } },
@@ -351,7 +353,7 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
   }
   function kill() {
     mon.dead = 0.001; laughT = 0.6;
-    komiHp = Math.min(maxHp(), komiHp + maxHp() * 0.1);   // 잡을 때마다 체력 10% 회복 (하드코어)
+    // 일반 몬스터(잡몹)를 잡아도 체력은 회복되지 않음 (보스를 잡으면 아래에서 가득 회복)
     const g = mon.boss ? mGold(S.stage) * 12 : mGold(S.stage);
     S.gold += g;
     for (let i = 0; i < (mon.boss ? 12 : 5); i++) coins.push({ x: 262, y: 160, vx: (Math.random() - .5) * 220, vy: -200 - Math.random() * 200, t: 0 });
@@ -366,6 +368,7 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
       pops.push({ t: 0, x: W / 2, y: 40, text: "스테이지 " + S.stage + "!", c: "#a855f7", big: true, huge: true });
       const tr = TIERS.find((x) => x[0] === S.stage);
       if (tr) pops.push({ t: -0.5, x: W / 2, y: 80, text: tr[1] + " 등급 UP!", c: "#5fe3a1", big: true });
+      pops.push({ t: -0.3, x: W / 2, y: 118, text: "❤️ 최대 체력 UP! (+" + Math.round(BOSS_HP * 100 * (S.stage - 1)) + "%)", c: "#ff7a9a", big: true });
       [523, 659, 784, 1046].forEach((f, k) => setTimeout(() => beep(f, 0.15, "square", 0.04), k * 90));
       save();
       setTimeout(checkJob, 700);
