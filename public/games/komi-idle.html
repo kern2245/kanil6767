@@ -358,6 +358,8 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
       S.stage++; S.kill = 0; bossFail = false; $("bossBtn").hidden = true;
       S.top = Math.max(S.top || 1, S.stage);
       komiHp = maxHp();   // 스테이지를 깨면 체력 가득
+      // 세카이 안에서 할 때: 바깥 페이지에 "스테이지 깼어요" 알림 → 로그인 회원이면 순위표에 저장
+      try { if (window.parent !== window) window.parent.postMessage({ type: "komi-stage", stage: S.stage, job: S.job }, location.origin); } catch (e) {}
       pops.push({ t: 0, x: W / 2, y: 40, text: "스테이지 " + S.stage + "!", c: "#a855f7", big: true, huge: true });
       const tr = TIERS.find((x) => x[0] === S.stage);
       if (tr) pops.push({ t: -0.5, x: W / 2, y: 80, text: tr[1] + " 등급 UP!", c: "#5fe3a1", big: true });
