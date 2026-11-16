@@ -64,6 +64,8 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
   font-family: var(--body); cursor: pointer; transition: transform .05s, background .15s;
 }
 .up:active:not(:disabled) { transform: scale(.98); }
+.up[hidden] { display: none; }
+.up.jobup { box-shadow: inset 0 0 0 2px var(--sekai); }
 .up .ic { font-size: 1.7rem; text-align: center; }
 .up .nm { font-family: var(--display); font-size: 1.05rem; }
 .up .nm em { font-style: normal; color: var(--dim); font-family: var(--body); font-size: .8rem; margin-left: 4px; }
@@ -209,7 +211,7 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
 
   // ---- 저장 ----
   const KEY = "komi-idle-v1";
-  const fresh = () => ({ gold: 0, stage: 1, kill: 0, atk: 0, spd: 0, crit: 0, tap: 0, help: 0, last: Date.now(), seen: false, job: null, adv: 0, buy: "1", top: 1 });
+  const fresh = () => ({ gold: 0, stage: 1, kill: 0, atk: 0, spd: 0, crit: 0, tap: 0, help: 0, last: Date.now(), seen: false, job: null, adv: 0, buy: "1", top: 1, jsk: 0 });
   let needHpMig = false;
   let S = fresh();
   try { const raw = localStorage.getItem(KEY); if (raw) { const o = JSON.parse(raw); needHpMig = !("hp" in o) && (o.stage || 1) > 1; S = Object.assign(fresh(), o); } } catch (e) {}
@@ -239,7 +241,18 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
   const critP = () => Math.min(0.45, 0.05 + S.crit * 0.02 + (J() && J().crit ? J().crit[jl()] : 0));
   const critX = () => (J() && J().critX ? J().critX[jl()] : 2.5);
   // 조수 꼬미: 강화로 사지 않고, 조련사 직업만 데리고 다님 (1차 2마리, 2차 4마리)
-  const helpers = () => (S.job === "tamer" ? (S.adv >= 2 ? 4 : 2) : 0);
+  const helpers = () => (S.job === "tamer" ? (S.adv >= 2 ? 4 : 2) + (S.jsk || 0) : 0);
+  // ---- 직업 전용 강화 (직업을 얻으면 강화 목록에 하나 생김, 직업마다 다름) ----
+  const cdAt = (l) => Math.max(2, 5 - 0.3 * l);   // 마법사 스킬 대기 시간
+  const skillCd = () => (S.job === "magic" ? cdAt(S.jsk || 0) : J().cd);
+  const swordMul = () => (S.job === "sword" ? 1 + 0.25 * (S.jsk || 0) : 1);
+  const arrowsPlus = () => (S.job === "bow" ? S.jsk || 0 : 0);
+  const JSK = {
+    sword: { ic: "⚔️", nm: "베기 수련", max: 20, ef: (l) => "스킬 피해 +" + l * 25 + "% → +" + (l + 1) * 25 + "%", cost: (l) => 300 * Math.pow(1.55, l) },
+    bow:   { ic: "🎯", nm: "화살 추가", max: 6, ef: (l) => "스킬 화살 +" + l + "발 → +" + (l + 1) + "발", cost: (l) => 500 * Math.pow(2.2, l) },
+    magic: { ic: "🔋", nm: "마나 회복", max: 10, ef: (l) => "번개 " + cdAt(l).toFixed(1) + "초마다 → " + cdAt(l + 1).toFixed(1) + "초마다", cost: (l) => 400 * Math.pow(1.9, l) },
+    tamer: { ic: "🐒", nm: "조수 꼬미 고용", max: 6, ef: () => "조수 " + helpers() + "마리 → " + (helpers() + 1) + "마리", cost: (l) => 400 * Math.pow(1.9, l) },
+  };
   const helpDps = () => Math.floor(atk() * 0.6 * helpers() * jm("help"));
   const dps = () => atk() * aps() * (1 + critP() * (critX() - 1)) + helpDps();
   const PER_STAGE = 5;                      // 몬스터 5마리 → 보스
@@ -252,6 +265,7 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
   const maxHp = () => Math.max(80, Math.floor(mHp(S.stage) * 4 * jm("hp")));   // 체력 너프 (5.4 → 4)
 
   const UPS = [
+    { id: "jsk", ic: "", nm: "", job: true, ef: () => (J() ? JSK[S.job].ef(S.jsk || 0) : ""), cost: (l) => (J() ? JSK[S.job].cost(l) : 1e99), get max() { return J() ? JSK[S.job].max : 1; } },
     { id: "atk",  ic: "🗡️", nm: "공격력",    ef: () => "한 대에 " + fmt(atk()) + " → " + fmt(Math.floor(baseAtk(S.atk + 1) * jm("atk"))), cost: (l) => 10 * Math.pow(1.15, l) },
     { id: "spd",  ic: "⚡",  nm: "공격 속도", ef: () => "1초에 " + aps().toFixed(1) + "번 → " + apsAt(S.spd + 1).toFixed(1) + "번", cost: (l) => 60 * Math.pow(1.6, l), max: 20 },
     { id: "crit", ic: "💥", nm: "치명타",    ef: () => Math.round(critP() * 100) + "% 확률로 " + critX() + "배 피해", cost: (l) => 120 * Math.pow(2.2, l), max: 10 },
@@ -366,9 +380,9 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
     }
     if (S.job === "sword") {
       fx = { k: "slash", t: 0 }; beep(180, .25, "sawtooth", .05, 600);
-      hit(atk() * (two ? 10 : 6), "skill", true);
+      hit(atk() * (two ? 10 : 6) * swordMul(), "skill", true);
     } else if (S.job === "bow") {
-      const n = two ? 8 : 5; fx = { k: "arrows", t: 0, n };
+      const n = (two ? 8 : 5) + arrowsPlus(); fx = { k: "arrows", t: 0, n };
       for (let i = 0; i < n; i++) setTimeout(() => { hit(atk() * 1.5, "skill", true); beep(1200, .04, "square", .02, -500); }, 120 + i * 70);
     } else if (S.job === "magic") {
       fx = { k: "bolt", t: 0 }; shake = 10; beep(90, .4, "sawtooth", .07, 300);
@@ -391,9 +405,10 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
     [392, 523, 659, 784].forEach((f, k) => setTimeout(() => beep(f, .12, "triangle", .05), k * 50));
     const burst = (n, c, sp) => { for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, v = sp * (0.4 + Math.random()); parts.push({ x: 262, y: 160, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 120, t: 0, life: .5 + Math.random() * .4, c: c[i % c.length] }); } };
     if (S.job === "sword") {
-      setTimeout(() => { shake = 14; beep(160, .4, "sawtooth", .07, 900); burst(40, ["#ffd66b", "#ffffff", "#ffb347"], 380); hit(atk() * 10, "skill", true); }, 250);
+      setTimeout(() => { shake = 14; beep(160, .4, "sawtooth", .07, 900); burst(40, ["#ffd66b", "#ffffff", "#ffb347"], 380); hit(atk() * 10 * swordMul(), "skill", true); }, 250);
     } else if (S.job === "bow") {
-      for (let i = 0; i < 8; i++) setTimeout(() => { hit(atk() * 1.5, "skill", true); burst(6, ["#7fd8ff", "#ffd66b"], 220); beep(1400 - i * 60, .05, "square", .025, -600); }, 300 + i * 80);
+      fx.n = 8 + arrowsPlus();
+      for (let i = 0; i < fx.n; i++) setTimeout(() => { hit(atk() * 1.5, "skill", true); burst(6, ["#7fd8ff", "#ffd66b"], 220); beep(1400 - i * 60, .05, "square", .025, -600); }, 300 + i * 80);
     } else if (S.job === "magic") {
       setTimeout(() => { shake = 18; beep(70, .6, "sawtooth", .08, 200); burst(50, ["#b48cff", "#7fd8ff", "#ffffff"], 420); hit(atk() * 14, "skill", true); }, 450);
     } else if (S.job === "tamer") {
@@ -434,7 +449,7 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
       }
       if (t > .9) fx = null;
     } else if (fx.k === "bow") { // 명사수: 빛나는 유성 화살 8발
-      for (let i = 0; i < 8; i++) {
+      for (let i = 0; i < (fx.n || 8); i++) {
         const p = (t - .3 - i * .08) / .14 + 1;
         const tx = MX + ((i % 3) - 1) * 22, ty = MY + (i % 2 ? -10 : 12), sx = tx - 170 + i * 8, sy = -40;
         if (p > 0 && p < 1) {
@@ -565,7 +580,7 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
     b.className = "job"; b.type = "button";
     b.innerHTML = `<span class="ic">${j.ic}</span><b>${j.n[0]}</b><small>${j.d}</small>`;
     b.addEventListener("click", () => {
-      wake(); S.job = id; S.adv = 1; $("jobPick").hidden = true; skillT = 0; komiHp = maxHp();
+      wake(); S.job = id; S.adv = 1; S.jsk = 0; $("jobPick").hidden = true; skillT = 0; komiHp = maxHp();
       pops.push({ t: 0, x: W / 2, y: 50, text: j.n[0] + " 전직!", c: "#5fe3a1", big: true, huge: true });
       [523, 784, 1046, 1568].forEach((f, k) => setTimeout(() => beep(f, 0.15, "square", 0.04), k * 90));
       save(); renderJob(); renderUps();
@@ -594,7 +609,7 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
     $("jobIc").textContent = j ? j.ic : "🐒";
     $("jobName").textContent = j ? jobName() : "직업 없음";
     $("jobTxt").textContent = j
-      ? j.d + " · " + j.cd + "초마다 [" + (S.adv >= 2 ? j.sk2 : j.sk) + "]" + (S.adv < 2 ? " · 스테이지 " + JOB2 + "에서 2차 전직" : " · 2차 전직 완료!")
+      ? j.d + " · " + skillCd().toFixed(1).replace(".0", "") + "초마다 [" + (S.adv >= 2 ? j.sk2 : j.sk) + "]" + (S.adv < 2 ? " · 스테이지 " + JOB2 + "에서 2차 전직" : " · 2차 전직 완료!")
       : "스테이지 " + JOB1 + "에 가면 직업을 고를 수 있어요 (검사·궁수·마법사·조련사)";
   }
 
@@ -612,7 +627,7 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
   UPS.forEach((u) => {
     const b = document.createElement("button");
     b.className = "up"; b.type = "button"; b.id = "up-" + u.id;
-    b.innerHTML = `<span class="ic">${u.ic}</span><span><span class="nm">${u.nm}<em></em></span><br><span class="ef"></span></span><span class="cost"></span>`;
+    b.innerHTML = `<span class="ic">${u.ic}</span><span><span class="nm"><span class="nmt">${u.nm}</span><em></em></span><br><span class="ef"></span></span><span class="cost"></span>`;
     b.addEventListener("click", () => {
       wake();
       const p = plan(u);
@@ -648,7 +663,11 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
     for (const u of UPS) {
       const b = $("up-" + u.id), maxed = u.max && S[u.id] >= u.max, p = plan(u);
       const next = Math.ceil(u.cost(S[u.id]));
-      b.querySelector("em").textContent = "Lv." + S[u.id];
+      if (u.job) { // 직업 전용 강화: 직업이 있을 때만 보임
+        b.hidden = !J(); b.classList.add("jobup"); if (!J()) continue;
+        b.querySelector(".ic").textContent = JSK[S.job].ic; b.querySelector(".nmt").textContent = JSK[S.job].nm + " ★";
+      }
+      b.querySelector("em").textContent = "Lv." + (S[u.id] || 0);
       b.querySelector(".ef").textContent = u.ef();
       b.querySelector(".cost").textContent = maxed ? "최대!" : p.n === 0 ? "🍌 " + fmt(next) : "🍌 " + fmt(p.total) + (p.n > 1 ? " ×" + p.n : "");
       b.classList.toggle("max", !!maxed);
@@ -784,7 +803,7 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
       atkTimer += dt;
       if (atkTimer >= 1 / aps()) { atkTimer = 0; swing = 1; hit(atk(), "komi", true); }
       if (helpers() > 0) { helpTimer += dt; if (helpTimer >= 1) { helpTimer = 0; hit(helpDps(), "help", false); } }
-      if (J()) { skillT += dt; if (skillT >= J().cd) { skillT = 0; useSkill(); } }
+      if (J()) { skillT += dt; if (skillT >= skillCd()) { skillT = 0; useSkill(); } }
       // 악당의 반격!
       if (mon && !mon.dead) {
         monAtkT += dt;
@@ -812,7 +831,7 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
     if (shake > 0) { ctx.translate((Math.random() - .5) * shake, (Math.random() - .5) * shake); shake *= 0.85; if (shake < .4) shake = 0; }
     bg(now); drawMon(now); drawKomi(now); drawFx();
     if (J()) { // 스킬 충전 표시 (오른쪽 위)
-      const p = Math.min(1, skillT / J().cd);
+      const p = Math.min(1, skillT / skillCd());
       ctx.fillStyle = "rgba(0,0,0,.45)"; ctx.beginPath(); ctx.arc(W - 26, 26, 17, 0, Math.PI * 2); ctx.fill();
       ctx.strokeStyle = "#7fd8ff"; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(W - 26, 26, 17, -Math.PI / 2, -Math.PI / 2 + p * Math.PI * 2); ctx.stroke();
       emoji(J().ic, W - 26, 33, 18);
