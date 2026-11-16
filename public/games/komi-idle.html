@@ -221,7 +221,7 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
   const save = () => { S.last = Date.now(); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
 
   // ---- 직업 (스테이지 5에서 1차 전직, 25에서 2차 전직) ----
-  const JOB1 = 5, JOB2 = 25;
+  const JOB1 = 2, JOB2 = 25;   // 1차 전직: 스테이지 1 보스를 잡으면 (=스테이지 2)
   const JOBS = {
     sword: { ic: "🗡️", n: ["검사 꼬미", "기사 꼬미"], d: "체력 1.6배(튼튼), 공격력 +50%, 치명타 3배", sk: "회전 베기", sk2: "십자 성검", cd: 5, atk: [1.5, 2.2], critX: [3, 3.5], hp: [1.6, 2] },
     bow:   { ic: "🏹", n: ["궁수 꼬미", "명사수 꼬미"], d: "체력 1배(보통), 공격 속도 +50%, 화살비", sk: "화살비", sk2: "유성 화살비", cd: 4, aps: [1.5, 2], hp: [1, 1.2] },
@@ -259,7 +259,7 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
   const mHp = (st) => Math.floor(18 * Math.pow(1.21, st - 1));
   const mGold = (st) => Math.ceil(mHp(st) * 0.4);
   // 꼬미 체력 / 악당 공격력
-  const EASY = 5;   // 1~5 스테이지는 연습 구간 (쉽게)
+  const EASY = 1;   // 1 스테이지만 연습 구간 (쉽게), 2부터 하드코어
   const mDmg = (st, boss) => Math.ceil(mHp(st) * 0.27 * (boss ? 3 : 1) * (st <= EASY ? 0.35 : 1));   // 하드코어: 악당이 세게 때림 (1~5는 약하게)
   // 체력은 강화로 못 올림: 스테이지가 오르면 저절로 늘고, 직업마다 배수가 다름
   const maxHp = () => Math.max(80, Math.floor(mHp(S.stage) * 4 * jm("hp")));   // 체력 너프 (5.4 → 4)
@@ -610,7 +610,7 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
     $("jobName").textContent = j ? jobName() : "직업 없음";
     $("jobTxt").textContent = j
       ? j.d + " · " + skillCd().toFixed(1).replace(".0", "") + "초마다 [" + (S.adv >= 2 ? j.sk2 : j.sk) + "]" + (S.adv < 2 ? " · 스테이지 " + JOB2 + "에서 2차 전직" : " · 2차 전직 완료!")
-      : "스테이지 " + JOB1 + "에 가면 직업을 고를 수 있어요 (검사·궁수·마법사·조련사)";
+      : "스테이지 1 보스를 잡으면 직업을 고를 수 있어요 (검사·궁수·마법사·조련사)";
   }
 
   // ---- 입력 ----
