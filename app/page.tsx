@@ -2,6 +2,7 @@ import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { WebtoonWeekly } from "@/components/sections/webtoon-weekly";
 import { AdBoard } from "@/components/sections/ad-board";
+import { GameBanner } from "@/components/sections/game-banner";
 
 /* 메인 페이지 = 섹션 블록을 위에서 아래로 쌓아 놓은 것.
    - 섹션 순서 바꾸기: 아래 줄의 순서를 바꾸면 됩니다.
@@ -20,6 +21,8 @@ export default function HomePage() {
             import { Hero } from "@/components/sections/hero"; 를 넣고 여기에 <Hero /> 한 줄 추가 */}
         {/* 완결 웹툰은 요일별 웹툰 제목 옆 버튼으로 봄.
             따로 큰 칸으로 보이고 싶으면 components/sections/webtoon-completed.tsx 의 WebtoonCompleted 를 여기 넣기 */}
+        {/* 꼬미 키우기 게임 배너 (빼려면 이 줄 삭제) */}
+        <GameBanner />
         <WebtoonWeekly />
         <AdBoard />
       </main>

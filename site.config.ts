@@ -80,6 +80,23 @@ export const siteConfig = {
     empty: "아직 완결된 웹툰이 없어요.",
   },
 
+  /* 꼬미 키우기 게임 (주소: /game) — 첫 화면 배너 글자와 게임 페이지 제목 */
+  game: {
+    href: "/game",
+    ko: {
+      eyebrow: "미니 게임",
+      title: "꼬미 키우기",
+      text: "꼬미가 마감 몬스터와 싸워요! 바나나로 강화하고 직업을 골라 보스를 물리치세요. 쓰러지면 처음부터!",
+      cta: "게임 하러 가기",
+    },
+    en: {
+      eyebrow: "Mini game",
+      title: "Raise Komi",
+      text: "Komi fights deadline monsters! Power up with bananas, pick a class, and beat the bosses. (Game text is in Korean.)",
+      cta: "Play now",
+    },
+  },
+
   /* 연락처 섹션 */
   contact: {
     eyebrow: "tea time",
