@@ -244,7 +244,8 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
   const mHp = (st) => Math.floor(18 * Math.pow(1.21, st - 1));
   const mGold = (st) => Math.ceil(mHp(st) * 0.4);
   // 꼬미 체력 / 악당 공격력
-  const mDmg = (st, boss) => Math.ceil(mHp(st) * 0.27 * (boss ? 3 : 1));   // 하드코어: 악당이 세게 때림 (1.5배 올림)
+  const EASY = 5;   // 1~5 스테이지는 연습 구간 (쉽게)
+  const mDmg = (st, boss) => Math.ceil(mHp(st) * 0.27 * (boss ? 3 : 1) * (st <= EASY ? 0.35 : 1));   // 하드코어: 악당이 세게 때림 (1~5는 약하게)
   // 체력은 강화로 못 올림: 스테이지가 오르면 저절로 늘고, 직업마다 배수가 다름
   const maxHp = () => Math.max(80, Math.floor(mHp(S.stage) * 4 * jm("hp")));   // 체력 너프 (5.4 → 4)
 
@@ -300,9 +301,9 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
     if (isBoss) { bossFail = false; komiHp = maxHp(); }   // 보스전 시작: 체력 가득
     const st = S.stage;
     const pick = isBoss ? BOSSES[(st - 1) % BOSSES.length] : MONS[(st * 3 + S.kill) % MONS.length];
-    const hp = isBoss ? mHp(st) * 10 : mHp(st);
+    const hp = isBoss ? mHp(st) * (st <= EASY ? 5 : 10) : mHp(st);
     mon = { e: pick[0], name: isBoss ? pick[1] : pick[1] + " Lv." + st, hp, max: hp, boss: isBoss, x: W + 60, hit: 0, dead: 0 };
-    if (isBoss) bossTime = 20;
+    if (isBoss) bossTime = st <= EASY ? 30 : 20;
   }
   newMon();
   if (S.kill >= PER_STAGE) { bossGo = true; newMon(); }
