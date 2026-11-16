@@ -149,7 +149,7 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
       <h2 style="color: var(--alarm)">꼬미가 쓰러졌어요…</h2>
       <div class="big" id="deadStage">스테이지 1</div>
       <p id="deadTxt"></p>
-      <p>하드코어라서 바나나·강화가 모두 사라지고 스테이지 1부터 다시 해요.</p>
+      <p>하드코어라서 바나나·강화·직업이 모두 사라지고 스테이지 1부터 다시 해요. 직업은 스테이지 1 보스를 잡으면 다시 골라요.</p>
       <div id="jobAsk" hidden style="display:flex; flex-direction:column; gap:8px; align-items:center">
         <p><b style="color:var(--ink)">직업을 그대로 하겠습니까? 아니면 바꾸겠습니까?</b></p>
         <button class="btn" id="keepJob" type="button">그대로 하기</button>
@@ -288,7 +288,7 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
     komiHp = 0; faint = 99;
     const reached = S.stage, job = jobName();
     lastJob = S.job;
-    const hasJob = !!lastJob;
+    const hasJob = false; // 쓰러지면 직업도 초기화 (스테이지 1 보스를 잡고 다시 고름)
     $("jobAsk").hidden = !hasJob; $("jobAsk").style.display = hasJob ? "flex" : "none"; $("restart").hidden = hasJob;
     if (hasJob) $("keepJob").textContent = JOBS[lastJob].ic + " " + JOBS[lastJob].n[0] + " 그대로 하기";
     S.top = Math.max(S.top || 1, reached);
