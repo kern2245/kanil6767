@@ -116,7 +116,7 @@ export function GameFrame({ src, title }: { src: string; title: string }) {
         aria-label={full ? "전체 화면 끄기" : "전체 화면"}
         className={cn(
           "absolute flex size-9 items-center justify-center rounded-full bg-background/80 text-foreground shadow backdrop-blur hover:bg-background",
-          full ? "top-[max(0.5rem,env(safe-area-inset-top))] right-2" : "right-2 bottom-2",
+          full ? "top-[max(0.5rem,env(safe-area-inset-top))] left-1/2 -translate-x-1/2" : "right-2 bottom-2",
         )}
       >
         {full ? <X className="size-5" /> : <Maximize2 className="size-4" />}
