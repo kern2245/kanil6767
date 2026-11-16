@@ -218,7 +218,7 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
   let needHpMig = false;
   let S = fresh();
   try { const raw = localStorage.getItem(KEY); if (raw) { const o = JSON.parse(raw); needHpMig = !("hp" in o) && (o.stage || 1) > 1; S = Object.assign(fresh(), o); } } catch (e) {}
-  S.spd = Math.min(S.spd, 20);   // 공격 속도 만렙이 40 → 20 으로 바뀜 (예전 기록 맞춤)
+  S.spd = Math.min(S.spd, 10);   // 공격 속도 만렙 40 → 20 → 10 (예전 기록 맞춤)
   S.crit = Math.min(S.crit, 10); // 치명타 만렙 25 → 10
   S.top = Math.max(S.top || 1, S.stage);
   const save = () => { S.last = Date.now(); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
@@ -272,7 +272,7 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
   const UPS = [
     { id: "jsk", ic: "", nm: "", job: true, ef: () => (J() ? JSK[S.job].ef(S.jsk || 0) : ""), cost: (l) => (J() ? JSK[S.job].cost(l) : 1e99), get max() { return J() ? JSK[S.job].max : 1; } },
     { id: "atk",  ic: "🗡️", nm: "공격력",    ef: () => "한 대에 " + fmt(atk()) + " → " + fmt(Math.floor(baseAtk(S.atk + 1) * jm("atk"))), cost: (l) => 10 * Math.pow(1.15, l) },
-    { id: "spd",  ic: "⚡",  nm: "공격 속도", ef: () => "1초에 " + aps().toFixed(1) + "번 → " + apsAt(S.spd + 1).toFixed(1) + "번", cost: (l) => 60 * Math.pow(1.6, l), max: 20 },
+    { id: "spd",  ic: "⚡",  nm: "공격 속도", ef: () => "1초에 " + aps().toFixed(1) + "번 → " + apsAt(S.spd + 1).toFixed(1) + "번", cost: (l) => 60 * Math.pow(1.6, l), max: 10 },
     { id: "crit", ic: "💥", nm: "치명타",    ef: () => Math.round(critP() * 100) + "% 확률로 " + critX() + "배 피해", cost: (l) => 120 * Math.pow(2.2, l), max: 10 },
   ];
 
