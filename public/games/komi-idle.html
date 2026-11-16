@@ -224,7 +224,7 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
     sword: { ic: "🗡️", n: ["검사 꼬미", "기사 꼬미"], d: "체력 1.6배(튼튼), 공격력 +50%, 치명타 3배", sk: "회전 베기", sk2: "십자 성검", cd: 5, atk: [1.5, 2.2], critX: [3, 3.5], hp: [1.6, 2] },
     bow:   { ic: "🏹", n: ["궁수 꼬미", "명사수 꼬미"], d: "체력 1배(보통), 공격 속도 +50%, 화살비", sk: "화살비", sk2: "유성 화살비", cd: 4, aps: [1.5, 2], hp: [1, 1.2] },
     magic: { ic: "🔮", n: ["마법사 꼬미", "대마법사 꼬미"], d: "체력 0.7배(약함), 치명타 확률 +10%, 번개 마법", sk: "번개 마법", sk2: "천둥 폭풍", cd: 5, crit: [0.1, 0.18], hp: [0.7, 0.85] },
-    tamer: { ic: "🐵", n: ["조련사 꼬미", "원숭이 대장 꼬미"], d: "체력 1.2배, 조수 꼬미 3배, 원숭이 돌격", sk: "원숭이 돌격", sk2: "원숭이 대행진", cd: 6, help: [3, 3.6], hp: [1.2, 1.4] },
+    tamer: { ic: "🐵", n: ["조련사 꼬미", "원숭이 대장 꼬미"], d: "체력 1.2배, 조수 꼬미 2마리(2차 4마리), 원숭이 돌격", sk: "원숭이 돌격", sk2: "원숭이 대행진", cd: 6, help: [1, 1.2], hp: [1.2, 1.4] },
   };
   const J = () => (S.job ? JOBS[S.job] : null);
   const jl = () => Math.max(0, S.adv - 1);
@@ -238,7 +238,9 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
   const aps = () => apsAt(S.spd);
   const critP = () => Math.min(0.45, 0.05 + S.crit * 0.02 + (J() && J().crit ? J().crit[jl()] : 0));
   const critX = () => (J() && J().critX ? J().critX[jl()] : 2.5);
-  const helpDps = () => Math.floor(atk() * 0.6 * S.help * jm("help"));
+  // 조수 꼬미: 강화로 사지 않고, 조련사 직업만 데리고 다님 (1차 2마리, 2차 4마리)
+  const helpers = () => (S.job === "tamer" ? (S.adv >= 2 ? 4 : 2) : 0);
+  const helpDps = () => Math.floor(atk() * 0.6 * helpers() * jm("help"));
   const dps = () => atk() * aps() * (1 + critP() * (critX() - 1)) + helpDps();
   const PER_STAGE = 5;                      // 몬스터 5마리 → 보스
   const mHp = (st) => Math.floor(18 * Math.pow(1.21, st - 1));
@@ -253,7 +255,6 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
     { id: "atk",  ic: "🗡️", nm: "공격력",    ef: () => "한 대에 " + fmt(atk()) + " → " + fmt(Math.floor(baseAtk(S.atk + 1) * jm("atk"))), cost: (l) => 10 * Math.pow(1.15, l) },
     { id: "spd",  ic: "⚡",  nm: "공격 속도", ef: () => "1초에 " + aps().toFixed(1) + "번 → " + apsAt(S.spd + 1).toFixed(1) + "번", cost: (l) => 60 * Math.pow(1.6, l), max: 20 },
     { id: "crit", ic: "💥", nm: "치명타",    ef: () => Math.round(critP() * 100) + "% 확률로 " + critX() + "배 피해", cost: (l) => 120 * Math.pow(2.2, l), max: 10 },
-    { id: "help", ic: "🐒", nm: "조수 꼬미", ef: () => S.help ? "조수 " + S.help + "마리 · 초당 " + fmt(helpDps()) : "같이 싸워줄 아기 꼬미 고용", cost: (l) => 250 * Math.pow(1.28, l) },
   ];
 
   // 꼬미 등급 (스테이지가 오를수록)
@@ -373,7 +374,7 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
       fx = { k: "bolt", t: 0 }; shake = 10; beep(90, .4, "sawtooth", .07, 300);
       hit(atk() * (two ? 14 : 8), "skill", true);
     } else if (S.job === "tamer") {
-      fx = { k: "dash", t: 0, n: Math.max(3, Math.min(6, S.help + 2)) }; beep(500, .2, "square", .04, 300);
+      fx = { k: "dash", t: 0, n: helpers() + 2 }; beep(500, .2, "square", .04, 300);
       setTimeout(() => hit((helpDps() + atk()) * (two ? 4.5 : 4), "skill", false), 300);
     }
   }
@@ -724,7 +725,7 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
       emoji(J().ic, x + 36, y - h * 0.32, 30 * big, -0.4 + lunge * 0.03 + Math.sin(now * 2) * .08);
     }
     // 조수 꼬미들
-    for (let i = 0; i < Math.min(S.help, 4); i++) {
+    for (let i = 0; i < helpers(); i++) {
       const hx = 30 + i * 22, hop = Math.abs(Math.sin(now * 6 + i)) * 6;
       if (KOMI.smirk.complete) ctx.drawImage(i % 2 ? KOMI.laugh : KOMI.smirk, hx - 14, GROUND - 34 - hop, 28, 34);
     }
@@ -782,7 +783,7 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
       komiHp = Math.min(maxHp(), komiHp + maxHp() * 0.005 * dt);   // 아주 천천히 체력 회복 (하드코어)
       atkTimer += dt;
       if (atkTimer >= 1 / aps()) { atkTimer = 0; swing = 1; hit(atk(), "komi", true); }
-      if (S.help > 0) { helpTimer += dt; if (helpTimer >= 1) { helpTimer = 0; hit(helpDps(), "help", false); } }
+      if (helpers() > 0) { helpTimer += dt; if (helpTimer >= 1) { helpTimer = 0; hit(helpDps(), "help", false); } }
       if (J()) { skillT += dt; if (skillT >= J().cd) { skillT = 0; useSkill(); } }
       // 악당의 반격!
       if (mon && !mon.dead) {
