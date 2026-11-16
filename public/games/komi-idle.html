@@ -873,6 +873,12 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
   }
   renderUps();
   requestAnimationFrame(frame);
+
+  // 세카이 사이트 안에서 처음 누르면 전체 화면 요청 (페이지를 열 때마다 1번)
+  addEventListener("pointerdown", function askFull() {
+    removeEventListener("pointerdown", askFull, true);
+    try { if (window.parent !== window) window.parent.postMessage({ type: "komi-fullscreen" }, location.origin); } catch (e) {}
+  }, true);
 })();
 </script>
 
