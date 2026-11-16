@@ -11,11 +11,29 @@ import { cn } from "@/lib/utils";
    - "komi-stage": 스테이지를 깸 → 서버(app/game/actions.ts)에 전달 → 로그인 회원이면 순위표 저장 → 새로고침
    - "komi-fullscreen": 게임을 처음 누름 → 전체 화면으로
      (휴대폰 전체 화면 기능이 되면 그걸 쓰고, 아이폰처럼 안 되면 화면을 꽉 채우는 방식으로) */
+// PC 전체 화면에서 쓰는 "폰 모양" 게임 크기 (세로:가로 = 약 2:1)
+const PHONE_W = 420;
+const PHONE_H = 860;
+
 export function GameFrame({ src, title }: { src: string; title: string }) {
   const router = useRouter();
   const boxRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLIFrameElement>(null);
   const [full, setFull] = useState(false); // 화면 꽉 채우기 상태 (진짜 전체 화면 포함)
+  const [scale, setScale] = useState(0); // PC(가로 화면) 전체 화면일 때 폰 모양 게임을 키우는 배율, 0 = 폰처럼 꽉 채움
+
+  // 가로가 더 긴 화면(PC)이면 폰 크기(PHONE_W x PHONE_H) 게임을 화면 높이에 맞게 키움
+  useEffect(() => {
+    if (!full) return;
+    const fit = () => {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      setScale(w > h ? Math.min(h / PHONE_H, w / PHONE_W) : 0);
+    };
+    fit();
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, [full]);
 
   const enterFull = useCallback(async () => {
     const box = boxRef.current;
@@ -69,18 +87,29 @@ export function GameFrame({ src, title }: { src: string; title: string }) {
     return () => window.removeEventListener("message", onMessage);
   }, [router, enterFull]);
 
+  const phone = full && scale > 0;
+
   return (
     <div
       ref={boxRef}
-      className={cn("relative", full && "fixed inset-0 z-50 h-dvh w-full bg-background")}
+      className={cn(
+        "relative",
+        full && "fixed inset-0 z-50 h-dvh w-full bg-background",
+        phone && "flex items-center justify-center overflow-hidden",
+      )}
     >
-      <iframe
-        ref={frameRef}
-        src={src}
-        title={title}
-        className={cn("block w-full border-0", full ? "h-full" : "h-[1180px] sm:rounded-2xl")}
-        allow="autoplay; fullscreen"
-      />
+      <div
+        className={cn(full && !phone && "h-full w-full", phone && "shrink-0")}
+        style={phone ? { width: PHONE_W, height: PHONE_H, transform: `scale(${scale})` } : undefined}
+      >
+        <iframe
+          ref={frameRef}
+          src={src}
+          title={title}
+          className={cn("block w-full border-0", full ? "h-full" : "h-[1180px] sm:rounded-2xl")}
+          allow="autoplay; fullscreen"
+        />
+      </div>
       <button
         type="button"
         onClick={full ? exitFull : enterFull}
