@@ -41,8 +41,8 @@ body {
   padding-bottom: max(16px, env(safe-area-inset-bottom, 0px)); margin: 0 -4px; padding-inline: 4px; }
 .tabp { display: flex; flex-direction: column; gap: 10px; }
 .tabp[hidden] { display: none; }
-.tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; background: var(--card); border-radius: 14px; padding: 4px; }
-.tabs button { position: relative; border: 0; background: transparent; color: var(--dim); font-family: var(--display); font-size: 1rem; padding: 9px 4px; border-radius: 10px; cursor: pointer; }
+.tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; background: var(--card); border-radius: 14px; padding: 4px; }
+.tabs button { position: relative; border: 0; background: transparent; color: var(--dim); font-family: var(--display); font-size: .9rem; padding: 9px 2px; border-radius: 10px; cursor: pointer; white-space: nowrap; }
 .tabs button[aria-selected="true"] { background: var(--sekai); color: #fff; }
 .tabs button:focus-visible { outline: 3px solid var(--gold); outline-offset: 1px; }
 .tabs button.dot::after { content: ""; position: absolute; top: 6px; right: 10px; width: 8px; height: 8px; border-radius: 50%; background: var(--alarm); }
@@ -139,6 +139,16 @@ button.sec-h { cursor: pointer; }
 .achs li .pr { color: var(--dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .achs li.done .pr { color: var(--gold); }
 .achs[hidden] { display: none; }
+/* 미션: 진행 막대 + 받기 버튼 */
+.mbar { display: block; height: 5px; margin-top: 4px; background: rgba(0,0,0,.35); border-radius: 3px; overflow: hidden; }
+.mbar > i { display: block; height: 100%; background: var(--sekai); border-radius: 3px; }
+.achs li .claim { border: 0; background: var(--gold); color: #2a1a00; font-family: var(--display); font-size: .85rem; padding: 7px 10px; border-radius: 9px; cursor: pointer; }
+.achs li .claim:focus-visible { outline: 3px solid #fff; outline-offset: 1px; }
+.achs li.ready { box-shadow: inset 0 0 0 2px var(--gold); }
+/* 소리 켜기/끄기 */
+.hright { display: flex; align-items: center; gap: 10px; }
+.snd { border: 0; background: var(--card); color: var(--ink); font-size: 1.05rem; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; }
+.snd:focus-visible { outline: 3px solid var(--gold); outline-offset: 1px; }
 .foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
 .link { color: var(--ink); font-size: .9rem; text-decoration: underline; text-underline-offset: 3px; }
 </style>
@@ -148,7 +158,7 @@ button.sec-h { cursor: pointer; }
 <div class="wrap">
   <header>
     <h1>꼬미 <span>키우기</span></h1>
-    <div class="brand">SEKAI</div>
+    <div class="hright"><button type="button" class="snd" id="sndBtn" aria-label="소리 끄기">🔊</button><div class="brand">SEKAI</div></div>
   </header>
 
   <div class="hud" aria-live="polite">
@@ -206,6 +216,7 @@ button.sec-h { cursor: pointer; }
   <nav class="tabs" role="tablist" aria-label="메뉴">
     <button type="button" role="tab" id="tb-up" data-tab="up" aria-selected="true">⚔️ 강화</button>
     <button type="button" role="tab" id="tb-gear" data-tab="gear" aria-selected="false">🎁 장비</button>
+    <button type="button" role="tab" id="tb-mis" data-tab="mis" aria-selected="false">📜 미션</button>
     <button type="button" role="tab" id="tb-ach" data-tab="ach" aria-selected="false">🏆 업적</button>
   </nav>
 
@@ -242,6 +253,13 @@ button.sec-h { cursor: pointer; }
     <div class="boxmsg" id="boxMsg" aria-live="polite">같은 등급이 또 나오면 ★ 강화 (최대 ★5) · 열수록 값이 조금씩 올라요</div>
   </section>
 
+    </div>
+    <div class="tabp" id="tab-mis" role="tabpanel" hidden>
+  <section class="box" aria-label="미션">
+    <div class="sec-h"><b>📜 미션 <span id="misLv"></span></b><small id="misSum"></small></div>
+    <ul class="achs" id="miss"></ul>
+    <div class="boxmsg">깰 때마다 다음 미션이 더 어려워지고 보상도 커져요 · 쓰러져도 그대로!</div>
+  </section>
     </div>
     <div class="tabp" id="tab-ach" role="tabpanel" hidden>
   <section class="box" aria-label="업적">
@@ -285,9 +303,9 @@ button.sec-h { cursor: pointer; }
   const save = () => { S.last = Date.now(); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
 
   // ---- 영구 기록: 장비·업적 (꼬미가 쓰러져도 남음) ----
-  const META = () => ({ gear: { weapon: null, hat: null, ring: null }, ach: [], st: { boss: 0, deaths: 0, boxes: 0, legend: 0 }, jtop: {} });
+  const META = () => ({ gear: { weapon: null, hat: null, ring: null }, ach: [], st: { boss: 0, deaths: 0, boxes: 0, legend: 0, kills: 0, skills: 0, ups: 0 }, jtop: {}, mis: {} });
   { const m = META(); for (const k in m) if (!S[k] || typeof S[k] !== "object") S[k] = m[k]; S.gear = Object.assign(m.gear, S.gear); S.st = Object.assign(m.st, S.st); if (!Array.isArray(S.ach)) S.ach = []; }
-  const keepMeta = () => ({ gear: S.gear, ach: S.ach, st: S.st, jtop: S.jtop });
+  const keepMeta = () => ({ gear: S.gear, ach: S.ach, st: S.st, jtop: S.jtop, mis: S.mis });
   // 장비: 무기(공격력) · 모자(체력) · 반지(바나나), 등급 4개, 같은 등급이 또 나오면 ★ (최대 5, ★마다 +20%)
   const RAR = [["일반", 60, 5], ["희귀", 28, 12], ["영웅", 10, 25], ["전설", 2, 50]];   // 이름, 확률%, 기본 보너스%
   const SLOTS = { weapon: ["🗡️", "무기", "공격력"], hat: ["🎩", "모자", "체력"], ring: ["💍", "반지", "바나나"] };
@@ -427,8 +445,16 @@ button.sec-h { cursor: pointer; }
   // ---- 소리 ----
   let ac = null;
   const wake = () => { try { if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)(); ac.resume(); } catch (e) {} };
+  let muted = false; try { muted = localStorage.getItem("komi-mute") === "1"; } catch (e) {}
+  const sndShow = () => { $("sndBtn").textContent = muted ? "🔇" : "🔊"; $("sndBtn").setAttribute("aria-label", muted ? "소리 켜기" : "소리 끄기"); };
+  sndShow();
+  $("sndBtn").addEventListener("click", (e) => {
+    e.stopPropagation(); muted = !muted; sndShow();
+    try { localStorage.setItem("komi-mute", muted ? "1" : "0"); } catch (er) {}
+    if (!muted) { wake(); beep(880, .08, "triangle", .04); }
+  });
   const beep = (f, d, type = "square", vol = 0.03, slide = 0) => {
-    if (!ac) return;
+    if (!ac || muted) return;
     const o = ac.createOscillator(), g = ac.createGain();
     o.type = type; o.frequency.setValueAtTime(f, ac.currentTime);
     if (slide) o.frequency.linearRampToValueAtTime(Math.max(40, f + slide), ac.currentTime + d);
@@ -449,8 +475,9 @@ button.sec-h { cursor: pointer; }
   }
   function kill() {
     mon.dead = 0.001; laughT = 0.6;
+    if (!mon.boss) S.st.kills++;
     // 일반 몬스터(잡몹)를 잡아도 체력은 회복되지 않음 (보스를 잡으면 아래에서 가득 회복)
-    const g = Math.ceil((mon.boss ? mGold(S.stage) * 12 : mGold(S.stage)) * (1 + gearB("ring")));   // 반지 = 바나나 보너스
+    const g = Math.ceil((mon.boss ? mGold(S.stage) * 12 : mGold(S.stage)) * (1 + gearB("ring") + misB()));   // 반지 = 바나나 보너스
     S.gold += g;
     for (let i = 0; i < (mon.boss ? 12 : 5); i++) coins.push({ x: 262, y: 160, vx: (Math.random() - .5) * 220, vy: -200 - Math.random() * 200, t: 0 });
     pops.push({ t: 0, x: 262, y: 70, text: "+🍌 " + fmt(g), c: "#ffd66b", big: true });
@@ -476,6 +503,7 @@ button.sec-h { cursor: pointer; }
   // ---- 직업 스킬 (몇 초마다 자동으로 나감) ----
   function useSkill() {
     const j = J(); if (!j || !mon || mon.dead) return;
+    S.st.skills++;
     const two = S.adv >= 2;
     if (two) { useSkill2(j); return; }   // 2차 전직: 화려한 스킬
     pops.push({ t: 0, x: 150, y: 70, text: j.ic + " " + j.sk + "!", c: "#7fd8ff", big: true, huge: true });
@@ -768,7 +796,7 @@ button.sec-h { cursor: pointer; }
       wake();
       const p = plan(u);
       if (!p.n || S.gold < p.total) return;
-      S.gold -= p.total; S[u.id] += p.n;
+      S.gold -= p.total; S[u.id] += p.n; S.st.ups += p.n;
       if (u.id === "hp") komiHp = maxHp();
       beep(880, 0.06, "triangle", 0.05, 400);
       if (p.n > 1) { setTimeout(() => beep(1175, 0.08, "triangle", 0.05, 400), 70); pops.push({ t: 0, x: 92, y: 60, text: u.ic + " +" + p.n + "레벨!", c: "#5fe3a1", big: true }); }
@@ -811,7 +839,7 @@ button.sec-h { cursor: pointer; }
     }
     $("gold").textContent = fmt(S.gold);
     $("dps").textContent = fmt(dps());
-    const bc = boxCost(); $("openBox").disabled = S.gold < bc; $("tb-gear").classList.toggle("dot", S.gold >= bc); $("openBox").textContent = "상자 열기 🍌 " + fmt(bc);
+    const bc = boxCost(); $("openBox").disabled = S.gold < bc; $("tb-gear").classList.toggle("dot", S.gold >= bc); if (typeof misHtml === "string") { $("tb-mis").classList.toggle("dot", misReady()); if (!$("tab-mis").hidden) renderMis(); } $("openBox").textContent = "상자 열기 🍌 " + fmt(bc);
     $("stg").textContent = S.stage + "-" + (mon && mon.boss ? "보스" : Math.min(PER_STAGE, S.kill + 1));
   }
 
@@ -826,10 +854,12 @@ button.sec-h { cursor: pointer; }
         : `<div class="slot"><div class="ic" style="opacity:.35">${ic}</div><b>${nm}</b><small>비어 있음</small><small>${what} +0%</small></div>`;
     }).join("");
   }
-  $("openBox").addEventListener("click", () => {
+  $("openBox").addEventListener("click", () => openGearBox(false));
+  function openGearBox(free) {
     wake();
-    const c = boxCost(); if (S.gold < c) return;
-    S.gold -= c; S.st.boxes++;
+    const c = boxCost(); if (!free && S.gold < c) return;
+    if (!free) S.gold -= c;
+    S.st.boxes++;
     const slot = Object.keys(SLOTS)[Math.floor(Math.random() * 3)];
     let x = Math.random() * 100, r = 0; for (let i = 0; i < RAR.length; i++) { x -= RAR[i][1]; if (x < 0) { r = i; break; } }
     if (r === 3) S.st.legend++;
@@ -847,7 +877,7 @@ button.sec-h { cursor: pointer; }
     [660, 880, 1046, 1318].slice(0, r + 1).forEach((f, k) => setTimeout(() => beep(f, .12, "triangle", .05), k * 90));
     komiHp = Math.min(komiHp, maxHp());
     checkAch(); renderGear(); renderUps(); save();
-  });
+  }
 
   // ---- 🏆 업적 ----
   function checkAch() {
@@ -872,18 +902,59 @@ button.sec-h { cursor: pointer; }
     $("achToggle").setAttribute("aria-expanded", String(open)); $("achArrow").textContent = open ? "▴" : "▾";
   });
 
-  // ---- 아래 탭 (강화 / 장비 / 업적) ----
+  // ---- 📜 미션: 6갈래, 깰 때마다 다음 단계 (끝없이) ----
+  // 보상: 바나나 + 미션 하나마다 바나나 영구 +1% + 미션 5개마다 장비 상자 공짜
+  const tri = (l) => (l + 1) * (l + 2) / 2;
+  const MIS = [
+    { id: "kill", ic: "🐾", nm: "잡몹 사냥", d: (g) => "잡몹 " + fmt(g) + "마리 잡기", v: () => S.st.kills, goal: (l) => 40 * tri(l) },
+    { id: "boss", ic: "👹", nm: "보스 사냥", d: (g) => "보스 " + fmt(g) + "마리 잡기", v: () => S.st.boss, goal: (l) => 5 * tri(l) },
+    { id: "stage", ic: "🚩", nm: "더 멀리", d: (g) => "최고 스테이지 " + g + " 가기", v: () => S.top || 1, goal: (l) => 5 + 5 * l },
+    { id: "up", ic: "⚔️", nm: "강화 장인", d: (g) => "강화 " + fmt(g) + "번 하기", v: () => S.st.ups, goal: (l) => 15 * tri(l) },
+    { id: "box", ic: "🎁", nm: "상자 수집", d: (g) => "장비 상자 " + fmt(g) + "개 열기", v: () => S.st.boxes, goal: (l) => 3 * tri(l) },
+    { id: "skill", ic: "✨", nm: "스킬 마스터", d: (g) => "스킬 " + fmt(g) + "번 쓰기", v: () => S.st.skills, goal: (l) => 30 * tri(l) },
+  ];
+  const misLv = (m) => S.mis[m.id] || 0;
+  const misDone = () => MIS.reduce((a, m) => a + misLv(m), 0);
+  function misB() { return misDone() * 0.01; }
+  const misPay = (m) => Math.ceil(mGold(S.stage) * 10 * (misLv(m) + 1));
+  const misReady = () => MIS.some((m) => m.v() >= m.goal(misLv(m)));
+  var misHtml;   // var: 미션 코드보다 먼저 화면을 그려도 에러 안 나게
+  function renderMis() {
+    const n = misDone();
+    $("misLv").textContent = "Lv." + n;
+    $("misSum").textContent = "바나나 +" + n + "% · 상자까지 " + (5 - (n % 5)) + "개";
+    const html = MIS.map((m) => {
+      const l = misLv(m), g = m.goal(l), v = Math.min(g, m.v()), ok = v >= g;
+      return `<li class="${ok ? "ready" : ""}"><span class="ai">${m.ic}</span><span>${m.nm} <small style="display:inline">${l + 1}단계</small><small>${m.d(g)} · 🍌 ${fmt(misPay(m))}</small><i class="mbar"><i style="width:${Math.round(v / g * 100)}%"></i></i></span>` +
+        (ok ? `<button type="button" class="claim" data-mis="${m.id}">받기!</button>` : `<span class="pr">${fmt(v)}/${fmt(g)}</span>`) + `</li>`;
+    }).join("");
+    if (html !== misHtml) { misHtml = html; $("miss").innerHTML = html; }
+  }
+  $("miss").addEventListener("click", (e) => {
+    const b = e.target.closest(".claim"); if (!b) return;
+    const m = MIS.find((x) => x.id === b.dataset.mis); if (!m || m.v() < m.goal(misLv(m))) return;
+    wake();
+    const g = misPay(m); S.gold += g;
+    S.mis[m.id] = misLv(m) + 1;
+    pops.push({ t: 0, x: W / 2, y: 70, text: "📜 미션 완료! 🍌+" + fmt(g), c: "#ffcf5c", big: true });
+    [659, 784, 988, 1318].forEach((f, k) => setTimeout(() => beep(f, .1, "triangle", .05), k * 70));
+    if (misDone() % 5 === 0) setTimeout(() => { openGearBox(true); pops.push({ t: -0.3, x: W / 2, y: 110, text: "🎁 미션 보상 상자!", c: "#c38bff", big: true }); }, 500);
+    save(); renderMis(); renderUps();
+  });
+  renderMis();
+
+  // ---- 아래 탭 (강화 / 장비 / 미션 / 업적) ----
   const tabBtns = [...document.querySelectorAll(".tabs button")];
   tabBtns.forEach((tb) => tb.addEventListener("click", () => {
     tabBtns.forEach((x) => { const on = x === tb; x.setAttribute("aria-selected", String(on)); $("tab-" + x.dataset.tab).hidden = !on; });
-    $("panel").scrollTop = 0; beep(700, .04, "triangle", .03);
+    $("panel").scrollTop = 0; beep(700, .04, "triangle", .03); if (tb.dataset.tab === "mis") renderMis();
   }));
 
   // ---- 창을 닫아둔 동안 번 바나나 ----
   const away = Math.min(8 * 3600, (Date.now() - (S.last || Date.now())) / 1000);
   if (S.seen && away > 60) {
     const kills = (dps() * away) / monHp(S.stage);
-    const g = Math.floor(kills * mGold(S.stage) * 0.3 * (1 + gearB("ring")));
+    const g = Math.floor(kills * mGold(S.stage) * 0.3 * (1 + gearB("ring") + misB()));
     if (g > 0) {
       $("offGold").textContent = "🍌 " + fmt(g);
       $("welcome").hidden = false;
