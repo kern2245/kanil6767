@@ -459,6 +459,7 @@ button.sec-h { cursor: pointer; }
   const zoneName = (st) => { const r = Math.floor((st - 1) / 100); return zoneOf(st).n + (r ? " (" + (r + 1) + "회차)" : ""); };
 
   // ---- 전투 상태 ----
+  let pack = [];   // 지금 악당 뒤에서 기다리는 잡몹들 (스테이지 2부터 1~3마리씩 몰려옴)
   let mon = null, swing = 0, atkTimer = 0, helpTimer = 0, laughT = 0, pops = [], parts = [], coins = [], shake = 0;
   let bossTime = 0, bossFail = false, bossFailT = 0, skillT = 0, fx = null;
   let komiHp = maxHp(), faint = 0, komiHit = 0, monAtkT = 0, bossGo = false;
@@ -473,6 +474,7 @@ button.sec-h { cursor: pointer; }
     pops.push({ t: 0, x: W / 2, y: 60, text: "😵 쓰러졌다! " + S.stage + "스테이지 처음부터", c: "#ff7a9a", big: true });
     save();
     if (mon) mon.dead = 0.001;   // 지금 악당(보스)은 사라지고
+    pack = [];
     setTimeout(newMon, 450);     // 이 스테이지 첫 악당부터 다시
   }
   function restart() {
@@ -491,10 +493,20 @@ button.sec-h { cursor: pointer; }
     if (isBoss) { bossFail = false; komiHp = maxHp(); }   // 보스전 시작: 체력 가득
     const st = S.stage;
     const Z = zoneOf(st), zb = isBoss && st % 10 === 0;   // 10, 20, 30... 은 구역 대보스
-    const pick = isBoss ? (zb ? Z.big : Z.boss) : Z.mons[(st * 3 + S.kill) % Z.mons.length];
-    const hp = isBoss ? monHp(st) * (st <= EASY ? 5 : 10) : monHp(st);
-    mon = { e: pick[0], name: isBoss ? (zb ? "👑 " : "") + pick[1] : pick[1] + " Lv." + st, hp, max: hp, boss: isBoss, big: zb, x: W + 60, hit: 0, dead: 0 };
-    if (isBoss) bossTime = st <= EASY ? 30 : 20;
+    pack = [];
+    if (isBoss) {
+      const pick = zb ? Z.big : Z.boss, hp = monHp(st) * (st <= EASY ? 5 : 10);
+      mon = { e: pick[0], name: (zb ? "👑 " : "") + pick[1], hp, max: hp, boss: true, big: zb, x: W + 60, hit: 0, dead: 0 };
+      bossTime = st <= EASY ? 30 : 20;
+      return;
+    }
+    // 잡몹: 스테이지 1은 1마리씩, 2부터는 1~3마리가 한꺼번에 몰려옴 (보스까지 남은 수보다 많이는 안 나옴)
+    const left = Math.max(1, PER_STAGE - S.kill);
+    const n = st >= 2 ? Math.min(left, 1 + Math.floor(Math.random() * 3)) : 1;
+    const mob = (i) => { const pick = st >= 2 ? Z.mons[Math.floor(Math.random() * Z.mons.length)] : Z.mons[(st * 3 + S.kill) % Z.mons.length], hp = monHp(st); return { e: pick[0], name: pick[1] + " Lv." + st, hp, max: hp, boss: false, x: W + 60 + i * 34, hit: 0, dead: 0 }; };
+    mon = mob(0);
+    for (let i = 1; i < n; i++) pack.push(mob(i));
+    if (n > 1) pops.push({ t: 0, x: 210, y: 70, text: "악당 " + n + "마리 등장!", c: "#ffb347", big: true });
   }
   newMon();
   if (S.kill >= PER_STAGE) { bossGo = true; newMon(); }
@@ -553,6 +565,8 @@ button.sec-h { cursor: pointer; }
       save();
       setTimeout(checkJob, 700);
     } else if (S.kill < PER_STAGE) { S.kill++; if (S.kill >= PER_STAGE) bossGo = true; }   // 5마리 잡으면 자동으로 보스
+    if (!mon.boss && !bossGo && pack.length) { const nx = pack.shift(); setTimeout(() => { if (mon && mon.dead) { mon = nx; monAtkT = 0; } }, 300); return; }
+    pack = [];
     setTimeout(newMon, 450);
   }
 
@@ -1734,6 +1748,13 @@ button.sec-h { cursor: pointer; }
     if (faint > 0 && faint < 50) { ctx.font = "13px 'Black Han Sans', sans-serif"; ctx.fillStyle = "#ffd66b"; ctx.fillText("💫 " + Math.ceil(faint) + "초 뒤 일어나요", 92, GROUND - 10); }
   }
   function drawMon(now) {
+    for (let i = pack.length - 1; i >= 0; i--) {
+      const m = pack[i], s = 62, dy = Math.sin(now * 4 + i + 1) * 4;
+      ctx.fillStyle = "rgba(0,0,0,.3)"; ctx.beginPath(); ctx.ellipse(m.x, GROUND + 3, s * 0.38, 6, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 0.92; emoji(m.e, m.x, GROUND - 4 + dy, s, 0, -1, 1); ctx.globalAlpha = 1;
+      ctx.fillStyle = "rgba(0,0,0,.5)"; ctx.beginPath(); ctx.roundRect(m.x - 20, GROUND - s - 14, 40, 6, 3); ctx.fill();
+      ctx.fillStyle = "#5fe3a1"; ctx.beginPath(); ctx.roundRect(m.x - 20, GROUND - s - 14, 40, 6, 3); ctx.fill();
+    }
     if (!mon) return;
     const size = mon.big ? 124 : mon.boss ? 104 : 74;
     const sh = (mon.hit > 0 ? (Math.random() - .5) * 8 : 0) - (mon.lunge > 0 ? Math.sin(mon.lunge * Math.PI) * 40 : 0);
@@ -1768,6 +1789,7 @@ button.sec-h { cursor: pointer; }
       if (mon.lunge > 0) mon.lunge = Math.max(0, mon.lunge - dt * 4);
       if (mon.dead) mon.dead += dt;
     }
+    pack.forEach((m, i) => { const to = 262 + 34 * (i + 1); if (m.x > to) m.x = Math.max(to, m.x - 520 * dt); });
     if (komiHit > 0) komiHit -= dt;
     if (!paused && faint > 0) { // 기절 중: 아무것도 못 함 → 일어나면 체력 가득
       faint -= dt;
