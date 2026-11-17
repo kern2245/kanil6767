@@ -403,3 +403,14 @@ alter table public.webtoons add column if not exists lang text not null default 
 alter table public.webtoons drop constraint if exists webtoons_lang_check;
 alter table public.webtoons add constraint webtoons_lang_check check (lang in ('ko', 'en'));
 create index if not exists webtoons_lang_idx on public.webtoons (lang);
+
+-- 28) 꼬미 키우기 세이브 (로그인 회원 자동 저장, supabase/game-saves.sql 과 같은 내용)
+--   member_id  : 세카이 회원 번호 (회원이 지워지면 세이브도 같이 지워짐)
+--   data       : 게임 진행 기록 (바나나·강화·직업·장비·미션) — 20,000 글자까지
+--   읽기 규칙 없음 → 서버 비밀 키로만 읽고 씀
+create table if not exists public.game_saves (
+  member_id   uuid primary key references public.artists (id) on delete cascade,
+  data        jsonb not null check (octet_length(data::text) <= 20000),
+  updated_at  timestamptz not null default now()
+);
+alter table public.game_saves enable row level security;

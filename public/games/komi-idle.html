@@ -96,9 +96,16 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
   gap: 10px; padding: 18px; text-align: center; background: rgba(12, 8, 26, .85); cursor: default;
 }
 /* 직업 고르기·쓰러짐 화면은 내용이 많아서 게임 창 전체를 덮고, 넘치면 위아래로 밀어 보기 */
-#jobPick, #dead { position: fixed; z-index: 50; justify-content: safe center; overflow-y: auto; background: rgba(12, 8, 26, .94);
+#jobPick, #dead, #saveBox { position: fixed; z-index: 50; justify-content: safe center; overflow-y: auto; background: rgba(12, 8, 26, .94);
   padding: max(18px, env(safe-area-inset-top, 0px)) 16px max(18px, env(safe-area-inset-bottom, 0px)); }
 .overlay[hidden] { display: none; }
+/* 세이브 코드 창 + 서버 저장 알림 */
+#saveBox textarea { width: min(340px, 100%); box-sizing: border-box; background: var(--card2); color: var(--ink); border: 1px solid rgba(255,255,255,.15); border-radius: 10px; padding: 10px; font: 12px/1.4 ui-monospace, monospace; word-break: break-all; resize: none; }
+#saveBox textarea:focus-visible { outline: 3px solid var(--gold); outline-offset: 1px; }
+#saveBox .btn { min-width: 200px; }
+#saveMsg { color: var(--gold) !important; min-height: 1.6em; }
+.cloud { width: 100%; font-size: .8rem; color: var(--dim); background: var(--card); border-radius: 10px; padding: 8px 10px; }
+.cloud a { color: var(--gold); }
 .overlay h2 { font-family: var(--display); font-weight: 400; font-size: 1.8rem; margin: 0; line-height: 1.15; }
 .overlay p { margin: 0; color: var(--dim); line-height: 1.6; max-width: 32ch; }
 .overlay img { width: 92px; height: auto; }
@@ -189,6 +196,18 @@ button.sec-h { cursor: pointer; }
       <div class="jobs" id="jobs"></div>
     </div>
 
+    <div class="overlay" id="saveBox" hidden role="dialog" aria-modal="true" aria-labelledby="saveTitle">
+      <h2 id="saveTitle">💾 세이브 코드</h2>
+      <p>이 코드를 복사해 두면 다른 휴대폰·PC에서 그대로 이어서 할 수 있어요.</p>
+      <textarea id="saveOut" rows="4" readonly aria-label="내 세이브 코드"></textarea>
+      <button class="btn" id="saveCopy" type="button">코드 복사</button>
+      <p>받은 코드를 붙여넣고 불러오기:</p>
+      <textarea id="saveIn" rows="3" placeholder="여기에 세이브 코드 붙여넣기" aria-label="불러올 세이브 코드"></textarea>
+      <button class="btn ghost" id="saveLoad" type="button">불러오기</button>
+      <p id="saveMsg" aria-live="polite"></p>
+      <button class="btn ghost" id="saveClose" type="button">닫기</button>
+    </div>
+
     <div class="overlay" id="dead" hidden>
       <img src="data:image/png;base64,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" alt="쓰러진 꼬미">
       <h2 style="color: var(--alarm)">꼬미가 쓰러졌어요…</h2>
@@ -239,7 +258,9 @@ button.sec-h { cursor: pointer; }
 
   <div class="foot">
     <a class="link" href="/" target="_top">세카이에서 진짜 웹툰 보기 →</a>
+    <button class="btn ghost" id="saveOpen" type="button">💾 세이브 코드</button>
     <button class="btn ghost" id="reset" type="button">처음부터 다시</button>
+    <div class="cloud" id="cloudMsg" hidden></div>
   </div>
     </div>
     <div class="tabp" id="tab-gear" role="tabpanel" hidden>
@@ -285,12 +306,18 @@ button.sec-h { cursor: pointer; }
   const fresh = () => ({ gold: 0, stage: 1, kill: 0, atk: 0, spd: 0, crit: 0, tap: 0, help: 0, last: Date.now(), seen: false, job: null, adv: 0, buy: "1", top: 1, jsk: 0 });
   let needHpMig = false;
   let S = fresh();
-  try { const raw = localStorage.getItem(KEY); if (raw) { const o = JSON.parse(raw); needHpMig = !("hp" in o) && (o.stage || 1) > 1; S = Object.assign(fresh(), o); } } catch (e) {}
+  let hadSave = false;
+  try { const raw = localStorage.getItem(KEY); if (raw) { hadSave = true; const o = JSON.parse(raw); needHpMig = !("hp" in o) && (o.stage || 1) > 1; S = Object.assign(fresh(), o); } } catch (e) {}
+  const loadedLast = typeof S.last === "number" ? S.last : 0;   // 서버 세이브와 비교할 때 씀
   S.spd = Math.min(S.spd, 10);   // 공격 속도 만렙 40 → 20 → 10 (예전 기록 맞춤)
   S.crit = Math.min(S.crit, 10); // 치명타 만렙 25 → 10
   if (S.job === "sword") S.jsk = Math.min(S.jsk || 0, 10);   // 베기 수련 만렙 20 → 10
   S.top = Math.max(S.top || 1, S.stage);
-  const save = () => { S.last = Date.now(); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+  var cloudOn = false;   // 세카이 로그인 회원이면 true (서버에도 자동 저장)
+  const save = () => {
+    S.last = Date.now(); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {}
+    if (cloudOn) try { window.parent.postMessage({ type: "komi-save", data: S }, location.origin); } catch (e) {}
+  };
 
   // ---- 영구 기록: 장비·미션 (꼬미가 쓰러져도 남음) ----
   const META = () => ({ gear: { weapon: null, hat: null, ring: null }, ach: [], st: { boss: 0, deaths: 0, boxes: 0, legend: 0, kills: 0, skills: 0, ups: 0 }, jtop: {}, mis: {} });
@@ -905,6 +932,51 @@ button.sec-h { cursor: pointer; }
   renderJob(); checkJob(); renderGear();
 
   setInterval(save, 5000);
+
+  // ---- ☁️ 서버 세이브 (세카이 로그인 회원): 켜질 때 서버 기록이 더 최신이면 그걸로 바꿈 ----
+  const applySave = (o) => { S = Object.assign(fresh(), o); save(); location.reload(); };
+  if (window.parent !== window) {
+    window.addEventListener("message", (e) => {
+      if (e.origin !== location.origin || e.source !== window.parent || !e.data || e.data.type !== "komi-sync") return;
+      const m = e.data;
+      if (m.data && typeof m.data === "object" && typeof m.data.stage === "number") { applySave(m.data); return; }
+      cloudOn = !!m.cloud;
+      const c = $("cloudMsg"); c.hidden = false;
+      if (cloudOn) { c.textContent = "☁️ 세카이 계정에 자동 저장 중 · 휴대폰·PC 어디서든 이어서 해요"; save(); }
+      else if (m.login) c.textContent = "☁️ 서버 저장 준비 중이에요. 지금은 이 기기에만 저장돼요.";
+      else c.innerHTML = '🔑 <a href="/login" target="_top">로그인</a>하면 휴대폰·PC 어디서든 이어서 할 수 있어요';
+    });
+    try { window.parent.postMessage({ type: "komi-ready", fresh: !hadSave, last: loadedLast }, location.origin); } catch (e) {}
+  }
+
+  // ---- 💾 세이브 코드: 복사해 두었다가 다른 기기에서 붙여넣기 ----
+  const toCode = () => "KOMI1:" + btoa(unescape(encodeURIComponent(JSON.stringify(S))));
+  const fromCode = (code) => {
+    const s = String(code || "").replace(/\s+/g, "");
+    if (!s.startsWith("KOMI1:")) return null;
+    try {
+      const o = JSON.parse(decodeURIComponent(escape(atob(s.slice(6)))));
+      return o && typeof o === "object" && !Array.isArray(o) && Number.isInteger(o.stage) && o.stage >= 1 && typeof o.gold === "number" ? o : null;
+    } catch (e) { return null; }
+  };
+  let loadArm = 0;
+  $("saveOpen").addEventListener("click", () => {
+    save(); $("saveOut").value = toCode(); $("saveIn").value = ""; $("saveMsg").textContent = ""; loadArm = 0;
+    $("saveLoad").textContent = "불러오기"; $("saveBox").hidden = false; $("saveCopy").focus();
+  });
+  $("saveClose").addEventListener("click", () => { $("saveBox").hidden = true; $("saveOpen").focus(); });
+  $("saveCopy").addEventListener("click", async () => {
+    const out = $("saveOut"); let ok = false;
+    try { await navigator.clipboard.writeText(out.value); ok = true; } catch (e) {}
+    if (!ok) { out.focus(); out.select(); try { ok = document.execCommand("copy"); } catch (e) {} }
+    $("saveMsg").textContent = ok ? "✅ 복사했어요! 메모장이나 카톡에 붙여넣어 보관하세요." : "코드를 길게 눌러 직접 복사해 주세요.";
+  });
+  $("saveLoad").addEventListener("click", () => {
+    const o = fromCode($("saveIn").value);
+    if (!o) { $("saveMsg").textContent = "❌ 올바른 세이브 코드가 아니에요. 다시 확인해 주세요."; return; }
+    if (Date.now() - loadArm > 3000) { loadArm = Date.now(); $("saveLoad").textContent = "정말? 지금 기록이 바뀌어요 (한 번 더)"; return; }
+    applySave(o);
+  });
   document.addEventListener("visibilitychange", () => { if (document.hidden) save(); });
   window.addEventListener("pagehide", save);
 
