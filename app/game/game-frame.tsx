@@ -106,7 +106,7 @@ export function GameFrame({ src, title }: { src: string; title: string }) {
           ref={frameRef}
           src={src}
           title={title}
-          className={cn("block w-full border-0", full ? "h-full" : "h-[1180px] sm:rounded-2xl")}
+          className={cn("block w-full border-0", full ? "h-full" : "h-[calc(100dvh-5rem)] min-h-[600px] sm:rounded-2xl")}
           allow="autoplay; fullscreen"
         />
       </div>

@@ -24,17 +24,28 @@
   --display: "Black Han Sans", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
   --body: "Gowun Dodum", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
 }
-html, body { min-height: 100%; }
+html, body { height: 100%; margin: 0; overflow: hidden; }
 body {
   background: radial-gradient(120% 60% at 50% 0%, #2a1d52 0%, var(--night) 60%);
   background-color: var(--night);
   color: var(--ink); font-family: var(--body);
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
-  padding-block: 12px 24px; box-sizing: border-box;
+  padding-block: max(8px, env(safe-area-inset-top, 0px)) 0; box-sizing: border-box;
   -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
 }
-.wrap { max-width: 440px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
+.wrap { max-width: 440px; height: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 8px; }
+.wrap > header, .wrap > .hud, .wrap > .stage, .wrap > .tabs { flex-shrink: 0; }
+/* 아래 패널: 이 안에서만 위아래로 밀림 (전투 화면은 항상 보임) */
+.panel { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+  padding-bottom: max(16px, env(safe-area-inset-bottom, 0px)); margin: 0 -4px; padding-inline: 4px; }
+.tabp { display: flex; flex-direction: column; gap: 10px; }
+.tabp[hidden] { display: none; }
+.tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; background: var(--card); border-radius: 14px; padding: 4px; }
+.tabs button { position: relative; border: 0; background: transparent; color: var(--dim); font-family: var(--display); font-size: 1rem; padding: 9px 4px; border-radius: 10px; cursor: pointer; }
+.tabs button[aria-selected="true"] { background: var(--sekai); color: #fff; }
+.tabs button:focus-visible { outline: 3px solid var(--gold); outline-offset: 1px; }
+.tabs button.dot::after { content: ""; position: absolute; top: 6px; right: 10px; width: 8px; height: 8px; border-radius: 50%; background: var(--alarm); }
 header { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 h1 { font-family: var(--display); font-weight: 400; font-size: 1.6rem; margin: 0; }
 h1 span { color: var(--sekai); }
@@ -105,6 +116,29 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
 .job .ic { font-size: 1.7rem; }
 .job b { font-family: var(--display); font-weight: 400; font-size: 1rem; }
 .job small { color: var(--dim); font-size: .72rem; line-height: 1.35; }
+.box { background: var(--card); border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.sec-h { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; width: 100%; background: none; border: 0; padding: 0; color: var(--ink); font-family: var(--body); text-align: left; }
+.sec-h b { font-family: var(--display); font-weight: 400; font-size: 1.1rem; }
+.sec-h small { color: var(--dim); font-size: .78rem; }
+button.sec-h { cursor: pointer; }
+.gear { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.slot { background: var(--card2); border-radius: 12px; padding: 8px 4px; text-align: center; border: 2px solid transparent; min-width: 0; }
+.slot .ic { font-size: 1.6rem; line-height: 1.2; }
+.slot b { display: block; font-family: var(--display); font-weight: 400; font-size: .85rem; }
+.slot small { display: block; color: var(--dim); font-size: .7rem; line-height: 1.35; }
+.r0 { color: #b9c0cf; } .r1 { color: #5fb0ff; } .r2 { color: #c38bff; } .r3 { color: #ffcf5c; }
+.slot.r0 { border-color: #6b7286; } .slot.r1 { border-color: #3d86e0; } .slot.r2 { border-color: #9b5cf0; } .slot.r3 { border-color: #ffcf5c; box-shadow: 0 0 14px rgba(255,207,92,.45); }
+.boxmsg { min-height: 1.3em; text-align: center; font-size: .9rem; color: var(--dim); }
+.boxmsg b { font-family: var(--display); font-weight: 400; }
+#openBox:disabled { opacity: .45; cursor: not-allowed; }
+.achs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.achs li { display: grid; grid-template-columns: 28px 1fr auto; gap: 8px; align-items: center; background: var(--card2); border-radius: 10px; padding: 7px 10px; font-size: .82rem; }
+.achs li.done { box-shadow: inset 0 0 0 2px var(--gold); }
+.achs li .ai { font-size: 1.2rem; text-align: center; }
+.achs li small { display: block; color: var(--dim); font-size: .72rem; }
+.achs li .pr { color: var(--dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.achs li.done .pr { color: var(--gold); }
+.achs[hidden] { display: none; }
 .foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
 .link { color: var(--ink); font-size: .9rem; text-decoration: underline; text-underline-offset: 3px; }
 </style>
@@ -152,7 +186,7 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
       <h2 style="color: var(--alarm)">꼬미가 쓰러졌어요…</h2>
       <div class="big" id="deadStage">스테이지 1</div>
       <p id="deadTxt"></p>
-      <p>하드코어라서 바나나·강화·직업이 모두 사라지고 스테이지 1부터 다시 해요. 직업은 스테이지 1 보스를 잡으면 다시 골라요.</p>
+      <p>하드코어라서 바나나·강화·직업이 모두 사라지고 스테이지 1부터 다시 해요. <b style="color:var(--gold)">🎁 장비와 🏆 업적은 그대로 남아요!</b></p>
       <div id="jobAsk" hidden style="display:flex; flex-direction:column; gap:8px; align-items:center">
         <p><b style="color:var(--ink)">직업을 그대로 하겠습니까? 아니면 바꾸겠습니까?</b></p>
         <button class="btn" id="keepJob" type="button">그대로 하기</button>
@@ -169,6 +203,14 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
     </div>
   </div>
 
+  <nav class="tabs" role="tablist" aria-label="메뉴">
+    <button type="button" role="tab" id="tb-up" data-tab="up" aria-selected="true">⚔️ 강화</button>
+    <button type="button" role="tab" id="tb-gear" data-tab="gear" aria-selected="false">🎁 장비</button>
+    <button type="button" role="tab" id="tb-ach" data-tab="ach" aria-selected="false">🏆 업적</button>
+  </nav>
+
+  <div class="panel" id="panel">
+    <div class="tabp" id="tab-up" role="tabpanel">
   <div class="jobcard"><span class="ic" id="jobIc">🐒</span><span><b id="jobName">직업 없음</b><small id="jobTxt"></small></span></div>
 
   <div class="bossbar">
@@ -190,6 +232,24 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
   <div class="foot">
     <a class="link" href="/" target="_top">세카이에서 진짜 웹툰 보기 →</a>
     <button class="btn ghost" id="reset" type="button">처음부터 다시</button>
+  </div>
+    </div>
+    <div class="tabp" id="tab-gear" role="tabpanel" hidden>
+  <section class="box" aria-label="장비 상자">
+    <div class="sec-h"><b>🎁 장비 상자</b><small>쓰러져도 장비는 그대로!</small></div>
+    <div class="gear" id="gear"></div>
+    <button class="btn" id="openBox" type="button">상자 열기</button>
+    <div class="boxmsg" id="boxMsg" aria-live="polite">같은 등급이 또 나오면 ★ 강화 (최대 ★5)</div>
+  </section>
+
+    </div>
+    <div class="tabp" id="tab-ach" role="tabpanel" hidden>
+  <section class="box" aria-label="업적">
+    <button class="sec-h" id="achToggle" type="button" aria-expanded="true" aria-controls="achs"><b>🏆 업적 <span id="achArrow">▴</span></b><small id="achSum"></small></button>
+    <ul class="achs" id="achs"></ul>
+  </section>
+
+    </div>
   </div>
 </div>
 
@@ -224,6 +284,36 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
   S.top = Math.max(S.top || 1, S.stage);
   const save = () => { S.last = Date.now(); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
 
+  // ---- 영구 기록: 장비·업적 (꼬미가 쓰러져도 남음) ----
+  const META = () => ({ gear: { weapon: null, hat: null, ring: null }, ach: [], st: { boss: 0, deaths: 0, boxes: 0, legend: 0 }, jtop: {} });
+  { const m = META(); for (const k in m) if (!S[k] || typeof S[k] !== "object") S[k] = m[k]; S.gear = Object.assign(m.gear, S.gear); S.st = Object.assign(m.st, S.st); if (!Array.isArray(S.ach)) S.ach = []; }
+  const keepMeta = () => ({ gear: S.gear, ach: S.ach, st: S.st, jtop: S.jtop });
+  // 장비: 무기(공격력) · 모자(체력) · 반지(바나나), 등급 4개, 같은 등급이 또 나오면 ★ (최대 5, ★마다 +20%)
+  const RAR = [["일반", 60, 5], ["희귀", 28, 12], ["영웅", 10, 25], ["전설", 2, 50]];   // 이름, 확률%, 기본 보너스%
+  const SLOTS = { weapon: ["🗡️", "무기", "공격력"], hat: ["🎩", "모자", "체력"], ring: ["💍", "반지", "바나나"] };
+  const gearB = (slot) => { const g = S.gear[slot]; return g ? RAR[g.r][2] * (1 + 0.2 * g.s) / 100 : 0; };
+  // 업적: 하나 깰 때마다 공격력 영구 +3%
+  const ACH = [
+    { id: "boss10", ic: "👹", nm: "보스 사냥꾼", d: "보스 10마리 잡기", v: () => S.st.boss, goal: 10 },
+    { id: "boss50", ic: "👺", nm: "보스 학살자", d: "보스 50마리 잡기", v: () => S.st.boss, goal: 50 },
+    { id: "boss200", ic: "💀", nm: "보스들의 악몽", d: "보스 200마리 잡기", v: () => S.st.boss, goal: 200 },
+    { id: "st10", ic: "🚩", nm: "모험의 시작", d: "스테이지 10 도착", v: () => S.top, goal: 10 },
+    { id: "st25", ic: "🏰", nm: "베테랑 꼬미", d: "스테이지 25 도착", v: () => S.top, goal: 25 },
+    { id: "st50", ic: "🌋", nm: "전설의 꼬미", d: "스테이지 50 도착", v: () => S.top, goal: 50 },
+    { id: "adv2", ic: "✨", nm: "진화!", d: "2차 전직 하기", v: () => (S.top >= JOB2 ? 1 : 0), goal: 1 },
+    { id: "js", ic: "🗡️", nm: "검의 길", d: "검사로 스테이지 20", v: () => S.jtop.sword || 0, goal: 20 },
+    { id: "jb", ic: "🏹", nm: "활의 길", d: "궁수로 스테이지 20", v: () => S.jtop.bow || 0, goal: 20 },
+    { id: "jm", ic: "🔮", nm: "마법의 길", d: "마법사로 스테이지 20", v: () => S.jtop.magic || 0, goal: 20 },
+    { id: "jt", ic: "🐵", nm: "원숭이의 길", d: "조련사로 스테이지 20", v: () => S.jtop.tamer || 0, goal: 20 },
+    { id: "d1", ic: "🩹", nm: "첫 번째 쓰러짐", d: "꼬미가 1번 쓰러지기", v: () => S.st.deaths, goal: 1 },
+    { id: "d10", ic: "🔥", nm: "포기를 모르는 꼬미", d: "10번 쓰러져도 다시 하기", v: () => S.st.deaths, goal: 10 },
+    { id: "box10", ic: "🎁", nm: "상자 수집가", d: "장비 상자 10개 열기", v: () => S.st.boxes, goal: 10 },
+    { id: "box100", ic: "📦", nm: "상자 중독", d: "장비 상자 100개 열기", v: () => S.st.boxes, goal: 100 },
+    { id: "leg", ic: "🌟", nm: "전설을 손에", d: "전설 장비 얻기", v: () => S.st.legend, goal: 1 },
+  ];
+  const ACH_BONUS = 0.03;
+  const achB = () => S.ach.length * ACH_BONUS;
+
   // ---- 직업 (스테이지 5에서 1차 전직, 25에서 2차 전직) ----
   const JOB1 = 2, JOB2 = 25;   // 1차 전직: 스테이지 1 보스를 잡으면 (=스테이지 2)
   const JOBS = {
@@ -239,7 +329,8 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
 
   // ---- 능력치 ----
   const baseAtk = (l) => Math.floor(5 * Math.pow(1.13, l) + l * 3);
-  const atk = () => Math.floor(baseAtk(S.atk) * jm("atk"));
+  const atkMul = () => jm("atk") * (1 + gearB("weapon") + achB());   // 직업 · 무기 · 업적 보너스
+  const atk = () => Math.floor(baseAtk(S.atk) * atkMul());
   const apsAt = (l) => Math.min(5 * jm("aps"), (1 + l * 0.2) * jm("aps"));   // 20레벨이면 1초에 5번
   const aps = () => apsAt(S.spd);
   const critP = () => Math.min(0.45, 0.05 + S.crit * 0.02 + (J() && J().crit ? J().crit[jl()] : 0));
@@ -271,11 +362,11 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
   // 체력은 강화로 못 올림: 스테이지가 오르면 저절로 늘고, 직업마다 배수가 다름
   // 보스를 잡을 때마다(= 스테이지가 오를 때마다) 최대 체력 +5% 보너스 (쓰러지면 스테이지 1로 가서 같이 사라짐)
   const BOSS_HP = 0.05;
-  const maxHp = () => Math.max(80, Math.floor(mHp(S.stage) * 4 * jm("hp") * (1 + BOSS_HP * (S.stage - 1))));   // 체력 너프 (5.4 → 4)
+  const maxHp = () => Math.max(80, Math.floor(mHp(S.stage) * 4 * jm("hp") * (1 + BOSS_HP * (S.stage - 1)) * (1 + gearB("hat"))));   // 모자 = 체력 보너스   // 체력 너프 (5.4 → 4)
 
   const UPS = [
     { id: "jsk", ic: "", nm: "", job: true, ef: () => (J() ? JSK[S.job].ef(S.jsk || 0) : ""), cost: (l) => (J() ? JSK[S.job].cost(l) : 1e99), get max() { return J() ? JSK[S.job].max : 1; } },
-    { id: "atk",  ic: "🗡️", nm: "공격력",    ef: () => "한 대에 " + fmt(atk()) + " → " + fmt(Math.floor(baseAtk(S.atk + 1) * jm("atk"))), cost: (l) => 10 * Math.pow(1.15, l) },
+    { id: "atk",  ic: "🗡️", nm: "공격력",    ef: () => "한 대에 " + fmt(atk()) + " → " + fmt(Math.floor(baseAtk(S.atk + 1) * atkMul())), cost: (l) => 10 * Math.pow(1.15, l) },
     { id: "spd",  ic: "⚡",  nm: "공격 속도", ef: () => "1초에 " + aps().toFixed(1) + "번 → " + apsAt(S.spd + 1).toFixed(1) + "번", cost: (l) => 60 * Math.pow(1.6, l), max: 10 },
     { id: "crit", ic: "💥", nm: "치명타",    ef: () => Math.round(critP() * 100) + "% 확률로 " + critX() + "배 피해", cost: (l) => 120 * Math.pow(2.2, l), max: 10 },
   ];
@@ -301,8 +392,9 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
     $("jobAsk").hidden = !hasJob; $("jobAsk").style.display = hasJob ? "flex" : "none"; $("restart").hidden = hasJob;
     if (hasJob) $("keepJob").textContent = JOBS[lastJob].ic + " " + JOBS[lastJob].n[0] + " 그대로 하기";
     S.top = Math.max(S.top || 1, reached);
-    const keep = { seen: true, buy: S.buy, top: S.top };
-    S = Object.assign(fresh(), keep); save();
+    S.st.deaths++;
+    const keep = Object.assign({ seen: true, buy: S.buy, top: S.top }, keepMeta());   // 장비·업적은 남음
+    S = Object.assign(fresh(), keep); save(); checkAch();
     shake = 14;
     beep(300, .5, "sawtooth", .07, -250); setTimeout(() => beep(110, .6, "square", .06, -40), 200);
     $("deadStage").textContent = "스테이지 " + reached;
@@ -358,13 +450,14 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
   function kill() {
     mon.dead = 0.001; laughT = 0.6;
     // 일반 몬스터(잡몹)를 잡아도 체력은 회복되지 않음 (보스를 잡으면 아래에서 가득 회복)
-    const g = mon.boss ? mGold(S.stage) * 12 : mGold(S.stage);
+    const g = Math.ceil((mon.boss ? mGold(S.stage) * 12 : mGold(S.stage)) * (1 + gearB("ring")));   // 반지 = 바나나 보너스
     S.gold += g;
     for (let i = 0; i < (mon.boss ? 12 : 5); i++) coins.push({ x: 262, y: 160, vx: (Math.random() - .5) * 220, vy: -200 - Math.random() * 200, t: 0 });
     pops.push({ t: 0, x: 262, y: 70, text: "+🍌 " + fmt(g), c: "#ffd66b", big: true });
     beep(988, 0.07, "square", 0.04); setTimeout(() => beep(1318, 0.1, "square", 0.04), 60);
     if (mon.boss) {
       S.stage++; S.kill = 0; bossFail = false; $("bossBtn").hidden = true;
+      S.st.boss++; if (S.job) S.jtop[S.job] = Math.max(S.jtop[S.job] || 0, S.stage);
       S.top = Math.max(S.top || 1, S.stage);
       komiHp = maxHp();   // 스테이지를 깨면 체력 가득
       // 세카이 안에서 할 때: 바깥 페이지에 "스테이지 깼어요" 알림 → 로그인 회원이면 순위표에 저장
@@ -375,7 +468,7 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
       pops.push({ t: -0.3, x: W / 2, y: 118, text: "❤️ 최대 체력 UP! (+" + Math.round(BOSS_HP * 100 * (S.stage - 1)) + "%)", c: "#ff7a9a", big: true });
       [523, 659, 784, 1046].forEach((f, k) => setTimeout(() => beep(f, 0.15, "square", 0.04), k * 90));
       save();
-      setTimeout(checkJob, 700);
+      setTimeout(checkJob, 700); checkAch();
     } else if (S.kill < PER_STAGE) { S.kill++; if (S.kill >= PER_STAGE) bossGo = true; }   // 5마리 잡으면 자동으로 보스
     setTimeout(newMon, 450);
   }
@@ -660,7 +753,7 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
   $("bossBtn").addEventListener("click", () => { wake(); bossFail = false; bossGo = true; komiHp = maxHp(); S.kill = PER_STAGE; $("bossBtn").hidden = true; newMon(); });
   let resetArm = 0;
   $("reset").addEventListener("click", () => {
-    if (Date.now() - resetArm < 3000) { S = Object.assign(fresh(), { seen: true, top: S.top }); save(); komiHp = maxHp(); faint = 0; bossFail = false; $("bossBtn").hidden = true; newMon(); $("reset").textContent = "처음부터 다시"; renderUps(); renderJob(); renderMode(); return; }
+    if (Date.now() - resetArm < 3000) { S = Object.assign(fresh(), { seen: true, top: S.top }, keepMeta()); save(); komiHp = maxHp(); faint = 0; bossFail = false; $("bossBtn").hidden = true; newMon(); $("reset").textContent = "처음부터 다시"; renderUps(); renderJob(); renderMode(); return; }
     resetArm = Date.now(); $("reset").textContent = "정말? 한 번 더 누르기";
     setTimeout(() => { $("reset").textContent = "처음부터 다시"; }, 3000);
   });
@@ -718,14 +811,78 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
     }
     $("gold").textContent = fmt(S.gold);
     $("dps").textContent = fmt(dps());
+    const bc = boxCost(); $("openBox").disabled = S.gold < bc; $("tb-gear").classList.toggle("dot", S.gold >= bc); $("openBox").textContent = "상자 열기 🍌 " + fmt(bc);
     $("stg").textContent = S.stage + "-" + (mon && mon.boss ? "보스" : Math.min(PER_STAGE, S.kill + 1));
   }
+
+  // ---- 🎁 장비 상자 ----
+  const boxCost = () => Math.ceil(mGold(S.stage) * 10);
+  function renderGear() {
+    $("gear").innerHTML = Object.entries(SLOTS).map(([k, [ic, nm, what]]) => {
+      const g = S.gear[k];
+      return g
+        ? `<div class="slot r${g.r}"><div class="ic">${ic}</div><b class="r${g.r}">${RAR[g.r][0]} ${nm}</b><small>${"★".repeat(g.s) || "☆"}</small><small>${what} +${Math.round(gearB(k) * 100)}%</small></div>`
+        : `<div class="slot"><div class="ic" style="opacity:.35">${ic}</div><b>${nm}</b><small>비어 있음</small><small>${what} +0%</small></div>`;
+    }).join("");
+  }
+  $("openBox").addEventListener("click", () => {
+    wake();
+    const c = boxCost(); if (S.gold < c) return;
+    S.gold -= c; S.st.boxes++;
+    const slot = Object.keys(SLOTS)[Math.floor(Math.random() * 3)];
+    let x = Math.random() * 100, r = 0; for (let i = 0; i < RAR.length; i++) { x -= RAR[i][1]; if (x < 0) { r = i; break; } }
+    if (r === 3) S.st.legend++;
+    const cur = S.gear[slot], [ic, nm] = SLOTS[slot], name = `<b class="r${r}">${RAR[r][0]} ${nm}</b>`;
+    let msg;
+    if (!cur || r > cur.r) { S.gear[slot] = { r, s: 0 }; msg = `${ic} ${name} 장착! ✨`; }
+    else if (r === cur.r && cur.s < 5) { cur.s++; msg = `${ic} ${name} ★${cur.s} 강화!`; }
+    else { const back = Math.floor(c * (r === cur.r ? 0.5 : 0.3)); S.gold += back; msg = `${ic} ${name} → 분해해서 🍌 ${fmt(back)} 돌려받음`; }
+    $("boxMsg").innerHTML = msg;
+    // 연출: 등급이 높을수록 화려하게
+    const col = ["#b9c0cf", "#5fb0ff", "#c38bff", "#ffcf5c"][r];
+    pops.push({ t: 0, x: W / 2, y: 70, text: "🎁 " + RAR[r][0] + " " + nm + "!", c: col, big: true, huge: r >= 2 });
+    for (let i = 0; i < 10 + r * 14; i++) { const a = Math.random() * Math.PI * 2, v = 80 + Math.random() * (120 + r * 90); parts.push({ x: W / 2, y: 110, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 80, t: 0, life: .6 + r * .1, c: i % 2 ? col : "#ffffff" }); }
+    if (r >= 2) shake = 6 + r * 3;
+    [660, 880, 1046, 1318].slice(0, r + 1).forEach((f, k) => setTimeout(() => beep(f, .12, "triangle", .05), k * 90));
+    komiHp = Math.min(komiHp, maxHp());
+    checkAch(); renderGear(); renderUps(); save();
+  });
+
+  // ---- 🏆 업적 ----
+  function checkAch() {
+    for (const a of ACH) {
+      if (S.ach.includes(a.id) || a.v() < a.goal) continue;
+      S.ach.push(a.id);
+      const g = mGold(S.stage) * 20; S.gold += g;
+      pops.push({ t: -0.2, x: W / 2, y: 100, text: "🏆 " + a.nm + "! 공격력+3%", c: "#ffcf5c", big: true });
+      [784, 988, 1175].forEach((f, k) => setTimeout(() => beep(f, .1, "triangle", .05), k * 80));
+    }
+    renderAch();
+  }
+  function renderAch() {
+    $("achSum").textContent = S.ach.length + "/" + ACH.length + " 달성 · 공격력 +" + Math.round(achB() * 100) + "%";
+    $("achs").innerHTML = ACH.map((a) => {
+      const done = S.ach.includes(a.id), v = Math.min(a.goal, a.v());
+      return `<li class="${done ? "done" : ""}"><span class="ai">${done ? a.ic : "🔒"}</span><span>${a.nm}<small>${a.d}</small></span><span class="pr">${done ? "완료!" : fmt(v) + "/" + fmt(a.goal)}</span></li>`;
+    }).join("");
+  }
+  $("achToggle").addEventListener("click", () => {
+    const open = $("achs").hidden; $("achs").hidden = !open;
+    $("achToggle").setAttribute("aria-expanded", String(open)); $("achArrow").textContent = open ? "▴" : "▾";
+  });
+
+  // ---- 아래 탭 (강화 / 장비 / 업적) ----
+  const tabBtns = [...document.querySelectorAll(".tabs button")];
+  tabBtns.forEach((tb) => tb.addEventListener("click", () => {
+    tabBtns.forEach((x) => { const on = x === tb; x.setAttribute("aria-selected", String(on)); $("tab-" + x.dataset.tab).hidden = !on; });
+    $("panel").scrollTop = 0; beep(700, .04, "triangle", .03);
+  }));
 
   // ---- 창을 닫아둔 동안 번 바나나 ----
   const away = Math.min(8 * 3600, (Date.now() - (S.last || Date.now())) / 1000);
   if (S.seen && away > 60) {
     const kills = (dps() * away) / monHp(S.stage);
-    const g = Math.floor(kills * mGold(S.stage) * 0.3);
+    const g = Math.floor(kills * mGold(S.stage) * 0.3 * (1 + gearB("ring")));
     if (g > 0) {
       $("offGold").textContent = "🍌 " + fmt(g);
       $("welcome").hidden = false;
@@ -734,7 +891,7 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
   }
   if (!S.seen) $("intro").hidden = false;
   $("go").addEventListener("click", () => { wake(); S.seen = true; $("intro").hidden = true; save(); });
-  renderJob(); checkJob();
+  renderJob(); checkJob(); renderGear(); checkAch();
 
   setInterval(save, 5000);
   document.addEventListener("visibilitychange", () => { if (document.hidden) save(); });
