@@ -441,8 +441,22 @@ button.sec-h { cursor: pointer; }
   const TIERS = [[1, "아기 꼬미", ""], [10, "견습 용사 꼬미", "⭐"], [25, "용사 꼬미", "🗡️"], [50, "영웅 꼬미", "👑"], [100, "전설의 꼬미", "👑"]];
   const tier = () => { let t = 0; TIERS.forEach((x, i) => { if (S.stage >= x[0]) t = i; }); return t; };
 
-  const MONS = [["🐛", "버그"], ["⏰", "마감 시계"], ["📚", "숙제 괴물"], ["👻", "졸음 귀신"], ["🦇", "밤샘 박쥐"], ["🍄", "독버섯"], ["🧟", "야근 좀비"], ["🌵", "선인장"]];
-  const BOSSES = [["👹", "악플 대마왕"], ["👾", "렉 괴물"], ["🤖", "스팸 로봇"], ["🐙", "마감 문어"], ["🐲", "휴재 드래곤"]];
+  // ---- 🗺️ 구역: 10 스테이지마다 풍경 · 몬스터 · 보스가 바뀜 (100 스테이지 뒤에는 2회차로 다시 처음부터) ----
+  //   boss = 그 구역 보스 / big = 10번째 스테이지(10, 20, 30...)에 나오는 구역 대보스 (더 큼)
+  const ZONES = [
+    { n: "🌃 밤의 도시", sky: ["#1a1240", "#4a2a78"], gr: "#3a2a6b", line: "#a855f7", sc: "city", mons: [["🐛", "버그"], ["⏰", "마감 시계"], ["📚", "숙제 괴물"]], boss: ["👾", "렉 괴물"], big: ["👹", "악플 대마왕"] },
+    { n: "🌴 바나나 숲", sky: ["#14532d", "#65a30d"], gr: "#3f2a14", line: "#84cc16", sc: "forest", mons: [["🐌", "끈적 달팽이"], ["🍄", "독버섯"], ["🐍", "숲 뱀"]], boss: ["🦍", "고릴라 대장"], big: ["🐊", "늪 악어왕"] },
+    { n: "🏜️ 모래 사막", sky: ["#9a3412", "#f59e0b"], gr: "#a16207", line: "#fde047", sc: "desert", mons: [["🌵", "선인장"], ["🦂", "전갈"], ["🐍", "모래뱀"]], boss: ["🗿", "모래 석상"], big: ["🦖", "사막 공룡"] },
+    { n: "🏔️ 얼음 산", sky: ["#1e3a5f", "#60a5fa"], gr: "#94a3b8", line: "#ffffff", sc: "snow", mons: [["⛄", "눈사람"], ["🐧", "펭귄 병사"], ["🧊", "얼음 덩어리"]], boss: ["🐺", "눈늑대"], big: ["🦣", "매머드 왕"] },
+    { n: "🌊 깊은 바다", sky: ["#082f49", "#0e7490"], gr: "#a8875a", line: "#22d3ee", sc: "sea", mons: [["🐡", "복어"], ["🦀", "집게 게"], ["🐠", "가시 물고기"]], boss: ["🦈", "상어"], big: ["🐙", "마감 문어"] },
+    { n: "🏰 유령 성", sky: ["#0f0a1e", "#3b2463"], gr: "#2a1b3d", line: "#c084fc", sc: "castle", mons: [["👻", "졸음 귀신"], ["🦇", "밤샘 박쥐"], ["💀", "해골 병사"]], boss: ["🧛", "흡혈귀"], big: ["🎃", "호박 대왕"] },
+    { n: "🌋 불의 화산", sky: ["#3b0a0a", "#c2410c"], gr: "#292524", line: "#f97316", sc: "volcano", mons: [["🔥", "불꽃 정령"], ["🦎", "용암 도마뱀"], ["☄️", "작은 운석"]], boss: ["🐲", "휴재 드래곤"], big: ["🐉", "화산 용왕"] },
+    { n: "🌐 사이버 시티", sky: ["#020617", "#1e1b4b"], gr: "#0f172a", line: "#22d3ee", sc: "cyber", mons: [["🤖", "스팸 로봇"], ["💾", "고장 디스크"], ["📡", "해킹 안테나"]], boss: ["💻", "바이러스 컴퓨터"], big: ["🦾", "메카 대장"] },
+    { n: "☁️ 하늘 섬", sky: ["#0369a1", "#7dd3fc"], gr: "#4d7c0f", line: "#facc15", sc: "sky", mons: [["🦅", "독수리"], ["🎈", "풍선 괴물"], ["⚡", "번개 정령"]], boss: ["🌪️", "폭풍 거인"], big: ["⛈️", "천둥 군주"] },
+    { n: "🌌 우주", sky: ["#000000", "#2e1065"], gr: "#1f1f2e", line: "#e879f9", sc: "space", mons: [["👽", "외계인"], ["🌑", "그림자 별"], ["🛰️", "고장 위성"]], boss: ["🛸", "UFO 함장"], big: ["🪐", "행성 파괴자"] },
+  ];
+  const zoneOf = (st) => ZONES[Math.floor((st - 1) / 10) % ZONES.length];
+  const zoneName = (st) => { const r = Math.floor((st - 1) / 100); return zoneOf(st).n + (r ? " (" + (r + 1) + "회차)" : ""); };
 
   // ---- 전투 상태 ----
   let mon = null, swing = 0, atkTimer = 0, helpTimer = 0, laughT = 0, pops = [], parts = [], coins = [], shake = 0;
@@ -476,9 +490,10 @@ button.sec-h { cursor: pointer; }
     bossGo = false;
     if (isBoss) { bossFail = false; komiHp = maxHp(); }   // 보스전 시작: 체력 가득
     const st = S.stage;
-    const pick = isBoss ? BOSSES[(st - 1) % BOSSES.length] : MONS[(st * 3 + S.kill) % MONS.length];
+    const Z = zoneOf(st), zb = isBoss && st % 10 === 0;   // 10, 20, 30... 은 구역 대보스
+    const pick = isBoss ? (zb ? Z.big : Z.boss) : Z.mons[(st * 3 + S.kill) % Z.mons.length];
     const hp = isBoss ? monHp(st) * (st <= EASY ? 5 : 10) : monHp(st);
-    mon = { e: pick[0], name: isBoss ? pick[1] : pick[1] + " Lv." + st, hp, max: hp, boss: isBoss, x: W + 60, hit: 0, dead: 0 };
+    mon = { e: pick[0], name: isBoss ? (zb ? "👑 " : "") + pick[1] : pick[1] + " Lv." + st, hp, max: hp, boss: isBoss, big: zb, x: W + 60, hit: 0, dead: 0 };
     if (isBoss) bossTime = st <= EASY ? 30 : 20;
   }
   newMon();
@@ -530,6 +545,7 @@ button.sec-h { cursor: pointer; }
       S.top = Math.max(S.top || 1, S.stage);
       komiHp = maxHp();   // 스테이지를 깨면 체력 가득
       pops.push({ t: 0, x: W / 2, y: 40, text: "스테이지 " + S.stage + "!", c: "#a855f7", big: true, huge: true });
+      if (S.stage % 10 === 1) pops.push({ t: -0.9, x: W / 2, y: 150, text: zoneName(S.stage) + " 도착!", c: "#7fd8ff", big: true, huge: true });
       const tr = TIERS.find((x) => x[0] === S.stage);
       if (tr) pops.push({ t: -0.5, x: W / 2, y: 80, text: tr[1] + " 등급 UP!", c: "#5fe3a1", big: true });
       pops.push({ t: -0.3, x: W / 2, y: 118, text: "❤️ 최대 체력 UP! (+" + Math.round(BOSS_HP * 100 * (S.stage - 1)) + "%)", c: "#ff7a9a", big: true });
@@ -1255,22 +1271,109 @@ button.sec-h { cursor: pointer; }
     ctx.textAlign = "center"; ctx.textBaseline = "alphabetic"; ctx.fillText(e, 0, 0); ctx.restore();
   }
   let scroll = 0;
+  const STARS = Array.from({ length: 46 }, (_, i) => [(i * 97) % 360, (i * 53) % 200, 0.6 + (i % 3) * 0.6, i]);
   function bg(now) {
-    const boss = mon && mon.boss;
+    const boss = mon && mon.boss, Z = zoneOf(S.stage), par = scroll * 0.3;
     const g = ctx.createLinearGradient(0, 0, 0, GROUND);
-    g.addColorStop(0, boss ? "#3a0f2a" : "#1a1240"); g.addColorStop(1, boss ? "#6b1e3e" : "#4a2a78");
+    g.addColorStop(0, Z.sky[0]); g.addColorStop(1, Z.sky[1]);
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = "#ffd66b"; ctx.beginPath(); ctx.arc(320, 40, 18, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = boss ? "#3a0f2a" : "#1a1240"; ctx.beginPath(); ctx.arc(312, 35, 16, 0, Math.PI * 2); ctx.fill();
-    // 빌딩
-    for (let i = 0; i < 9; i++) {
-      const x = ((i * 52 - scroll * 0.3) % 468 + 468) % 468 - 54, h = 50 + ((i * 37) % 70);
-      ctx.fillStyle = boss ? "#2a0c22" : "#2a1d52"; ctx.fillRect(x, GROUND - h, 46, h);
-      ctx.fillStyle = "rgba(255,214,107,.4)";
-      for (let wy = GROUND - h + 8; wy < GROUND - 8; wy += 14) for (let wx = x + 6; wx < x + 40; wx += 12) if ((wx * 7 + wy * 3 + i) % 5 < 2) ctx.fillRect(wx, wy, 5, 6);
+    const each = (gap, sp, fn) => { const p = par * sp, k0 = Math.floor(p / gap) - 1; for (let k = k0; k < k0 + W / gap + 3; k++) fn(k * gap - p, ((k * 37) % 97 + 97) % 97); };
+    const disc = (x, y, r, c) => { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); };
+    const tri = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(x - w / 2, y); ctx.lineTo(x, y - h); ctx.lineTo(x + w / 2, y); ctx.closePath(); ctx.fill(); };
+    const moon = (c, bgc) => { disc(320, 40, 18, c); disc(312, 35, 16, bgc); };
+    const twinkle = (n, a) => { for (let i = 0; i < n; i++) { const s = STARS[i]; ctx.fillStyle = "rgba(255,255,255," + (a * (0.4 + 0.6 * Math.abs(Math.sin(now * 2 + s[3])))).toFixed(2) + ")"; ctx.fillRect(s[0], s[1] * 0.75, s[2], s[2]); } };
+    const sc = Z.sc;
+    if (sc === "city") {   // 밤의 도시: 달 + 불 켜진 빌딩
+      twinkle(18, 0.6); moon("#ffd66b", Z.sky[0]);
+      each(52, 1, (x, h) => {
+        h = 50 + (h % 70); ctx.fillStyle = "#2a1d52"; ctx.fillRect(x, GROUND - h, 46, h);
+        ctx.fillStyle = "rgba(255,214,107,.4)";
+        for (let wy = GROUND - h + 8; wy < GROUND - 8; wy += 14) for (let wx = 6; wx < 40; wx += 12) if ((wx * 7 + wy * 3 + h) % 5 < 2) ctx.fillRect(x + wx, wy, 5, 6);
+      });
+    } else if (sc === "forest") {   // 바나나 숲: 햇살 + 언덕 + 야자수
+      disc(300, 46, 22, "rgba(255,240,150,.9)"); disc(300, 46, 34, "rgba(255,240,150,.18)");
+      each(140, 0.4, (x) => { ctx.fillStyle = "#166534"; ctx.beginPath(); ctx.ellipse(x + 70, GROUND, 110, 60, 0, Math.PI, Math.PI * 2); ctx.fill(); });
+      each(90, 1, (x, h) => {
+        const th = 70 + (h % 40), bx = x + 40;
+        ctx.strokeStyle = "#7c4a1e"; ctx.lineWidth = 7; ctx.lineCap = "round";
+        ctx.beginPath(); ctx.moveTo(bx, GROUND); ctx.quadraticCurveTo(bx + 10, GROUND - th / 2, bx + 4, GROUND - th); ctx.stroke();
+        ctx.fillStyle = "#22c55e";
+        for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + (i - 2) * 0.7 + Math.sin(now * 1.5 + h) * 0.05; ctx.beginPath(); ctx.ellipse(bx + 4 + Math.cos(a) * 18, GROUND - th + Math.sin(a) * 10 + 6, 22, 6, a, 0, Math.PI * 2); ctx.fill(); }
+        if (h % 3 === 0) emoji("🍌", bx + 10, GROUND - th + 18, 14, 0.3);
+      });
+    } else if (sc === "desert") {   // 모래 사막: 큰 해 + 피라미드 + 모래 언덕 + 선인장
+      disc(290, 52, 28, "rgba(255,247,200,.95)"); disc(290, 52, 44, "rgba(255,240,170,.25)");
+      each(220, 0.3, (x) => { tri(x + 60, GROUND - 20, 120, 80, "#c2410c"); tri(x + 150, GROUND - 20, 80, 52, "#b45309"); });
+      ctx.fillStyle = "#d97706"; ctx.beginPath(); ctx.moveTo(0, GROUND);
+      for (let x = 0; x <= W; x += 10) ctx.lineTo(x, GROUND - 26 - Math.sin((x + par * 0.6) / 50) * 12); ctx.lineTo(W, GROUND); ctx.fill();
+      each(130, 1, (x, h) => emoji("🌵", x + 40, GROUND - 2, 26 + (h % 3) * 6));
+    } else if (sc === "snow") {   // 얼음 산: 눈 덮인 산 + 눈송이
+      each(160, 0.3, (x, h) => { const mh = 110 + (h % 50); tri(x + 80, GROUND, 200, mh, "#334e7a"); tri(x + 80, GROUND - mh + 34, 58, 34, "#f1f5f9"); });
+      each(110, 0.7, (x, h) => { const mh = 60 + (h % 30); tri(x + 55, GROUND, 130, mh, "#475f8a"); tri(x + 55, GROUND - mh + 20, 34, 20, "#ffffff"); });
+      ctx.fillStyle = "rgba(255,255,255,.85)";
+      for (let i = 0; i < 40; i++) { const s = STARS[i]; const x = ((s[0] + Math.sin(now + i) * 10 - par * 0.5) % W + W) % W, y = (s[1] + now * (20 + (i % 4) * 8)) % GROUND; ctx.beginPath(); ctx.arc(x, y, 1 + (i % 3) * 0.6, 0, Math.PI * 2); ctx.fill(); }
+    } else if (sc === "sea") {   // 깊은 바다: 빛줄기 + 해초 + 거품
+      ctx.fillStyle = "rgba(186,230,253,.08)";
+      for (let i = 0; i < 4; i++) { const x = 40 + i * 90 + Math.sin(now * 0.5 + i) * 10; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + 30, 0); ctx.lineTo(x + 90, GROUND); ctx.lineTo(x + 40, GROUND); ctx.fill(); }
+      each(70, 1, (x, h) => {
+        ctx.strokeStyle = h % 2 ? "#15803d" : "#0f766e"; ctx.lineWidth = 5; ctx.lineCap = "round"; const sh = 50 + (h % 40);
+        ctx.beginPath(); ctx.moveTo(x + 30, GROUND); for (let y = 0; y <= sh; y += 8) ctx.lineTo(x + 30 + Math.sin(now * 2 + y / 12 + h) * 6, GROUND - y); ctx.stroke();
+      });
+      ctx.strokeStyle = "rgba(224,242,254,.6)"; ctx.lineWidth = 1.5;
+      for (let i = 0; i < 18; i++) { const s = STARS[i]; const y = GROUND - ((now * (25 + i * 2) + s[1]) % GROUND), x = (s[0] + Math.sin(now * 2 + i) * 6 + W) % W; ctx.beginPath(); ctx.arc(x, y, 2 + (i % 3), 0, Math.PI * 2); ctx.stroke(); }
+    } else if (sc === "castle") {   // 유령 성: 큰 달 + 성 그림자 + 안개
+      twinkle(20, 0.5); disc(300, 50, 30, "#fef3c7"); disc(300, 50, 44, "rgba(254,243,199,.15)");
+      each(240, 0.4, (x) => {
+        ctx.fillStyle = "#1a1030"; ctx.fillRect(x + 40, GROUND - 90, 140, 90);
+        for (const [tx, tw, th] of [[30, 30, 130], [110, 26, 150], [175, 30, 120]]) { ctx.fillRect(x + tx, GROUND - th, tw, th); tri(x + tx + tw / 2, GROUND - th, tw + 8, 30, "#1a1030"); }
+        ctx.fillStyle = "rgba(255,214,107,.7)"; ctx.fillRect(x + 118, GROUND - 120, 8, 12); ctx.fillRect(x + 80, GROUND - 60, 8, 12);
+      });
+      ctx.fillStyle = "rgba(196,181,253,.12)";
+      for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.ellipse(((i * 150 + now * 15) % (W + 200)) - 100, GROUND - 10 - i * 8, 120, 16, 0, 0, Math.PI * 2); ctx.fill(); }
+    } else if (sc === "volcano") {   // 불의 화산: 화산 + 용암 빛 + 불똥
+      each(260, 0.3, (x) => {
+        tri(x + 130, GROUND, 260, 140, "#1c1917");
+        const gl = ctx.createRadialGradient(x + 130, GROUND - 140, 2, x + 130, GROUND - 140, 40); gl.addColorStop(0, "rgba(255,180,60,.9)"); gl.addColorStop(1, "rgba(255,80,20,0)");
+        ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(x + 130, GROUND - 140, 40, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = "#f97316"; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(x + 126, GROUND - 136); ctx.quadraticCurveTo(x + 112, GROUND - 90, x + 100, GROUND - 40); ctx.stroke();
+      });
+      for (let i = 0; i < 24; i++) { const s = STARS[i]; const y = GROUND - ((now * (40 + i * 3) + s[1]) % GROUND), x = (s[0] + Math.sin(now * 3 + i) * 8 + W) % W; ctx.fillStyle = i % 2 ? "rgba(255,170,60,.9)" : "rgba(255,90,40,.9)"; ctx.fillRect(x, y, 2.5, 2.5); }
+    } else if (sc === "cyber") {   // 사이버 시티: 네온 빌딩 + 글자 비
+      for (let i = 0; i < 14; i++) { const s = STARS[i]; ctx.fillStyle = "rgba(34,211,238,.25)"; ctx.fillRect(s[0], (s[1] + now * 60 * (1 + i % 3)) % GROUND, 2, 12); }
+      each(60, 1, (x, h) => {
+        const bh = 60 + (h % 80), col = h % 2 ? "#22d3ee" : "#e879f9";
+        ctx.fillStyle = "#0b1028"; ctx.fillRect(x + 4, GROUND - bh, 48, bh);
+        ctx.strokeStyle = col; ctx.lineWidth = 1.5; ctx.shadowColor = col; ctx.shadowBlur = 8; ctx.strokeRect(x + 4, GROUND - bh, 48, bh); ctx.shadowBlur = 0;
+        ctx.fillStyle = col; ctx.globalAlpha = 0.5;
+        for (let wy = GROUND - bh + 8; wy < GROUND - 8; wy += 12) ctx.fillRect(x + 10, wy, (h * wy) % 30 + 6, 3);
+        ctx.globalAlpha = 1;
+      });
+    } else if (sc === "sky") {   // 하늘 섬: 해 + 구름 + 떠 있는 섬
+      disc(60, 48, 20, "rgba(255,250,210,.95)");
+      each(200, 0.25, (x, h) => {   // 떠 있는 섬
+        const iy = 90 + (h % 40) + Math.sin(now + h) * 4;
+        ctx.fillStyle = "#78350f"; ctx.beginPath(); ctx.moveTo(x + 40, iy); ctx.lineTo(x + 110, iy); ctx.lineTo(x + 75, iy + 34); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = "#65a30d"; ctx.beginPath(); ctx.ellipse(x + 75, iy, 38, 8, 0, 0, Math.PI * 2); ctx.fill();
+        emoji("🌳", x + 70, iy - 2, 22);
+      });
+      ctx.fillStyle = "rgba(255,255,255,.9)";
+      each(150, 0.6, (x, h) => { const cy = 40 + (h % 60) * 1.2; for (const [dx, r] of [[0, 16], [18, 22], [40, 15]]) { ctx.beginPath(); ctx.arc(x + 40 + dx, cy, r, 0, Math.PI * 2); ctx.fill(); } });
+      ctx.fillStyle = "rgba(255,255,255,.75)"; ctx.fillRect(0, GROUND - 20, W, 20);
+      each(60, 1, (x) => { ctx.beginPath(); ctx.arc(x + 30, GROUND - 20, 22, Math.PI, Math.PI * 2); ctx.fill(); });
+    } else if (sc === "space") {   // 우주: 반짝이는 별 + 고리 행성 + 별똥별
+      twinkle(46, 1);
+      each(300, 0.15, (x, h) => {
+        const py = 60 + (h % 50), pc = h % 2 ? "#a78bfa" : "#f472b6";
+        disc(x + 150, py, 24, pc); disc(x + 144, py - 6, 8, "rgba(255,255,255,.25)");
+        ctx.strokeStyle = "rgba(253,230,138,.8)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(x + 150, py, 40, 9, -0.3, 0, Math.PI * 2); ctx.stroke();
+      });
+      const m = (now * 0.4) % 1.6;
+      if (m < 1) { const mx = 360 - m * 300, my = 20 + m * 90; ctx.strokeStyle = "rgba(255,255,255,.8)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(mx + 30, my - 9); ctx.stroke(); }
+      each(120, 0.5, (x, h) => { ctx.fillStyle = "#2a2a40"; ctx.beginPath(); ctx.ellipse(x + 60, GROUND, 70, 18 + (h % 12), 0, Math.PI, Math.PI * 2); ctx.fill(); });
     }
-    ctx.fillStyle = "#3a2a6b"; ctx.fillRect(0, GROUND, W, H - GROUND);
-    ctx.fillStyle = boss ? "#ff4d6a" : "#a855f7"; ctx.fillRect(0, GROUND, W, 3);
+    if (boss) { ctx.fillStyle = "rgba(140,0,40,.28)"; ctx.fillRect(0, 0, W, GROUND); }   // 보스전: 화면이 붉어짐
+    ctx.fillStyle = Z.gr; ctx.fillRect(0, GROUND, W, H - GROUND);
+    ctx.fillStyle = boss ? "#ff4d6a" : Z.line; ctx.fillRect(0, GROUND, W, 3);
     ctx.fillStyle = "rgba(255,255,255,.1)";
     for (let x = -(scroll % 36); x < W; x += 36) ctx.fillRect(x, GROUND + 18, 18, 3);
   }
@@ -1632,7 +1735,7 @@ button.sec-h { cursor: pointer; }
   }
   function drawMon(now) {
     if (!mon) return;
-    const size = mon.boss ? 104 : 74;
+    const size = mon.big ? 124 : mon.boss ? 104 : 74;
     const sh = (mon.hit > 0 ? (Math.random() - .5) * 8 : 0) - (mon.lunge > 0 ? Math.sin(mon.lunge * Math.PI) * 40 : 0);
     const dy = Math.sin(now * 4) * 4;
     let a = 1, sc = 1;
@@ -1645,7 +1748,7 @@ button.sec-h { cursor: pointer; }
     if (!mon.dead) {
       const bw = mon.boss ? 150 : 110, bx = mon.x - bw / 2, by = GROUND - size - 34;
       ctx.fillStyle = "#f4eefe"; ctx.font = (mon.boss ? "15px 'Black Han Sans'" : "12px 'Gowun Dodum'") + ", sans-serif"; ctx.textAlign = "center";
-      ctx.fillText(mon.name, mon.x, by - 6);
+      ctx.strokeStyle = "rgba(10,5,25,.75)"; ctx.lineWidth = 3; ctx.strokeText(mon.name, mon.x, by - 6); ctx.fillText(mon.name, mon.x, by - 6);
       ctx.fillStyle = "rgba(0,0,0,.5)"; ctx.beginPath(); ctx.roundRect(bx, by, bw, 10, 5); ctx.fill();
       ctx.fillStyle = mon.boss ? "#ff4d6a" : "#5fe3a1"; ctx.beginPath(); ctx.roundRect(bx, by, Math.max(4, bw * mon.hp / mon.max), 10, 5); ctx.fill();
       ctx.fillStyle = "#fff"; ctx.font = "10px 'Gowun Dodum', sans-serif"; ctx.fillText(fmt(Math.max(0, mon.hp)) + " / " + fmt(mon.max), mon.x, by + 22);
@@ -1725,6 +1828,9 @@ button.sec-h { cursor: pointer; }
       ctx.strokeText(p.text, p.x, p.y - p.t * 36); ctx.fillText(p.text, p.x, p.y - p.t * 36);
     }
     ctx.globalAlpha = 1;
+    { const zl = zoneName(S.stage) + " " + ((S.stage - 1) % 10 + 1) + "/10";
+      ctx.font = "12px 'Gowun Dodum', sans-serif"; ctx.textAlign = "left"; ctx.lineWidth = 3; ctx.strokeStyle = "rgba(10,5,25,.7)"; ctx.fillStyle = "rgba(255,255,255,.92)";
+      ctx.strokeText(zl, 12, 46); ctx.fillText(zl, 12, 46); }
     if (mon && mon.boss && !mon.dead) {
       ctx.fillStyle = bossTime < 8 ? "#ff4d6a" : "#f4eefe"; ctx.font = "18px 'Black Han Sans', sans-serif"; ctx.textAlign = "left";
       ctx.fillText("⏳ " + Math.ceil(bossTime) + "초", 12, 28);
