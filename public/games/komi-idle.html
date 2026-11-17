@@ -41,8 +41,8 @@ body {
   padding-bottom: max(16px, env(safe-area-inset-bottom, 0px)); margin: 0 -4px; padding-inline: 4px; }
 .tabp { display: flex; flex-direction: column; gap: 10px; }
 .tabp[hidden] { display: none; }
-.tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; background: var(--card); border-radius: 14px; padding: 4px; }
-.tabs button { position: relative; border: 0; background: transparent; color: var(--dim); font-family: var(--display); font-size: .9rem; padding: 9px 2px; border-radius: 10px; cursor: pointer; white-space: nowrap; }
+.tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; background: var(--card); border-radius: 14px; padding: 4px; }
+.tabs button { position: relative; border: 0; background: transparent; color: var(--dim); font-family: var(--display); font-size: 1rem; padding: 9px 2px; border-radius: 10px; cursor: pointer; white-space: nowrap; }
 .tabs button[aria-selected="true"] { background: var(--sekai); color: #fff; }
 .tabs button:focus-visible { outline: 3px solid var(--gold); outline-offset: 1px; }
 .tabs button.dot::after { content: ""; position: absolute; top: 6px; right: 10px; width: 8px; height: 8px; border-radius: 50%; background: var(--alarm); }
@@ -133,11 +133,9 @@ button.sec-h { cursor: pointer; }
 #openBox:disabled { opacity: .45; cursor: not-allowed; }
 .achs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .achs li { display: grid; grid-template-columns: 28px 1fr auto; gap: 8px; align-items: center; background: var(--card2); border-radius: 10px; padding: 7px 10px; font-size: .82rem; }
-.achs li.done { box-shadow: inset 0 0 0 2px var(--gold); }
 .achs li .ai { font-size: 1.2rem; text-align: center; }
 .achs li small { display: block; color: var(--dim); font-size: .72rem; }
 .achs li .pr { color: var(--dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.achs li.done .pr { color: var(--gold); }
 .achs[hidden] { display: none; }
 /* 미션: 진행 막대 + 받기 버튼 */
 .mbar { display: block; height: 5px; margin-top: 4px; background: rgba(0,0,0,.35); border-radius: 3px; overflow: hidden; }
@@ -217,7 +215,6 @@ button.sec-h { cursor: pointer; }
     <button type="button" role="tab" id="tb-up" data-tab="up" aria-selected="true">⚔️ 강화</button>
     <button type="button" role="tab" id="tb-gear" data-tab="gear" aria-selected="false">🎁 장비</button>
     <button type="button" role="tab" id="tb-mis" data-tab="mis" aria-selected="false">📜 미션</button>
-    <button type="button" role="tab" id="tb-ach" data-tab="ach" aria-selected="false">🏆 업적</button>
   </nav>
 
   <div class="panel" id="panel">
@@ -261,13 +258,6 @@ button.sec-h { cursor: pointer; }
     <div class="boxmsg">깰 때마다 다음 미션이 더 어려워지고 보상도 커져요 · 쓰러져도 그대로!</div>
   </section>
     </div>
-    <div class="tabp" id="tab-ach" role="tabpanel" hidden>
-  <section class="box" aria-label="업적">
-    <button class="sec-h" id="achToggle" type="button" aria-expanded="true" aria-controls="achs"><b>🏆 업적 <span id="achArrow">▴</span></b><small id="achSum"></small></button>
-    <ul class="achs" id="achs"></ul>
-  </section>
-
-    </div>
   </div>
 </div>
 
@@ -302,35 +292,15 @@ button.sec-h { cursor: pointer; }
   S.top = Math.max(S.top || 1, S.stage);
   const save = () => { S.last = Date.now(); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
 
-  // ---- 영구 기록: 장비·업적 (꼬미가 쓰러져도 남음) ----
+  // ---- 영구 기록: 장비·미션 (꼬미가 쓰러져도 남음) ----
   const META = () => ({ gear: { weapon: null, hat: null, ring: null }, ach: [], st: { boss: 0, deaths: 0, boxes: 0, legend: 0, kills: 0, skills: 0, ups: 0 }, jtop: {}, mis: {} });
-  { const m = META(); for (const k in m) if (!S[k] || typeof S[k] !== "object") S[k] = m[k]; S.gear = Object.assign(m.gear, S.gear); S.st = Object.assign(m.st, S.st); if (!Array.isArray(S.ach)) S.ach = []; }
-  const keepMeta = () => ({ gear: S.gear, ach: S.ach, st: S.st, jtop: S.jtop, mis: S.mis });
+  delete S.ach;   // 예전 업적 기록은 지움
+  { const m = META(); for (const k in m) if (!S[k] || typeof S[k] !== "object") S[k] = m[k]; S.gear = Object.assign(m.gear, S.gear); S.st = Object.assign(m.st, S.st); }
+  const keepMeta = () => ({ gear: S.gear, st: S.st, jtop: S.jtop, mis: S.mis });
   // 장비: 무기(공격력) · 모자(체력) · 반지(바나나), 등급 4개, 같은 등급이 또 나오면 ★ (최대 5, ★마다 +20%)
   const RAR = [["일반", 60, 5], ["희귀", 28, 12], ["영웅", 10, 25], ["전설", 2, 50]];   // 이름, 확률%, 기본 보너스%
   const SLOTS = { weapon: ["🗡️", "무기", "공격력"], hat: ["🎩", "모자", "체력"], ring: ["💍", "반지", "바나나"] };
   const gearB = (slot) => { const g = S.gear[slot]; return g ? RAR[g.r][2] * (1 + 0.2 * g.s) / 100 : 0; };
-  // 업적: 하나 깰 때마다 공격력 영구 +3%
-  const ACH = [
-    { id: "boss10", ic: "👹", nm: "보스 사냥꾼", d: "보스 10마리 잡기", v: () => S.st.boss, goal: 10 },
-    { id: "boss50", ic: "👺", nm: "보스 학살자", d: "보스 50마리 잡기", v: () => S.st.boss, goal: 50 },
-    { id: "boss200", ic: "💀", nm: "보스들의 악몽", d: "보스 200마리 잡기", v: () => S.st.boss, goal: 200 },
-    { id: "st10", ic: "🚩", nm: "모험의 시작", d: "스테이지 10 도착", v: () => S.top, goal: 10 },
-    { id: "st25", ic: "🏰", nm: "베테랑 꼬미", d: "스테이지 25 도착", v: () => S.top, goal: 25 },
-    { id: "st50", ic: "🌋", nm: "전설의 꼬미", d: "스테이지 50 도착", v: () => S.top, goal: 50 },
-    { id: "adv2", ic: "✨", nm: "진화!", d: "2차 전직 하기", v: () => (S.top >= JOB2 ? 1 : 0), goal: 1 },
-    { id: "js", ic: "🗡️", nm: "검의 길", d: "검사로 스테이지 20", v: () => S.jtop.sword || 0, goal: 20 },
-    { id: "jb", ic: "🏹", nm: "활의 길", d: "궁수로 스테이지 20", v: () => S.jtop.bow || 0, goal: 20 },
-    { id: "jm", ic: "🔮", nm: "마법의 길", d: "마법사로 스테이지 20", v: () => S.jtop.magic || 0, goal: 20 },
-    { id: "jt", ic: "🐵", nm: "원숭이의 길", d: "조련사로 스테이지 20", v: () => S.jtop.tamer || 0, goal: 20 },
-    { id: "d1", ic: "🩹", nm: "첫 번째 쓰러짐", d: "꼬미가 1번 쓰러지기", v: () => S.st.deaths, goal: 1 },
-    { id: "d10", ic: "🔥", nm: "포기를 모르는 꼬미", d: "10번 쓰러져도 다시 하기", v: () => S.st.deaths, goal: 10 },
-    { id: "box10", ic: "🎁", nm: "상자 수집가", d: "장비 상자 10개 열기", v: () => S.st.boxes, goal: 10 },
-    { id: "box100", ic: "📦", nm: "상자 중독", d: "장비 상자 100개 열기", v: () => S.st.boxes, goal: 100 },
-    { id: "leg", ic: "🌟", nm: "전설을 손에", d: "전설 장비 얻기", v: () => S.st.legend, goal: 1 },
-  ];
-  const ACH_BONUS = 0.03;
-  const achB = () => S.ach.length * ACH_BONUS;
 
   // ---- 직업 (스테이지 5에서 1차 전직, 25에서 2차 전직) ----
   const JOB1 = 2, JOB2 = 25;   // 1차 전직: 스테이지 1 보스를 잡으면 (=스테이지 2)
@@ -347,7 +317,7 @@ button.sec-h { cursor: pointer; }
 
   // ---- 능력치 ----
   const baseAtk = (l) => Math.floor(5 * Math.pow(1.13, l) + l * 3);
-  const atkMul = () => jm("atk") * (1 + gearB("weapon") + achB());   // 직업 · 무기 · 업적 보너스
+  const atkMul = () => jm("atk") * (1 + gearB("weapon"));   // 직업 · 무기 보너스
   const atk = () => Math.floor(baseAtk(S.atk) * atkMul());
   const apsAt = (l) => Math.min(5 * jm("aps"), (1 + l * 0.2) * jm("aps"));   // 20레벨이면 1초에 5번
   const aps = () => apsAt(S.spd);
@@ -409,7 +379,7 @@ button.sec-h { cursor: pointer; }
     shake = 14;
     beep(300, .5, "sawtooth", .07, -250); setTimeout(() => beep(110, .6, "square", .06, -40), 200);
     pops.push({ t: 0, x: W / 2, y: 60, text: "😵 쓰러졌다! " + S.stage + "스테이지 처음부터", c: "#ff7a9a", big: true });
-    save(); checkAch();
+    save();
     if (mon) mon.dead = 0.001;   // 지금 악당(보스)은 사라지고
     setTimeout(newMon, 450);     // 이 스테이지 첫 악당부터 다시
   }
@@ -481,15 +451,13 @@ button.sec-h { cursor: pointer; }
       S.st.boss++; if (S.job) S.jtop[S.job] = Math.max(S.jtop[S.job] || 0, S.stage);
       S.top = Math.max(S.top || 1, S.stage);
       komiHp = maxHp();   // 스테이지를 깨면 체력 가득
-      // 세카이 안에서 할 때: 바깥 페이지에 "스테이지 깼어요" 알림 → 로그인 회원이면 순위표에 저장
-      try { if (window.parent !== window) window.parent.postMessage({ type: "komi-stage", stage: S.stage, job: S.job }, location.origin); } catch (e) {}
       pops.push({ t: 0, x: W / 2, y: 40, text: "스테이지 " + S.stage + "!", c: "#a855f7", big: true, huge: true });
       const tr = TIERS.find((x) => x[0] === S.stage);
       if (tr) pops.push({ t: -0.5, x: W / 2, y: 80, text: tr[1] + " 등급 UP!", c: "#5fe3a1", big: true });
       pops.push({ t: -0.3, x: W / 2, y: 118, text: "❤️ 최대 체력 UP! (+" + Math.round(BOSS_HP * 100 * (S.stage - 1)) + "%)", c: "#ff7a9a", big: true });
       [523, 659, 784, 1046].forEach((f, k) => setTimeout(() => beep(f, 0.15, "square", 0.04), k * 90));
       save();
-      setTimeout(checkJob, 700); checkAch();
+      setTimeout(checkJob, 700);
     } else if (S.kill < PER_STAGE) { S.kill++; if (S.kill >= PER_STAGE) bossGo = true; }   // 5마리 잡으면 자동으로 보스
     setTimeout(newMon, 450);
   }
@@ -775,7 +743,7 @@ button.sec-h { cursor: pointer; }
   $("bossBtn").addEventListener("click", () => { wake(); bossFail = false; bossGo = true; komiHp = maxHp(); S.kill = PER_STAGE; $("bossBtn").hidden = true; newMon(); });
   let resetArm = 0;
   $("reset").addEventListener("click", () => {
-    if (Date.now() - resetArm < 3000) { S = Object.assign(fresh(), { seen: true, top: S.top }, keepMeta()); save(); komiHp = maxHp(); faint = 0; bossFail = false; $("bossBtn").hidden = true; newMon(); $("reset").textContent = "처음부터 다시"; renderUps(); renderJob(); renderMode(); return; }
+    if (Date.now() - resetArm < 3000) { S = Object.assign(fresh(), { seen: true, top: S.top }, keepMeta(), { gear: { weapon: null, hat: null, ring: null } }); renderGear(); $("boxMsg").textContent = "장비가 초기화됐어요. 상자를 다시 열어 보세요!"; save(); komiHp = maxHp(); faint = 0; bossFail = false; $("bossBtn").hidden = true; newMon(); $("reset").textContent = "처음부터 다시"; renderUps(); renderJob(); renderMode(); return; }
     resetArm = Date.now(); $("reset").textContent = "정말? 한 번 더 누르기";
     setTimeout(() => { $("reset").textContent = "처음부터 다시"; }, 3000);
   });
@@ -870,31 +838,8 @@ button.sec-h { cursor: pointer; }
     if (r >= 2) shake = 6 + r * 3;
     [660, 880, 1046, 1318].slice(0, r + 1).forEach((f, k) => setTimeout(() => beep(f, .12, "triangle", .05), k * 90));
     komiHp = Math.min(komiHp, maxHp());
-    checkAch(); renderGear(); renderUps(); save();
+    renderGear(); renderUps(); save();
   }
-
-  // ---- 🏆 업적 ----
-  function checkAch() {
-    for (const a of ACH) {
-      if (S.ach.includes(a.id) || a.v() < a.goal) continue;
-      S.ach.push(a.id);
-      const g = mGold(S.stage) * 20; S.gold += g;
-      pops.push({ t: -0.2, x: W / 2, y: 100, text: "🏆 " + a.nm + "! 공격력+3%", c: "#ffcf5c", big: true });
-      [784, 988, 1175].forEach((f, k) => setTimeout(() => beep(f, .1, "triangle", .05), k * 80));
-    }
-    renderAch();
-  }
-  function renderAch() {
-    $("achSum").textContent = S.ach.length + "/" + ACH.length + " 달성 · 공격력 +" + Math.round(achB() * 100) + "%";
-    $("achs").innerHTML = ACH.map((a) => {
-      const done = S.ach.includes(a.id), v = Math.min(a.goal, a.v());
-      return `<li class="${done ? "done" : ""}"><span class="ai">${done ? a.ic : "🔒"}</span><span>${a.nm}<small>${a.d}</small></span><span class="pr">${done ? "완료!" : fmt(v) + "/" + fmt(a.goal)}</span></li>`;
-    }).join("");
-  }
-  $("achToggle").addEventListener("click", () => {
-    const open = $("achs").hidden; $("achs").hidden = !open;
-    $("achToggle").setAttribute("aria-expanded", String(open)); $("achArrow").textContent = open ? "▴" : "▾";
-  });
 
   // ---- 📜 미션: 6갈래, 깰 때마다 다음 단계 (끝없이) ----
   // 보상: 바나나 + 미션 하나마다 바나나 영구 +1% + 미션 5개마다 장비 상자 공짜
@@ -937,7 +882,7 @@ button.sec-h { cursor: pointer; }
   });
   renderMis();
 
-  // ---- 아래 탭 (강화 / 장비 / 미션 / 업적) ----
+  // ---- 아래 탭 (강화 / 장비 / 미션) ----
   const tabBtns = [...document.querySelectorAll(".tabs button")];
   tabBtns.forEach((tb) => tb.addEventListener("click", () => {
     tabBtns.forEach((x) => { const on = x === tb; x.setAttribute("aria-selected", String(on)); $("tab-" + x.dataset.tab).hidden = !on; });
@@ -957,7 +902,7 @@ button.sec-h { cursor: pointer; }
   }
   if (!S.seen) $("intro").hidden = false;
   $("go").addEventListener("click", () => { wake(); S.seen = true; $("intro").hidden = true; save(); });
-  renderJob(); checkJob(); renderGear(); checkAch();
+  renderJob(); checkJob(); renderGear();
 
   setInterval(save, 5000);
   document.addEventListener("visibilitychange", () => { if (document.hidden) save(); });
