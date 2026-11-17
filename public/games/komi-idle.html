@@ -96,7 +96,7 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
   gap: 10px; padding: 18px; text-align: center; background: rgba(12, 8, 26, .85); cursor: default;
 }
 /* 직업 고르기·쓰러짐 화면은 내용이 많아서 게임 창 전체를 덮고, 넘치면 위아래로 밀어 보기 */
-#jobPick, #dead, #saveBox { position: fixed; z-index: 50; justify-content: safe center; overflow-y: auto; background: rgba(12, 8, 26, .94);
+#jobPick, #dead, #saveBox, #slotBox { position: fixed; z-index: 50; justify-content: safe center; overflow-y: auto; background: rgba(12, 8, 26, .94);
   padding: max(18px, env(safe-area-inset-top, 0px)) 16px max(18px, env(safe-area-inset-bottom, 0px)); }
 .overlay[hidden] { display: none; }
 /* 세이브 코드 창 + 서버 저장 알림 */
@@ -104,6 +104,21 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
 #saveBox textarea:focus-visible { outline: 3px solid var(--gold); outline-offset: 1px; }
 #saveBox .btn { min-width: 200px; }
 #saveMsg { color: var(--gold) !important; min-height: 1.6em; }
+/* 영웅 슬롯 + 합성 */
+.slots { display: flex; flex-direction: column; gap: 8px; width: min(340px, 100%); }
+.slot-c { display: grid; grid-template-columns: 44px 1fr auto; gap: 8px; align-items: center; background: var(--card2); border-radius: 12px; padding: 10px; text-align: left; }
+.slot-c.cur { box-shadow: inset 0 0 0 2px var(--sekai); }
+.slot-c .ic { font-size: 1.4rem; text-align: center; white-space: nowrap; }
+.slot-c b { font-size: .92rem; }
+.slot-c small { display: block; color: var(--dim); font-size: .74rem; line-height: 1.4; }
+.slot-c .sb { display: flex; flex-direction: column; gap: 4px; }
+.mini { border: 0; background: var(--sekai); color: #fff; font-family: var(--display); font-size: .82rem; padding: 7px 10px; border-radius: 8px; cursor: pointer; white-space: nowrap; }
+.mini.ghost { background: transparent; box-shadow: inset 0 0 0 1px rgba(255,255,255,.25); color: var(--ink); }
+.mini[aria-pressed="true"] { background: var(--gold); color: #2a1a00; }
+.mini:disabled { opacity: .45; cursor: default; }
+.mini:focus-visible { outline: 3px solid var(--gold); outline-offset: 1px; }
+.tagc { color: var(--sekai2, #c38bff); font-weight: 700; }
+#slotBox h3 { font-family: var(--display); font-weight: 400; margin: 8px 0 0; font-size: 1.25rem; }
 .cloud { width: 100%; font-size: .8rem; color: var(--dim); background: var(--card); border-radius: 10px; padding: 8px 10px; }
 .cloud a { color: var(--gold); }
 .overlay h2 { font-family: var(--display); font-weight: 400; font-size: 1.8rem; margin: 0; line-height: 1.15; }
@@ -196,6 +211,17 @@ button.sec-h { cursor: pointer; }
       <div class="jobs" id="jobs"></div>
     </div>
 
+    <div class="overlay" id="slotBox" hidden role="dialog" aria-modal="true" aria-labelledby="slotTitle">
+      <h2 id="slotTitle">👥 영웅 슬롯</h2>
+      <p>영웅을 3명까지 따로 키울 수 있어요. 영웅마다 스테이지·강화·장비·미션이 따로 저장돼요.</p>
+      <div class="slots" id="slotList"></div>
+      <h3>🧬 영웅 합성</h3>
+      <p>2차 전직 + 스테이지 100을 깬 <b style="color:var(--ink)">서로 다른 직업</b> 영웅 2명을 고르면 합성 영웅이 돼요. 먼저 고른 영웅이 남고(스테이지·강화·장비 그대로), 두 번째 영웅은 재료로 사라져요.</p>
+      <div class="slots" id="fuseList"></div>
+      <p id="slotMsg" aria-live="polite" style="color:var(--gold)"></p>
+      <button class="btn ghost" id="slotClose" type="button">닫기</button>
+    </div>
+
     <div class="overlay" id="saveBox" hidden role="dialog" aria-modal="true" aria-labelledby="saveTitle">
       <h2 id="saveTitle">💾 세이브 코드</h2>
       <p>이 코드를 복사해 두면 다른 휴대폰·PC에서 그대로 이어서 할 수 있어요.</p>
@@ -258,6 +284,7 @@ button.sec-h { cursor: pointer; }
 
   <div class="foot">
     <a class="link" href="/" target="_top">세카이에서 진짜 웹툰 보기 →</a>
+    <button class="btn ghost" id="slotOpen" type="button">👥 영웅 슬롯</button>
     <button class="btn ghost" id="saveOpen" type="button">💾 세이브 코드</button>
     <button class="btn ghost" id="reset" type="button">처음부터 다시</button>
     <div class="cloud" id="cloudMsg" hidden></div>
@@ -306,18 +333,32 @@ button.sec-h { cursor: pointer; }
   const fresh = () => ({ gold: 0, stage: 1, kill: 0, atk: 0, spd: 0, crit: 0, tap: 0, help: 0, last: Date.now(), seen: false, job: null, adv: 0, buy: "1", top: 1, jsk: 0 });
   let needHpMig = false;
   let S = fresh();
-  let hadSave = false;
-  try { const raw = localStorage.getItem(KEY); if (raw) { hadSave = true; const o = JSON.parse(raw); needHpMig = !("hp" in o) && (o.stage || 1) > 1; S = Object.assign(fresh(), o); } } catch (e) {}
-  const loadedLast = typeof S.last === "number" ? S.last : 0;   // 서버 세이브와 비교할 때 씀
+  // 영웅 슬롯 3개: B = { cur: 지금 슬롯, t: 마지막 저장 시각, slots: [영웅 기록 | null] × 3 }
+  const KEY2 = "komi-slots-v1";
+  let B = { cur: 0, t: 0, slots: [null, null, null] };
+  const fixB = (o) => ({ cur: Math.min(2, Math.max(0, o.cur | 0)), t: typeof o.t === "number" ? o.t : (typeof o.last === "number" ? o.last : 0), slots: [0, 1, 2].map((i) => (o.slots[i] && typeof o.slots[i] === "object" ? o.slots[i] : null)) });
+  try {
+    const rb = localStorage.getItem(KEY2);
+    if (rb) { const o = JSON.parse(rb); if (o && Array.isArray(o.slots)) B = fixB(o); }
+    else { const raw = localStorage.getItem(KEY); if (raw) { const o = JSON.parse(raw); B.slots[0] = o; B.t = o.last || 0; } }   // 예전 기록 → 슬롯 1
+  } catch (e) {}
+  const hadSave = B.slots.some(Boolean);
+  { const o = B.slots[B.cur]; if (o) { needHpMig = !("hp" in o) && (o.stage || 1) > 1; S = Object.assign(fresh(), o); } }
+  const loadedLast = B.t;   // 서버 세이브와 비교할 때 씀
   S.spd = Math.min(S.spd, 10);   // 공격 속도 만렙 40 → 20 → 10 (예전 기록 맞춤)
   S.crit = Math.min(S.crit, 10); // 치명타 만렙 25 → 10
   if (S.job === "sword") S.jsk = Math.min(S.jsk || 0, 10);   // 베기 수련 만렙 20 → 10
   S.top = Math.max(S.top || 1, S.stage);
   var cloudOn = false;   // 세카이 로그인 회원이면 true (서버에도 자동 저장)
+  var noSave = false;   // 슬롯을 바꾸고 새로고침하는 중엔 저장 안 함
+  const writeB = () => { try { localStorage.setItem(KEY2, JSON.stringify(B)); } catch (e) {} };
+  const bundle = () => ({ v: 2, stage: S.stage, gold: S.gold, last: B.t, cur: B.cur, slots: B.slots });   // 서버·세이브 코드에 넣는 모양
   const save = () => {
-    S.last = Date.now(); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {}
-    if (cloudOn) try { window.parent.postMessage({ type: "komi-save", data: S }, location.origin); } catch (e) {}
+    if (noSave) return;
+    S.last = Date.now(); B.t = S.last; B.slots[B.cur] = S; writeB();
+    if (cloudOn) try { window.parent.postMessage({ type: "komi-save", data: bundle() }, location.origin); } catch (e) {}
   };
+  const reloadWith = () => { B.t = Date.now(); writeB(); noSave = true; location.reload(); };
 
   // ---- 영구 기록: 장비·미션 (꼬미가 쓰러져도 남음) ----
   const META = () => ({ gear: { weapon: null, hat: null, ring: null }, ach: [], st: { boss: 0, deaths: 0, boxes: 0, legend: 0, kills: 0, skills: 0, ups: 0 }, jtop: {}, mis: {} });
@@ -337,10 +378,20 @@ button.sec-h { cursor: pointer; }
     magic: { ic: "🔮", n: ["마법사 꼬미", "대마법사 꼬미"], d: "체력 0.85배(약함), 치명타 확률 +12%, 연쇄 번개 + 불꽃 화상", sk: "연쇄 번개", sk2: "메테오", cd: 5, crit: [0.12, 0.2], hp: [0.85, 0.95] },   // 리메이크: 피해 최고, 체력 최저
     tamer: { ic: "🐵", n: ["조련사 꼬미", "원숭이 대장 꼬미"], d: "체력 1.1배, 조수 꼬미 2마리(2차 4마리), 원숭이 돌격", sk: "원숭이 돌격", sk2: "원숭이 대행진", cd: 6, help: [1, 1.2], hp: [1.1, 1.3] },   // 조수 꼬미로 싸움
   };
+  // 🧬 합성 직업: 2차 전직 + 스테이지 100 을 깬 서로 다른 영웅 2명을 합침 (S.fuse = 두 번째 직업)
+  //   능력치는 두 직업 중 좋은 쪽 + 공격력 1.3배, 2차 스킬 두 개를 번갈아 씀
+  const FUSE = { "bow+sword": ["질풍 기사 꼬미", "검과 활"], "magic+sword": ["마검사 꼬미", "검과 마법"], "sword+tamer": ["야수 기사 꼬미", "검과 원숭이"],
+                 "bow+magic": ["마궁수 꼬미", "활과 마법"], "bow+tamer": ["사냥꾼 대장 꼬미", "활과 원숭이"], "magic+tamer": ["정령 조련사 꼬미", "마법과 원숭이"] };
+  const fuseKey = (a, b) => [a, b].sort().join("+");
+  const FUSE_ATK = 1.3, FUSE_STAGE = 100;
   const J = () => (S.job ? JOBS[S.job] : null);
+  const F = () => (S.fuse && JOBS[S.fuse] ? JOBS[S.fuse] : null);
   const jl = () => Math.max(0, S.adv - 1);
-  const jm = (k) => (J() && J()[k] ? J()[k][jl()] : 1);
-  const jobName = () => (J() ? J().n[jl()] : "");
+  const jv = (k, def) => { const a = J() && J()[k] ? J()[k][jl()] : def; const b = F() && F()[k] ? F()[k][1] : def; return Math.max(a, b); };
+  const jm = (k) => jv(k, 1) * (k === "atk" && F() ? FUSE_ATK : 1);
+  const nameOf = (d) => (!d || !d.job || !JOBS[d.job] ? "아기 꼬미" : d.fuse && FUSE[fuseKey(d.job, d.fuse)] ? FUSE[fuseKey(d.job, d.fuse)][0] : JOBS[d.job].n[d.adv >= 2 ? 1 : 0]);
+  const iconOf = (d) => (!d || !d.job || !JOBS[d.job] ? "🐒" : JOBS[d.job].ic + (d.fuse && JOBS[d.fuse] ? JOBS[d.fuse].ic : ""));
+  const jobName = () => (J() ? nameOf(S) : "");
 
   // ---- 능력치 ----
   const baseAtk = (l) => Math.floor(5 * Math.pow(1.13, l) + l * 3);
@@ -348,10 +399,10 @@ button.sec-h { cursor: pointer; }
   const atk = () => Math.floor(baseAtk(S.atk) * atkMul());
   const apsAt = (l) => Math.min(5 * jm("aps"), (1 + l * 0.2) * jm("aps"));   // 20레벨이면 1초에 5번
   const aps = () => apsAt(S.spd);
-  const critP = () => Math.min(0.45, 0.05 + S.crit * 0.02 + (J() && J().crit ? J().crit[jl()] : 0));
-  const critX = () => (J() && J().critX ? J().critX[jl()] : 2.5);
+  const critP = () => Math.min(0.45, 0.05 + S.crit * 0.02 + jv("crit", 0));
+  const critX = () => jv("critX", 2.5);
   // 조수 꼬미: 강화로 사지 않고, 조련사 직업만 데리고 다님 (1차 2마리, 2차 4마리)
-  const helpers = () => (S.job === "tamer" ? (S.adv >= 2 ? 4 : 2) + (S.jsk || 0) : 0);
+  const helpers = () => (S.job === "tamer" || S.fuse === "tamer" ? (S.adv >= 2 ? 4 : 2) + (S.job === "tamer" ? S.jsk || 0 : 0) : 0);
   // ---- 직업 전용 강화 (직업을 얻으면 강화 목록에 하나 생김, 직업마다 다름) ----
   const cdAt = (l) => Math.max(2.5, 5 - 0.3 * l);   // 최소 2.5초   // 마법사 스킬 대기 시간
   const skillCd = () => (S.job === "magic" ? cdAt(S.jsk || 0) : J().cd);
@@ -494,7 +545,10 @@ button.sec-h { cursor: pointer; }
     const j = J(); if (!j || !mon || mon.dead) return;
     S.st.skills++;
     const two = S.adv >= 2;
-    if (two) { useSkill2(j); return; }   // 2차 전직: 화려한 스킬
+    if (two) {   // 2차 전직: 화려한 스킬 (합성 영웅은 두 직업 스킬을 번갈아)
+      if (F()) { fuseTurn = !fuseTurn; if (fuseTurn) { const real = S.job; S.job = S.fuse; try { useSkill2(JOBS[S.job]); } finally { S.job = real; } return; } }
+      useSkill2(j); return;
+    }
     pops.push({ t: 0, x: 150, y: 70, text: j.ic + " " + j.sk + "!", c: "#7fd8ff", big: true, huge: true });
     { // 1차 스킬: 맞는 순간 불꽃이 터짐
       const B = { sword: [0, ["#9fd8ff", "#ffffff"]], bow: [330, ["#ffd66b", "#ffffff"]], magic: [0, ["#b48cff", "#7fd8ff"]], tamer: [300, ["#ffd66b", "#c98a4b"]] }[S.job];
@@ -530,6 +584,7 @@ button.sec-h { cursor: pointer; }
 
   // ---- 2차 전직 스킬: 직업마다 화려한 연출 ----
   let cut = null;   // 스킬 이름이 화면을 가로지르는 띠 (컷인)
+  let fuseTurn = false;
   function useSkill2(j) {
     cut = { t: 0, ic: j.ic, name: j.sk2 };
     fx = { k: S.job, t: 0, two: true };
@@ -759,9 +814,11 @@ button.sec-h { cursor: pointer; }
   $("changeJob").addEventListener("click", () => { wake(); restart(); $("jobPick").hidden = false; });
   function renderJob() {
     const j = J();
-    $("jobIc").textContent = j ? j.ic : "🐒";
+    $("jobIc").textContent = iconOf(S);
     $("jobName").textContent = j ? jobName() : "직업 없음";
-    $("jobTxt").textContent = j
+    $("jobTxt").textContent = j && F()
+      ? "🧬 합성 영웅 (" + FUSE[fuseKey(S.job, S.fuse)][1] + ") · 두 직업의 장점 모두 + 공격력 1.3배 · " + skillCd().toFixed(1).replace(".0", "") + "초마다 [" + j.sk2 + "] ↔ [" + F().sk2 + "] 번갈아"
+      : j
       ? j.d + " · " + skillCd().toFixed(1).replace(".0", "") + "초마다 [" + (S.adv >= 2 ? j.sk2 : j.sk) + "]" + (S.adv < 2 ? " · 스테이지 " + JOB2 + "에서 2차 전직" : " · 2차 전직 완료!")
       : "스테이지 1 보스를 잡으면 직업을 고를 수 있어요 (검사·궁수·마법사·조련사)";
   }
@@ -770,7 +827,7 @@ button.sec-h { cursor: pointer; }
   $("bossBtn").addEventListener("click", () => { wake(); bossFail = false; bossGo = true; komiHp = maxHp(); S.kill = PER_STAGE; $("bossBtn").hidden = true; newMon(); });
   let resetArm = 0;
   $("reset").addEventListener("click", () => {
-    if (Date.now() - resetArm < 3000) { S = Object.assign(fresh(), { seen: true, top: S.top }, keepMeta(), { gear: { weapon: null, hat: null, ring: null } }); renderGear(); $("boxMsg").textContent = "장비가 초기화됐어요. 상자를 다시 열어 보세요!"; save(); komiHp = maxHp(); faint = 0; bossFail = false; $("bossBtn").hidden = true; newMon(); $("reset").textContent = "처음부터 다시"; renderUps(); renderJob(); renderMode(); return; }
+    if (Date.now() - resetArm < 3000) { S = Object.assign(fresh(), { seen: true, top: S.top }, keepMeta(), { gear: { weapon: null, hat: null, ring: null } }, S.fuse ? { job: S.job, fuse: S.fuse, adv: 2 } : {}); renderGear(); $("boxMsg").textContent = "장비가 초기화됐어요. 상자를 다시 열어 보세요!"; save(); komiHp = maxHp(); faint = 0; bossFail = false; $("bossBtn").hidden = true; newMon(); $("reset").textContent = "처음부터 다시"; renderUps(); renderJob(); renderMode(); return; }
     resetArm = Date.now(); $("reset").textContent = "정말? 한 번 더 누르기";
     setTimeout(() => { $("reset").textContent = "처음부터 다시"; }, 3000);
   });
@@ -934,7 +991,7 @@ button.sec-h { cursor: pointer; }
   setInterval(save, 5000);
 
   // ---- ☁️ 서버 세이브 (세카이 로그인 회원): 켜질 때 서버 기록이 더 최신이면 그걸로 바꿈 ----
-  const applySave = (o) => { S = Object.assign(fresh(), o); save(); location.reload(); };
+  const applySave = (o) => { if (Array.isArray(o.slots)) B = fixB(o); else B.slots[B.cur] = o; reloadWith(); };
   if (window.parent !== window) {
     window.addEventListener("message", (e) => {
       if (e.origin !== location.origin || e.source !== window.parent || !e.data || e.data.type !== "komi-sync") return;
@@ -954,8 +1011,55 @@ button.sec-h { cursor: pointer; }
     const readyT = setInterval(ready, 1500); ready();
   }
 
+  // ---- 👥 영웅 슬롯 + 🧬 합성 ----
+  const grad = (d) => !!(d && d.job && JOBS[d.job] && d.adv >= 2 && !d.fuse && ((d.jtop && d.jtop[d.job]) || 0) >= FUSE_STAGE);
+  let fusePick = [], slotArm = { k: "", t: 0 };
+  const armed = (k) => { const ok = slotArm.k === k && Date.now() - slotArm.t < 3000; slotArm = ok ? { k: "", t: 0 } : { k, t: Date.now() }; return ok; };
+  function renderSlots() {
+    save();
+    $("slotList").innerHTML = B.slots.map((d, i) => {
+      const cur = i === B.cur;
+      const info = d ? "스테이지 " + (d.stage || 1) + " · 최고 " + Math.max(d.top || 1, d.stage || 1) + (d.fuse ? " · <span class='tagc'>🧬 합성 영웅</span>" : "") : "아직 아무도 없어요";
+      const btns = cur ? "<small>지금 하는 중</small>"
+        : d ? `<button class="mini" type="button" data-act="go" data-i="${i}">이 영웅으로</button><button class="mini ghost" type="button" data-act="del" data-i="${i}">${slotArm.k === "del" + i ? "정말 지우기?" : "지우기"}</button>`
+        : `<button class="mini" type="button" data-act="new" data-i="${i}">새 영웅 시작</button>`;
+      return `<div class="slot-c${cur ? " cur" : ""}"><span class="ic">${d ? iconOf(d) : "➕"}</span><span><b>슬롯 ${i + 1} · ${d ? nameOf(d) : "빈 칸"}</b><small>${info}</small></span><span class="sb">${btns}</span></div>`;
+    }).join("");
+    fusePick = fusePick.filter((i) => grad(B.slots[i]));
+    $("fuseList").innerHTML = B.slots.map((d, i) => {
+      if (!d || d.fuse) return "";
+      const top = (d.jtop && d.jtop[d.job]) || 0, ok = grad(d), n = fusePick.indexOf(i);
+      const need = !d.job ? "직업 없음" : (d.adv >= 2 ? "2차 전직 ✔" : "2차 전직 ✘") + " · " + nameOf(d).replace(" 꼬미", "") + "로 스테이지 " + Math.min(top, FUSE_STAGE) + "/" + FUSE_STAGE;
+      return `<div class="slot-c"><span class="ic">${iconOf(d)}</span><span><b>슬롯 ${i + 1} · ${nameOf(d)}</b><small>${need}</small></span><span class="sb"><button class="mini${ok ? "" : " ghost"}" type="button" data-act="pick" data-i="${i}" aria-pressed="${n >= 0}" ${ok ? "" : "disabled"}>${n === 0 ? "① 남을 영웅" : n === 1 ? "② 재료" : ok ? "고르기" : "조건 부족"}</button></span></div>`;
+    }).join("") || "<small>합성할 수 있는 영웅이 없어요.</small>";
+    if (fusePick.length === 2) {
+      const a = B.slots[fusePick[0]], b = B.slots[fusePick[1]];
+      const same = a.job === b.job;
+      $("fuseList").insertAdjacentHTML("beforeend", same ? "<small style='color:var(--alarm)'>서로 다른 직업이어야 합성할 수 있어요.</small>"
+        : `<button class="btn" type="button" data-act="fuse">${slotArm.k === "fuse" ? "정말 합성? (한 번 더)" : "🧬 " + FUSE[fuseKey(a.job, b.job)][0] + " 만들기"}</button>`);
+    }
+  }
+  $("slotOpen").addEventListener("click", () => { wake(); fusePick = []; $("slotMsg").textContent = ""; renderSlots(); $("slotBox").hidden = false; $("slotClose").focus(); });
+  $("slotClose").addEventListener("click", () => { $("slotBox").hidden = true; $("slotOpen").focus(); });
+  $("slotBox").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-act]"); if (!b) return;
+    const act = b.dataset.act, i = +b.dataset.i;
+    if (act === "go" || act === "new") { save(); B.cur = i; if (act === "new") B.slots[i] = null; reloadWith(); return; }
+    if (act === "del") { if (!armed("del" + i)) { renderSlots(); return; } B.slots[i] = null; fusePick = []; renderSlots(); $("slotMsg").textContent = "슬롯 " + (i + 1) + "을 비웠어요."; return; }
+    if (act === "pick") { const n = fusePick.indexOf(i); if (n >= 0) fusePick.splice(n, 1); else if (fusePick.length < 2) fusePick.push(i); slotArm = { k: "", t: 0 }; renderSlots(); return; }
+    if (act === "fuse") {
+      if (fusePick.length !== 2) return;
+      const [ia, ib] = fusePick, a = B.slots[ia], d = B.slots[ib];
+      if (!grad(a) || !grad(d) || a.job === d.job) return;
+      if (!armed("fuse")) { renderSlots(); return; }
+      a.fuse = d.job; a.adv = 2; B.slots[ib] = null;
+      if (B.cur === ib) B.cur = ia;
+      reloadWith();
+    }
+  });
+
   // ---- 💾 세이브 코드: 복사해 두었다가 다른 기기에서 붙여넣기 ----
-  const toCode = () => "KOMI1:" + btoa(unescape(encodeURIComponent(JSON.stringify(S))));
+  const toCode = () => "KOMI1:" + btoa(unescape(encodeURIComponent(JSON.stringify(bundle()))));
   const fromCode = (code) => {
     const s = String(code || "").replace(/\s+/g, "");
     if (!s.startsWith("KOMI1:")) return null;
@@ -1172,6 +1276,13 @@ button.sec-h { cursor: pointer; }
       const big = S.adv >= 2 ? 1.3 : 1;
       if (S.adv >= 2) { ctx.fillStyle = "rgba(127,216,255,.25)"; ctx.beginPath(); ctx.arc(x + 36, y - h * 0.45, 24 + Math.sin(now * 5) * 3, 0, Math.PI * 2); ctx.fill(); }
       emoji(J().ic, x + 36, y - h * 0.32, 30 * big, -0.4 + lunge * 0.03 + Math.sin(now * 2) * .08);
+      if (F()) {
+        const hue = (now * 120) % 360;
+        ctx.strokeStyle = "hsla(" + hue + ",90%,70%,.7)"; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.ellipse(x, y - h * 0.5, w * 0.62 + Math.sin(now * 4) * 3, h * 0.62, 0, 0, Math.PI * 2); ctx.stroke();
+        emoji(F().ic, x - 36, y - h * 0.32, 30 * big, 0.4 + Math.sin(now * 2 + 1) * .08);
+        emoji("🧬", x, y - h - 14 + Math.sin(now * 3) * 3, 18);
+      }
     }
     // 조수 꼬미들
     for (let i = 0; i < helpers(); i++) {
