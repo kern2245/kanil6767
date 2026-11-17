@@ -938,6 +938,8 @@ button.sec-h { cursor: pointer; }
   if (window.parent !== window) {
     window.addEventListener("message", (e) => {
       if (e.origin !== location.origin || e.source !== window.parent || !e.data || e.data.type !== "komi-sync") return;
+      if (synced) return;   // 답장은 한 번만 받음
+      synced = true; clearInterval(readyT);
       const m = e.data;
       if (m.data && typeof m.data === "object" && typeof m.data.stage === "number") { applySave(m.data); return; }
       cloudOn = !!m.cloud;
@@ -946,7 +948,10 @@ button.sec-h { cursor: pointer; }
       else if (m.login) c.textContent = "☁️ 서버 저장 준비 중이에요. 지금은 이 기기에만 저장돼요.";
       else c.innerHTML = '🔑 <a href="/login" target="_top">로그인</a>하면 휴대폰·PC 어디서든 이어서 할 수 있어요';
     });
-    try { window.parent.postMessage({ type: "komi-ready", fresh: !hadSave, last: loadedLast }, location.origin); } catch (e) {}
+    // 바깥 페이지가 아직 준비 안 됐을 수 있어서, 답장이 올 때까지 1.5초마다 다시 알림 (최대 20번)
+    let synced = false, tries = 0;
+    const ready = () => { if (synced || ++tries > 20) { clearInterval(readyT); return; } try { window.parent.postMessage({ type: "komi-ready", fresh: !hadSave, last: loadedLast }, location.origin); } catch (e) {} };
+    const readyT = setInterval(ready, 1500); ready();
   }
 
   // ---- 💾 세이브 코드: 복사해 두었다가 다른 기기에서 붙여넣기 ----
