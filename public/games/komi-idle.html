@@ -239,7 +239,7 @@ button.sec-h { cursor: pointer; }
     <div class="sec-h"><b>🎁 장비 상자</b><small>쓰러져도 장비는 그대로!</small></div>
     <div class="gear" id="gear"></div>
     <button class="btn" id="openBox" type="button">상자 열기</button>
-    <div class="boxmsg" id="boxMsg" aria-live="polite">같은 등급이 또 나오면 ★ 강화 (최대 ★5)</div>
+    <div class="boxmsg" id="boxMsg" aria-live="polite">같은 등급이 또 나오면 ★ 강화 (최대 ★5) · 열수록 값이 조금씩 올라요</div>
   </section>
 
     </div>
@@ -816,7 +816,8 @@ button.sec-h { cursor: pointer; }
   }
 
   // ---- 🎁 장비 상자 ----
-  const boxCost = () => Math.ceil(mGold(S.stage) * 10);
+  // 상자 가격: 처음엔 잡몹 5마리 값, 열 때마다 6%씩 비싸짐 (최대 잡몹 40마리 값, 죽어도 그대로)
+  const boxCost = () => Math.ceil(mGold(S.stage) * Math.min(40, 5 * Math.pow(1.06, S.st.boxes)));
   function renderGear() {
     $("gear").innerHTML = Object.entries(SLOTS).map(([k, [ic, nm, what]]) => {
       const g = S.gear[k];
