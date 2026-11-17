@@ -229,7 +229,7 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
   const JOBS = {
     sword: { ic: "🗡️", n: ["검사 꼬미", "기사 꼬미"], d: "체력 1.4배(튼튼), 공격력 +20%", sk: "회전 베기", sk2: "십자 성검", cd: 5, atk: [1.2, 1.45], critX: [2.5, 2.8], hp: [1.4, 1.6] },   // 탱커: 체력 최고, 피해는 보통
     bow:   { ic: "🏹", n: ["궁수 꼬미", "명사수 꼬미"], d: "체력 1배(보통), 공격 속도 +40%, 화살비", sk: "화살비", sk2: "유성 화살비", cd: 4, aps: [1.4, 1.9], hp: [1, 1.2] },   // 균형형
-    magic: { ic: "🔮", n: ["마법사 꼬미", "대마법사 꼬미"], d: "체력 0.85배(약함), 치명타 확률 +10%, 강한 번개 마법", sk: "번개 마법", sk2: "천둥 폭풍", cd: 5, crit: [0.1, 0.18], hp: [0.85, 0.95] },   // 피해 최고, 체력 최저
+    magic: { ic: "🔮", n: ["마법사 꼬미", "대마법사 꼬미"], d: "체력 0.85배(약함), 치명타 확률 +12%, 연쇄 번개 + 불꽃 화상", sk: "연쇄 번개", sk2: "메테오", cd: 5, crit: [0.12, 0.2], hp: [0.85, 0.95] },   // 리메이크: 피해 최고, 체력 최저
     tamer: { ic: "🐵", n: ["조련사 꼬미", "원숭이 대장 꼬미"], d: "체력 1.1배, 조수 꼬미 2마리(2차 4마리), 원숭이 돌격", sk: "원숭이 돌격", sk2: "원숭이 대행진", cd: 6, help: [1, 1.2], hp: [1.1, 1.3] },   // 조수 꼬미로 싸움
   };
   const J = () => (S.job ? JOBS[S.job] : null);
@@ -247,7 +247,7 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
   // 조수 꼬미: 강화로 사지 않고, 조련사 직업만 데리고 다님 (1차 2마리, 2차 4마리)
   const helpers = () => (S.job === "tamer" ? (S.adv >= 2 ? 4 : 2) + (S.jsk || 0) : 0);
   // ---- 직업 전용 강화 (직업을 얻으면 강화 목록에 하나 생김, 직업마다 다름) ----
-  const cdAt = (l) => Math.max(2, 5 - 0.3 * l);   // 마법사 스킬 대기 시간
+  const cdAt = (l) => Math.max(2.5, 5 - 0.3 * l);   // 최소 2.5초   // 마법사 스킬 대기 시간
   const skillCd = () => (S.job === "magic" ? cdAt(S.jsk || 0) : J().cd);
   const swordMul = () => (S.job === "sword" ? 1 + 0.1 * (S.jsk || 0) : 1);   // 베기 수련 1레벨당 +10% (너프: 25% → 10%)
   const arrowsPlus = () => (S.job === "bow" ? S.jsk || 0 : 0);
@@ -350,7 +350,7 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
     const crit = canCrit && Math.random() < critP();
     const d = Math.floor(base * (crit ? critX() : 1));
     mon.hp -= d; mon.hit = 0.15; if (crit) shake = 6;
-    pops.push({ t: 0, x: 262 + (Math.random() - .5) * 40, y: 110, text: (crit ? "치명타! " : "") + fmt(d), c: crit ? "#ff4d6a" : from === "skill" ? "#7fd8ff" : from === "tap" ? "#ffffff" : from === "help" ? "#5fe3a1" : "#ffd66b", big: crit || from === "skill" });
+    pops.push({ t: 0, x: 262 + (Math.random() - .5) * 40, y: 110, text: (crit ? "치명타! " : "") + fmt(d), c: crit ? "#ff4d6a" : from === "skill" ? "#7fd8ff" : from === "tap" ? "#ffffff" : from === "help" ? "#5fe3a1" : from === "burn" ? "#ff8a3d" : "#ffd66b", big: crit || from === "skill" });
     for (let i = 0; i < (crit ? 10 : 4); i++) parts.push({ x: 262, y: 160, vx: (Math.random() - .5) * 300, vy: -Math.random() * 260, t: 0, life: .4, c: crit ? "#ff4d6a" : "#ffd66b" });
     beep(crit ? 220 : from === "tap" ? 660 : 440, 0.05, "square", crit ? 0.05 : 0.025, -120);
     if (mon.hp <= 0) kill();
@@ -396,13 +396,22 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
     } else if (S.job === "bow") {
       const n = (two ? 8 : 5) + arrowsPlus(); fx = { k: "arrows", t: 0, n };
       for (let i = 0; i < n; i++) setTimeout(() => { hit(atk() * 1.5, "skill", true); beep(1200, .04, "square", .02, -500); }, 120 + i * 70);
-    } else if (S.job === "magic") {
-      fx = { k: "bolt", t: 0 }; shake = 10; beep(90, .4, "sawtooth", .07, 300);
-      hit(atk() * (two ? 16 : 11), "skill", true);
+    } else if (S.job === "magic") {   // 연쇄 번개: 번개 4줄이 차례로 떨어짐 (한 줄에 3.5배) + 불꽃 화상
+      fx = { k: "chain", t: 0 }; shake = 8;
+      for (let i = 0; i < 4; i++) setTimeout(() => { hit(atk() * 3.5, "skill", true); beep(120 + i * 40, .2, "sawtooth", .05, 400); }, i * 110);
+      setTimeout(() => burn(0.5), 450);
     } else if (S.job === "tamer") {
       fx = { k: "dash", t: 0, n: helpers() + 2 }; beep(500, .2, "square", .04, 300);
       setTimeout(() => hit((helpDps() + atk()) * (two ? 4.5 : 4), "skill", false), 300);
     }
+  }
+  // 불꽃 화상: 3초 동안 1초마다 (공격력 x 배수) 피해, 몸에서 불꽃이 남
+  function burn(mul) {
+    for (let i = 1; i <= 3; i++) setTimeout(() => {
+      if (!mon || mon.dead) return;
+      hit(atk() * mul, "burn", false);
+      for (let k = 0; k < 8; k++) parts.push({ x: 250 + Math.random() * 24, y: 150 + Math.random() * 30, vx: (Math.random() - .5) * 60, vy: -80 - Math.random() * 120, t: 0, life: .5, c: k % 2 ? "#ff8a3d" : "#ffd66b" });
+    }, i * 1000);
   }
   function drawFx() {
     if (fx && fx.two) { fx.t += 1 / 60; drawFx2(); } else if (fx) drawFx1();
@@ -422,7 +431,9 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
       fx.n = 8 + arrowsPlus();
       for (let i = 0; i < fx.n; i++) setTimeout(() => { hit(atk() * 1.5, "skill", true); burst(6, ["#7fd8ff", "#ffd66b"], 220); beep(1400 - i * 60, .05, "square", .025, -600); }, 300 + i * 80);
     } else if (S.job === "magic") {
-      setTimeout(() => { shake = 18; beep(70, .6, "sawtooth", .08, 200); burst(50, ["#b48cff", "#7fd8ff", "#ffffff"], 420); hit(atk() * 16, "skill", true); }, 450);
+      // 메테오: 하늘의 마법진에서 거대한 불덩이가 떨어져 쾅! (20배) + 큰 화상
+      beep(140, .5, "sawtooth", .05, -100);
+      setTimeout(() => { shake = 22; beep(55, .8, "sawtooth", .09, 150); burst(60, ["#ff8a3d", "#ffd66b", "#ff4d6a", "#ffffff"], 460); hit(atk() * 20, "skill", true); burn(1.5); }, 560);
     } else if (S.job === "tamer") {
       setTimeout(() => { shake = 12; beep(300, .3, "square", .05, -150); burst(30, ["#ffd66b", "#c98a4b"], 300); hit((helpDps() + atk()) * 4.5, "skill", false); }, 450);
     }
@@ -475,27 +486,32 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
         }
       }
       if (t > 1.3) fx = null;
-    } else if (fx.k === "magic") { // 대마법사: 어두워짐 → 마법진 → 번개 세 줄
-      const dark = Math.min(1, t / .15) * Math.max(0, 1 - Math.max(0, t - .9) / .3), grow = Math.min(1, t / .25);
-      ctx.fillStyle = `rgba(12,0,40,${.55 * dark})`; ctx.fillRect(0, 0, W, H);
-      ctx.save(); ctx.translate(MX, GROUND - 4); ctx.scale(1, .32); ctx.rotate(t * 2.5);
-      ctx.shadowColor = "#b48cff"; ctx.shadowBlur = 18; ctx.strokeStyle = `rgba(180,140,255,${dark})`; ctx.lineWidth = 4;
-      ctx.beginPath(); ctx.arc(0, 0, 84 * grow, 0, Math.PI * 2); ctx.stroke();
-      ctx.beginPath(); ctx.arc(0, 0, 64 * grow, 0, Math.PI * 2); ctx.stroke();
-      for (let s = 0; s < 2; s++) { ctx.beginPath(); for (let k = 0; k <= 3; k++) { const an = -Math.PI / 2 + s * Math.PI / 3 + k * Math.PI * 2 / 3; ctx[k ? "lineTo" : "moveTo"](Math.cos(an) * 64 * grow, Math.sin(an) * 64 * grow); } ctx.stroke(); }
+    } else if (fx.k === "magic") { // 대마법사 메테오: 어두운 하늘 → 하늘 마법진 → 불덩이 낙하 → 대폭발
+      const dark = Math.min(1, t / .15) * Math.max(0, 1 - Math.max(0, t - 1.0) / .3);
+      ctx.fillStyle = `rgba(20,0,30,${.6 * dark})`; ctx.fillRect(0, 0, W, H);
+      const grow = Math.min(1, t / .25);   // 하늘 마법진 (몬스터 위)
+      ctx.save(); ctx.translate(MX - 40, 28); ctx.scale(1, .35); ctx.rotate(t * 3);
+      ctx.shadowColor = "#ff8a3d"; ctx.shadowBlur = 18; ctx.strokeStyle = `rgba(255,150,80,${dark})`; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.arc(0, 0, 70 * grow, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, 0, 52 * grow, 0, Math.PI * 2); ctx.stroke();
+      for (let s = 0; s < 2; s++) { ctx.beginPath(); for (let k = 0; k <= 3; k++) { const an = -Math.PI / 2 + s * Math.PI / 3 + k * Math.PI * 2 / 3; ctx[k ? "lineTo" : "moveTo"](Math.cos(an) * 52 * grow, Math.sin(an) * 52 * grow); } ctx.stroke(); }
       ctx.restore();
-      if (t > .45 && t < .95) {
-        if (t < .55) { ctx.fillStyle = "rgba(220,235,255,.5)"; ctx.fillRect(0, 0, W, H); }
-        ctx.shadowColor = "#7fd8ff"; ctx.shadowBlur = 20;
-        for (let b = 0; b < 3; b++) {
-          ctx.strokeStyle = b === 1 ? "#ffffff" : "#bfe6ff"; ctx.lineWidth = b === 1 ? 7 : 4; ctx.beginPath();
-          let x = MX + (b - 1) * 40; ctx.moveTo(x, 0);
-          for (let y = 20; y <= MY + 20; y += 22) { x = MX + (b - 1) * 18 + (Math.random() - .5) * 46; ctx.lineTo(x, y); }
-          ctx.stroke();
-        }
-        ctx.shadowBlur = 0;
+      const p = (t - .22) / .34;   // 불덩이 떨어짐
+      if (p > 0 && p < 1) {
+        const x = MX - 40 + 40 * p, y = 28 + (MY - 28) * p, r = 18 + 8 * p;
+        for (let k = 1; k <= 6; k++) { ctx.fillStyle = `rgba(255,${120 + k * 15},60,${.5 - k * .07})`; ctx.beginPath(); ctx.arc(x - k * 7, y - k * 20, r * (1 - k * .12), 0, Math.PI * 2); ctx.fill(); }
+        const g = ctx.createRadialGradient(x, y, 2, x, y, r); g.addColorStop(0, "#fff6d0"); g.addColorStop(.5, "#ffb347"); g.addColorStop(1, "#ff4d1a");
+        ctx.shadowColor = "#ff8a3d"; ctx.shadowBlur = 30; ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
       }
-      if (t > 1.2) fx = null;
+      const q = (t - .56) / .6;   // 대폭발
+      if (q > 0 && q < 1) {
+        if (q < .12) { ctx.fillStyle = `rgba(255,240,210,${.7 * (1 - q / .12)})`; ctx.fillRect(0, 0, W, H); }
+        const g = ctx.createRadialGradient(MX, MY, 4, MX, MY, 30 + q * 90);
+        g.addColorStop(0, `rgba(255,250,220,${1 - q})`); g.addColorStop(.4, `rgba(255,170,60,${.85 * (1 - q)})`); g.addColorStop(1, "rgba(255,60,30,0)");
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(MX, MY, 30 + q * 90, 0, Math.PI * 2); ctx.fill();
+        for (let k = 0; k < 2; k++) { const rr = (q - k * .1) * 150; if (rr <= 0) continue; ctx.strokeStyle = `rgba(255,190,90,${1 - q})`; ctx.lineWidth = 5 - k * 2; ctx.beginPath(); ctx.ellipse(MX, GROUND - 2, rr, rr * .25, 0, 0, Math.PI * 2); ctx.stroke(); }
+      }
+      if (t > 1.3) fx = null;
     } else if (fx.k === "tamer") { // 원숭이 대장: 꼬미 10마리 대행진 + 바나나 비
       for (let i = 0; i < 10; i++) {
         const x = -40 + t * 620 - i * 30, row = i % 3, s = 36 - row * 6, y = GROUND - 18 - row * 14 - Math.abs(Math.sin(t * 28 + i)) * 12;
@@ -549,6 +565,21 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
       const pts = [[MX, 0]]; for (let y = 22; y <= MY + 10; y += 22) pts.push([MX + (Math.random() - .5) * 44, y]);
       [[7, `rgba(150,210,255,${a})`], [2.5, `rgba(255,255,255,${a})`]].forEach(([lw, c]) => { ctx.strokeStyle = c; ctx.lineWidth = lw; ctx.beginPath(); pts.forEach(([x, y], k) => ctx[k ? "lineTo" : "moveTo"](x, y)); ctx.stroke(); });
       if (t > .45) fx = null;
+    } else if (fx.k === "chain") { // 연쇄 번개: 보라 마법 고리 + 번개 4줄이 차례로 쾅쾅쾅쾅
+      const a = Math.max(0, 1 - t / .7);
+      ctx.save(); ctx.translate(MX, GROUND - 4); ctx.scale(1, .32); ctx.rotate(t * 4);
+      ctx.setLineDash([12, 8]); ctx.shadowColor = "#b48cff"; ctx.shadowBlur = 12; ctx.strokeStyle = `rgba(180,140,255,${a})`; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.arc(0, 0, 66, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+      ctx.shadowColor = "#b48cff"; ctx.shadowBlur = 18;
+      for (let i = 0; i < 4; i++) {
+        const age = t - i * .11; if (age < 0 || age > .22) continue;
+        const b = 1 - age / .22, ox = [-26, 18, -8, 28][i];
+        if (age < .04) { ctx.fillStyle = "rgba(200,180,255,.35)"; ctx.fillRect(0, 0, W, H); }
+        const pts = [[MX + ox, 0]]; for (let y = 22; y <= MY + 10; y += 22) pts.push([MX + ox * (1 - y / (MY + 10)) + (Math.random() - .5) * 36, y]);
+        [[7, `rgba(190,150,255,${b})`], [2.5, `rgba(255,255,255,${b})`]].forEach(([lw, c]) => { ctx.strokeStyle = c; ctx.lineWidth = lw; ctx.beginPath(); pts.forEach(([x, y], k) => ctx[k ? "lineTo" : "moveTo"](x, y)); ctx.stroke(); });
+        ctx.fillStyle = `rgba(255,255,255,${b})`; ctx.beginPath(); ctx.arc(MX, MY, 10 * b + 4, 0, Math.PI * 2); ctx.fill();
+      }
+      if (t > .7) fx = null;
     } else if (fx.k === "dash") { // 원숭이 돌격: 바람 줄무늬를 달고 우다다 + 쾅!
       for (let i = 0; i < fx.n; i++) {
         const x = -30 + t * 900 - i * 26; if (x < -30 || x > 300) continue;

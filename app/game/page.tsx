@@ -27,7 +27,7 @@ export default async function GamePage() {
       <main className="flex-1 py-4 sm:py-8">
         <Container className="max-w-xl px-0 sm:px-8">
           <h1 className="sr-only">{g.title}</h1>
-          <GameFrame src="/games/komi-idle.html?v=12" title={g.title} />
+          <GameFrame src="/games/komi-idle.html?v=13" title={g.title} />
         </Container>
         <Container className="max-w-xl pb-6">
           <GameLeaderboard />
