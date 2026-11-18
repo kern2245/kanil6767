@@ -159,8 +159,8 @@ button.sec-h { cursor: pointer; }
 .slot .ic { font-size: 1.6rem; line-height: 1.2; }
 .slot b { display: block; font-family: var(--display); font-weight: 400; font-size: .85rem; }
 .slot small { display: block; color: var(--dim); font-size: .7rem; line-height: 1.35; }
-.r0 { color: #b9c0cf; } .r1 { color: #5fb0ff; } .r2 { color: #c38bff; } .r3 { color: #ffcf5c; }
-.slot.r0 { border-color: #6b7286; } .slot.r1 { border-color: #3d86e0; } .slot.r2 { border-color: #9b5cf0; } .slot.r3 { border-color: #ffcf5c; box-shadow: 0 0 14px rgba(255,207,92,.45); }
+.r0 { color: #b9c0cf; } .r1 { color: #5fb0ff; } .r2 { color: #c38bff; } .r3 { color: #ff6b8b; } .r4 { color: #ffcf5c; }
+.slot.r0 { border-color: #6b7286; } .slot.r1 { border-color: #3d86e0; } .slot.r2 { border-color: #9b5cf0; } .slot.r3 { border-color: #ff6b8b; box-shadow: 0 0 10px rgba(255,107,139,.35); } .slot.r4 { border-color: #ffcf5c; box-shadow: 0 0 14px rgba(255,207,92,.45); }
 .boxmsg { min-height: 1.3em; text-align: center; font-size: .9rem; color: var(--dim); }
 .boxmsg b { font-family: var(--display); font-weight: 400; }
 #openBox:disabled { opacity: .45; cursor: not-allowed; }
@@ -356,18 +356,22 @@ button.sec-h { cursor: pointer; }
 
   // ---- 저장 ----
   const KEY = "komi-idle-v1";
-  const fresh = () => ({ gold: 0, stage: 1, kill: 0, atk: 0, spd: 0, crit: 0, tap: 0, help: 0, last: Date.now(), seen: false, job: null, adv: 0, buy: "1", top: 1, jsk: 0 });
+  const fresh = () => ({ gold: 0, stage: 1, kill: 0, atk: 0, spd: 0, crit: 0, tap: 0, help: 0, last: Date.now(), seen: false, job: null, adv: 0, buy: "1", top: 1, jsk: 0, gearV: 2 });
   let needHpMig = false;
   let S = fresh();
   // 영웅 슬롯 5개: B = { cur: 지금 슬롯, t: 마지막 저장 시각, slots: [영웅 기록 | null] × 5 }  (예전 3칸 기록도 그대로 읽힘)
   const KEY2 = "komi-slots-v1";
   const NSLOT = 5;
   let B = { cur: 0, t: 0, slots: Array(NSLOT).fill(null) };
-  const fixB = (o) => ({ cur: Math.min(NSLOT - 1, Math.max(0, o.cur | 0)), t: typeof o.t === "number" ? o.t : (typeof o.last === "number" ? o.last : 0), slots: [...Array(NSLOT).keys()].map((i) => (o.slots[i] && typeof o.slots[i] === "object" ? o.slots[i] : null)) });
+  function migGear(d) {   // 신화 추가 전 기록: 전설(3) → 4
+    if (d && typeof d === "object" && !d.gearV) { if (d.gear) for (const k in d.gear) { const g = d.gear[k]; if (g && g.r >= 3) g.r += 1; } d.gearV = 2; }
+    return d;
+  }
+  const fixB = (o) => ({ cur: Math.min(NSLOT - 1, Math.max(0, o.cur | 0)), t: typeof o.t === "number" ? o.t : (typeof o.last === "number" ? o.last : 0), slots: [...Array(NSLOT).keys()].map((i) => (o.slots[i] && typeof o.slots[i] === "object" ? migGear(o.slots[i]) : null)) });
   try {
     const rb = localStorage.getItem(KEY2);
     if (rb) { const o = JSON.parse(rb); if (o && Array.isArray(o.slots)) B = fixB(o); }
-    else { const raw = localStorage.getItem(KEY); if (raw) { const o = JSON.parse(raw); B.slots[0] = o; B.t = o.last || 0; } }   // 예전 기록 → 슬롯 1
+    else { const raw = localStorage.getItem(KEY); if (raw) { const o = migGear(JSON.parse(raw)); B.slots[0] = o; B.t = o.last || 0; } }   // 예전 기록 → 슬롯 1
   } catch (e) {}
   const hadSave = B.slots.some(Boolean);
   { const o = B.slots[B.cur]; if (o) { needHpMig = !("hp" in o) && (o.stage || 1) > 1; S = Object.assign(fresh(), o); } }
@@ -395,7 +399,7 @@ button.sec-h { cursor: pointer; }
   const MEDAL = [40, 60, 80], medals = () => MEDAL.filter((m) => (S.top || 1) > m).length, medalMul = () => 1 + 0.2 * medals();
   const keepMeta = () => ({ gear: S.gear, st: S.st, jtop: S.jtop, mis: S.mis, ev: S.ev, evHat: S.evHat });
   // 장비: 무기(공격력) · 모자(체력) · 반지(바나나), 등급 4개, 같은 등급이 또 나오면 ★ (최대 5, ★마다 +20%)
-  const RAR = [["일반", 60, 5], ["희귀", 28, 12], ["영웅", 10, 25], ["전설", 2, 50]];   // 이름, 확률%, 기본 보너스%
+  const RAR = [["일반", 56, 5], ["희귀", 28, 12], ["영웅", 10, 25], ["신화", 4, 35], ["전설", 2, 50]];   // 이름, 확률%, 기본 보너스% (신화 = 영웅과 전설 사이)
   const SLOTS = { weapon: ["🗡️", "무기", "공격력"], hat: ["🎩", "모자", "체력"], ring: ["💍", "반지", "바나나"] };
   const gearB = (slot) => { const g = S.gear[slot]; return g ? RAR[g.r][2] * (1 + 0.2 * g.s) / 100 : 0; };
 
@@ -1615,7 +1619,7 @@ button.sec-h { cursor: pointer; }
     S.st.boxes++;
     const slot = Object.keys(SLOTS)[Math.floor(Math.random() * 3)];
     let x = Math.random() * 100, r = 0; for (let i = 0; i < RAR.length; i++) { x -= RAR[i][1]; if (x < 0) { r = i; break; } }
-    if (r === 3) S.st.legend++;
+    if (r === 4) S.st.legend++;
     const cur = S.gear[slot], [ic, nm] = SLOTS[slot], name = `<b class="r${r}">${RAR[r][0]} ${nm}</b>`;
     let msg;
     if (!cur || r > cur.r) { S.gear[slot] = { r, s: 0 }; msg = `${ic} ${name} 장착! ✨`; }
@@ -1623,11 +1627,11 @@ button.sec-h { cursor: pointer; }
     else { const back = Math.floor(c * (r === cur.r ? 0.5 : 0.3)); S.gold += back; msg = `${ic} ${name} → 분해해서 🍌 ${fmt(back)} 돌려받음`; }
     $("boxMsg").innerHTML = msg;
     // 연출: 등급이 높을수록 화려하게
-    const col = ["#b9c0cf", "#5fb0ff", "#c38bff", "#ffcf5c"][r];
+    const col = ["#b9c0cf", "#5fb0ff", "#c38bff", "#ff6b8b", "#ffcf5c"][r];
     pops.push({ t: 0, x: W / 2, y: 70, text: "🎁 " + RAR[r][0] + " " + nm + "!", c: col, big: true, huge: r >= 2 });
     for (let i = 0; i < 10 + r * 14; i++) { const a = Math.random() * Math.PI * 2, v = 80 + Math.random() * (120 + r * 90); parts.push({ x: W / 2, y: 110, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 80, t: 0, life: .6 + r * .1, c: i % 2 ? col : "#ffffff" }); }
     if (r >= 2) shake = 6 + r * 3;
-    [660, 880, 1046, 1318].slice(0, r + 1).forEach((f, k) => setTimeout(() => beep(f, .12, "triangle", .05), k * 90));
+    [660, 880, 1046, 1318, 1568].slice(0, r + 1).forEach((f, k) => setTimeout(() => beep(f, .12, "triangle", .05), k * 90));
     komiHp = Math.min(komiHp, maxHp());
     renderGear(); renderUps(); save();
   }
@@ -1698,7 +1702,7 @@ button.sec-h { cursor: pointer; }
   setInterval(save, 5000);
 
   // ---- ☁️ 서버 세이브 (세카이 로그인 회원): 켜질 때 서버 기록이 더 최신이면 그걸로 바꿈 ----
-  const applySave = (o) => { if (Array.isArray(o.slots)) B = fixB(o); else B.slots[B.cur] = o; reloadWith(); };
+  const applySave = (o) => { if (Array.isArray(o.slots)) B = fixB(o); else B.slots[B.cur] = migGear(o); reloadWith(); };
   if (window.parent !== window) {
     window.addEventListener("message", (e) => {
       if (e.origin !== location.origin || e.source !== window.parent || !e.data || e.data.type !== "komi-sync") return;
