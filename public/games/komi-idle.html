@@ -384,15 +384,20 @@ button.sec-h { cursor: pointer; }
   // ---- 직업 (스테이지 5에서 1차 전직, 25에서 2차 전직) ----
   const JOB1 = 2, JOB2 = 25;   // 1차 전직: 스테이지 1 보스를 잡으면 (=스테이지 2)
   const JOBS = {
-    sword: { ic: "🗡️", n: ["검사 꼬미", "기사 꼬미"], d: "체력 1.4배(튼튼), 공격력 +20%", sk: "회전 베기", sk2: "십자 성검", cd: 5, atk: [1.2, 1.45], critX: [2.5, 2.8], hp: [1.4, 1.6] },   // 탱커: 체력 최고, 피해는 보통
-    bow:   { ic: "🏹", n: ["궁수 꼬미", "명사수 꼬미"], d: "체력 1배(보통), 공격 속도 +40%, 화살비", sk: "화살비", sk2: "유성 화살비", cd: 4, aps: [1.4, 1.9], hp: [1, 1.2] },   // 균형형
-    magic: { ic: "🔮", n: ["마법사 꼬미", "대마법사 꼬미"], d: "체력 0.85배(약함), 치명타 확률 +12%, 연쇄 번개 + 불꽃 화상", sk: "연쇄 번개", sk2: "메테오", cd: 5, crit: [0.12, 0.2], hp: [0.85, 0.95] },   // 리메이크: 피해 최고, 체력 최저
-    tamer: { ic: "🐵", n: ["조련사 꼬미", "원숭이 대장 꼬미"], d: "체력 1.1배, 조수 꼬미 2마리(2차 4마리), 원숭이 돌격", sk: "원숭이 돌격", sk2: "원숭이 대행진", cd: 6, help: [1, 1.2], hp: [1.1, 1.3] },   // 조수 꼬미로 싸움
-    ninja: { ic: "🥷", wp: "shuri", n: ["닌자 꼬미", "그림자 닌자 꼬미"], d: "체력 0.8배(약함), 공격 속도 +30%, 치명타 3배, 수리검 난사", sk: "수리검 난사", sk2: "천본 수리검", cd: 4, aps: [1.3, 1.7], critX: [3, 3.4], hp: [0.8, 0.9] },   // 빠르고 아프게, 대신 약함
-    demon: { ic: "😈", wp: "🔱", n: ["꼬마 악마 꼬미", "마왕 꼬미"], d: "체력 1배, 공격력 +15%, 때리면 체력 흡혈 + 저주(지속 피해)", sk: "지옥불", sk2: "어둠의 계약", cd: 5, atk: [1.15, 1.3], hp: [1, 1.15], steal: [0.1, 0.15] },   // 흡혈로 버팀
-    bard:  { ic: "🎵", wp: "🎸", n: ["음유시인 꼬미", "전설의 가수 꼬미"], d: "체력 1.1배, 노래로 잠깐 공격력 UP, 바나나 +10%", sk: "힘의 노래", sk2: "대합창 콘서트", cd: 6, hp: [1.1, 1.25], gold: [1.1, 1.15], song: [1.4, 1.6] },   // 버프 + 돈
+    sword: { ic: "🗡️", n: ["검사 꼬미", "기사 꼬미", "성기사 꼬미"], d: "체력 1.4배(튼튼), 공격력 +20%", sk: "회전 베기", sk2: "십자 성검", cd: 5, atk: [1.2, 1.45], critX: [2.5, 2.8], hp: [1.4, 1.6] },   // 탱커: 체력 최고, 피해는 보통
+    bow:   { ic: "🏹", n: ["궁수 꼬미", "명사수 꼬미", "바람의 궁신 꼬미"], d: "체력 1배(보통), 공격 속도 +40%, 화살비", sk: "화살비", sk2: "유성 화살비", cd: 4, aps: [1.4, 1.9], hp: [1, 1.2] },   // 균형형
+    magic: { ic: "🔮", n: ["마법사 꼬미", "대마법사 꼬미", "대현자 꼬미"], d: "체력 0.85배(약함), 치명타 확률 +12%, 연쇄 번개 + 불꽃 화상", sk: "연쇄 번개", sk2: "메테오", cd: 5, crit: [0.12, 0.2], hp: [0.85, 0.95] },   // 리메이크: 피해 최고, 체력 최저
+    tamer: { ic: "🐵", n: ["조련사 꼬미", "원숭이 대장 꼬미", "원숭이 왕 꼬미"], d: "체력 1.1배, 조수 꼬미 2마리(2차 4마리), 원숭이 돌격", sk: "원숭이 돌격", sk2: "원숭이 대행진", cd: 6, help: [1, 1.2], hp: [1.1, 1.3] },   // 조수 꼬미로 싸움
+    ninja: { ic: "🥷", wp: "shuri", n: ["닌자 꼬미", "그림자 닌자 꼬미", "그림자 군주 꼬미"], d: "체력 0.8배(약함), 공격 속도 +30%, 치명타 3배, 수리검 난사", sk: "수리검 난사", sk2: "천본 수리검", cd: 4, aps: [1.3, 1.7], critX: [3, 3.4], hp: [0.8, 0.9] },   // 빠르고 아프게, 대신 약함
+    demon: { ic: "😈", wp: "🔱", n: ["꼬마 악마 꼬미", "마왕 꼬미", "대마왕 꼬미"], d: "체력 1배, 공격력 +15%, 때리면 체력 흡혈 + 저주(지속 피해)", sk: "지옥불", sk2: "어둠의 계약", cd: 5, atk: [1.15, 1.3], hp: [1, 1.15], steal: [0.1, 0.15] },   // 흡혈로 버팀
+    bard:  { ic: "🎵", wp: "🎸", n: ["음유시인 꼬미", "전설의 가수 꼬미", "천상의 가수 꼬미"], d: "체력 1.1배, 노래로 잠깐 공격력 UP, 바나나 +10%", sk: "힘의 노래", sk2: "대합창 콘서트", cd: 6, hp: [1.1, 1.25], gold: [1.1, 1.15], song: [1.4, 1.6] },   // 버프 + 돈
   };
   const OLDJ = ["sword", "bow", "magic", "tamer"], NEWJ = ["ninja", "demon", "bard"];
+  // ✨ 3차 전직 (스테이지 250 마감 대마왕을 잡으면): 2차 스킬 + 각성 일격, 공격력 1.5배 · 체력 1.3배. 합성 영웅은 "각성"
+  const JOB3 = 251;
+  const SK3 = { sword: "성검 심판", bow: "천공의 화살", magic: "대현자의 별비", tamer: "원숭이 왕의 행차", ninja: "그림자 군주 난무", demon: "대마왕 강림", bard: "천상의 대합창" };
+  const AWK = { atk: 1.5, hp: 1.3 };
+  const ACOL = { sword: "255,214,107", bow: "134,239,172", magic: "167,139,250", tamer: "250,204,21", ninja: "255,60,100", demon: "239,68,68", bard: "244,114,182" };
   // 🧬 합성 직업: 2차 전직 + 스테이지 100 을 깬 서로 다른 영웅 2명을 합침 (S.fuse = 두 번째 직업)
   //   능력치는 두 직업 중 좋은 쪽 + 공격력 1.3배, 합성 영웅 전용 스킬 (useFuse / drawFuseFx)
   const FUSE = { "bow+sword": ["질풍 기사 꼬미", "검과 활"], "magic+sword": ["마검사 꼬미", "검과 마법"], "sword+tamer": ["야수 기사 꼬미", "검과 원숭이"],
@@ -405,10 +410,10 @@ button.sec-h { cursor: pointer; }
   const FUSE_ATK = 1.3, FUSE_STAGE = 100;
   const J = () => (S.job ? JOBS[S.job] : null);
   const F = () => (S.fuse && JOBS[S.fuse] ? JOBS[S.fuse] : null);
-  const jl = () => Math.max(0, S.adv - 1);
+  const jl = () => Math.min(1, Math.max(0, S.adv - 1));
   const jv = (k, def) => { const a = J() && J()[k] ? J()[k][jl()] : def; const b = F() && F()[k] ? F()[k][1] : def; return Math.max(a, b); };
-  const jm = (k) => jv(k, 1) * (k === "atk" && F() ? FUSE_ATK : 1);
-  const nameOf = (d) => (!d || !d.job || !JOBS[d.job] ? "아기 꼬미" : d.fuse && FUSE[fuseKey(d.job, d.fuse)] ? FUSE[fuseKey(d.job, d.fuse)][0] : JOBS[d.job].n[d.adv >= 2 ? 1 : 0]);
+  const jm = (k) => jv(k, 1) * (k === "atk" && F() ? FUSE_ATK : 1) * (S.adv >= 3 && AWK[k] ? AWK[k] : 1);
+  const nameOf = (d) => (!d || !d.job || !JOBS[d.job] ? "아기 꼬미" : d.fuse && FUSE[fuseKey(d.job, d.fuse)] ? (d.adv >= 3 ? "각성 " : "") + FUSE[fuseKey(d.job, d.fuse)][0] : JOBS[d.job].n[d.adv >= 3 ? 2 : d.adv >= 2 ? 1 : 0]);
   const iconOf = (d) => (!d || !d.job || !JOBS[d.job] ? "🐒" : JOBS[d.job].ic + (d.fuse && JOBS[d.fuse] ? JOBS[d.fuse].ic : ""));
   const jobName = () => (J() ? nameOf(S) : "");
 
@@ -485,8 +490,14 @@ button.sec-h { cursor: pointer; }
     { n: "☁️ 하늘 섬", sky: ["#0369a1", "#7dd3fc"], gr: "#4d7c0f", line: "#facc15", sc: "sky", mons: [["🦅", "독수리"], ["🎈", "풍선 괴물"], ["⚡", "번개 정령"]], boss: ["🌪️", "폭풍 거인"], big: ["⛈️", "천둥 군주"] },
     { n: "🌌 우주", sky: ["#000000", "#2e1065"], gr: "#1f1f2e", line: "#e879f9", sc: "space", mons: [["👽", "외계인"], ["🌑", "그림자 별"], ["🛰️", "고장 위성"]], boss: ["🛸", "UFO 함장"], big: ["🪐", "행성 파괴자"] },
   ];
-  const zoneOf = (st) => ZONES[Math.floor((st - 1) / 10) % ZONES.length];
-  const zoneName = (st) => { const r = Math.floor((st - 1) / 100); return zoneOf(st).n + (r ? " (" + (r + 1) + "회차)" : ""); };
+  // 🏰 대마왕 원정: 스테이지 151~250 은 마감 대마왕의 성. 10스테이지마다 대마왕 부하 9명 → 250에서 마감 대마왕 (잡으면 3차 전직)
+  const XZ = { n: "🏰 대마왕 원정", sky: ["#1a0005", "#7f1d1d"], gr: "#1c0a0a", line: "#ef4444", sc: "castle",
+    mons: [["😈", "꼬마 마귀"], ["👺", "도깨비 병사"], ["🦇", "마왕성 박쥐"], ["💀", "해골 기사"], ["🕷️", "독거미"]], boss: ["👿", "마왕 친위대장"], big: ["🧟", "좀비 장군"] };
+  const XBIG = [["🧟", "좀비 장군"], ["🧌", "트롤 문지기"], ["🐍", "저주 뱀 여왕"], ["🦂", "독침 사령관"], ["👹", "오니 장군"], ["🧙", "어둠의 마녀"], ["🐲", "흑룡"], ["🗿", "저주받은 거상"], ["🧛", "흡혈 백작"]];
+  const XFIN = ["👿", "마감 대마왕"];
+  const isXp = (st) => st > 150 && st <= 250;
+  const zoneOf = (st) => (isXp(st) ? XZ : ZONES[Math.floor((st - 1) / 10) % ZONES.length]);
+  const zoneName = (st) => { if (isXp(st)) return "🏰 대마왕 원정 " + Math.ceil((st - 150) / 10) + "/10구역"; const r = Math.floor((st - 1) / 100); return zoneOf(st).n + (r ? " (" + (r + 1) + "회차)" : ""); };
 
   // ---- 전투 상태 ----
   // ---- 🎃 기간 한정 이벤트: 11월 = 할로윈 (평소 스테이지와 진행 기록이 따로: S.ev) ----
@@ -538,9 +549,11 @@ button.sec-h { cursor: pointer; }
     const Z = evOn ? HZ : zoneOf(st), zb = isBoss && (evOn ? ev().st % 10 === 0 : st % 10 === 0);   // 10, 20, 30... 은 구역 대보스
     pack = [];
     if (isBoss) {
-      const pick = zb ? Z.big : Z.boss, hp = monHp(st) * (st <= EASY ? 5 : 10);
-      mon = { e: pick[0], name: (zb ? "👑 " : "") + pick[1], hp, max: hp, boss: true, big: zb, x: W + 60, hit: 0, dead: 0 };
-      bossTime = st <= EASY ? 30 : 25;   // 보스 제한 시간 20초 → 25초
+      const fin = !evOn && st === 250;   // 👿 원정 최종 보스: 체력 2배, 제한 시간 40초
+      const pick = zb ? (Z === XZ ? (fin ? XFIN : XBIG[Math.max(0, Math.min(8, (st - 160) / 10))]) : Z.big) : Z.boss, hp = monHp(st) * (st <= EASY ? 5 : 10) * (fin ? 2 : 1);
+      mon = { e: pick[0], name: (zb ? "👑 " : "") + pick[1], hp, max: hp, boss: true, big: zb, final: fin, x: W + 60, hit: 0, dead: 0 };
+      bossTime = fin ? 40 : st <= EASY ? 30 : 25;   // 보스 제한 시간 20초 → 25초
+      if (fin) pops.push({ t: 0, x: W / 2, y: 60, text: "👿 마감 대마왕 등장!", c: "#ff4d6a", big: true, huge: true });
       return;
     }
     // 잡몹: 스테이지 1은 1마리씩, 2부터는 1~3마리가 한꺼번에 몰려옴 (보스까지 남은 수보다 많이는 안 나옴)
@@ -611,6 +624,10 @@ button.sec-h { cursor: pointer; }
       } else if (E.kill < PER_STAGE) { E.kill++; if (E.kill >= PER_STAGE) bossGo = true; }
     } else if (mon.boss) {
       S.stage++; S.kill = 0; bossFail = false; $("bossBtn").hidden = true;
+      const xpFirst = S.stage > (S.top || 1), xpSt = S.stage - 1;
+      if (isXp(xpSt) && xpSt % 10 === 0 && xpFirst && xpSt < 250) { pops.push({ t: -0.6, x: W / 2, y: 190, text: "🎁 원정 보상: 장비 상자!", c: "#ffd66b", big: true }); setTimeout(() => openGearBox(true), 1200); }
+      if (xpSt === 250) pops.push({ t: -0.6, x: W / 2, y: 190, text: "👑 마감 대마왕 격파!!", c: "#ffd66b", big: true, huge: true });
+      if (S.stage === 151) pops.push({ t: -1.2, x: W / 2, y: 190, text: "250에서 대마왕을 잡으면 3차 전직!", c: "#ff7a9a", big: true });
       S.st.boss++; if (S.job) S.jtop[S.job] = Math.max(S.jtop[S.job] || 0, S.stage);
       S.top = Math.max(S.top || 1, S.stage);
       komiHp = maxHp();   // 스테이지를 깨면 체력 가득
@@ -634,8 +651,9 @@ button.sec-h { cursor: pointer; }
     S.st.skills++;
     const two = S.adv >= 2;
     if (two) {   // 2차 전직: 화려한 스킬 (합성 영웅은 전용 스킬)
-      if (F()) { useFuse(fuseKey(S.job, S.fuse)); return; }
-      useSkill2(j); return;
+      if (F()) useFuse(fuseKey(S.job, S.fuse)); else useSkill2(j);
+      if (S.adv >= 3) awaken();   // ✨ 3차: 이어서 각성 일격
+      return;
     }
     pops.push({ t: 0, x: 150, y: 70, text: j.ic + " " + j.sk + "!", c: "#7fd8ff", big: true, huge: true });
     { // 1차 스킬: 맞는 순간 불꽃이 터짐
@@ -688,7 +706,48 @@ button.sec-h { cursor: pointer; }
     songT = songDur();
     pops.push({ t: 0, x: 120, y: 128, text: "🎵 공격력 x" + jv("song", 1) + " (" + songDur().toFixed(1).replace(".0", "") + "초)", c: "#ffd66b" });
   }
+  // ✨ 각성 일격: 2차 스킬이 끝날 즈음 하늘에서 빛기둥이 내리꽂힘 (12배)
+  let awk = null;
+  const awkCol = () => (F() ? FAURA[fuseKey(S.job, S.fuse)] : ACOL[S.job]) || "255,214,107";
+  function awaken() {
+    const c = awkCol(), nm = F() ? "각성 " + FSK[fuseKey(S.job, S.fuse)][0] : SK3[S.job];
+    if (cut) cut.name = nm;
+    setTimeout(() => {
+      if (!mon || mon.dead) return;
+      awk = { t: 0, c };
+      pops.push({ t: 0, x: 150, y: 70, text: "✨ 각성 일격!", c: "rgb(" + c + ")", big: true, huge: true });
+      [784, 1046, 1318, 1568].forEach((f, k) => setTimeout(() => beep(f, .2, "triangle", .05), k * 60));
+      setTimeout(() => {
+        shake = 24; beep(60, .8, "sawtooth", .08, 200);
+        for (let i = 0; i < 50; i++) { const a = Math.random() * Math.PI * 2, v = 200 + Math.random() * 300; parts.push({ x: 262, y: 160, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 140, t: 0, life: .6 + Math.random() * .4, c: i % 3 ? "rgb(" + c + ")" : "#ffffff" }); }
+        hit(atk() * 12, "skill", true);
+      }, 280);
+    }, 1250);
+  }
+  function drawAwk() {
+    awk.t += 1 / 60; const t = awk.t, c = awk.c, MX = 262;
+    ctx.save();
+    if (t < .28) {   // 하늘이 열리며 빛이 모임
+      const p = t / .28;
+      ctx.fillStyle = `rgba(255,255,255,${.12 * p})`; ctx.fillRect(0, 0, W, H);
+      ctx.strokeStyle = `rgba(${c},${p})`; ctx.lineWidth = 3; ctx.shadowColor = `rgb(${c})`; ctx.shadowBlur = 14;
+      ctx.beginPath(); ctx.ellipse(MX, 18, 70 * p, 14 * p, 0, 0, Math.PI * 2); ctx.stroke();
+      for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 + t * 8; star(MX + Math.cos(a) * 60 * (1 - p), 18 + Math.sin(a) * 12 * (1 - p), 5, "#ffffff"); }
+    } else {   // 빛기둥 쾅 → 사라짐
+      const q = (t - .28) / .7, a = Math.max(0, 1 - q);
+      if (q < .1) { ctx.fillStyle = `rgba(255,255,255,${.7 * (1 - q / .1)})`; ctx.fillRect(0, 0, W, H); }
+      const bw = 70 * (1 - q * .6), g = ctx.createLinearGradient(MX - bw, 0, MX + bw, 0);
+      g.addColorStop(0, `rgba(${c},0)`); g.addColorStop(.3, `rgba(${c},${.8 * a})`); g.addColorStop(.5, `rgba(255,255,255,${a})`); g.addColorStop(.7, `rgba(${c},${.8 * a})`); g.addColorStop(1, `rgba(${c},0)`);
+      ctx.fillStyle = g; ctx.fillRect(MX - bw, 0, bw * 2, GROUND);
+      ctx.shadowColor = `rgb(${c})`; ctx.shadowBlur = 18;
+      for (let k = 0; k < 3; k++) { const r = (q - k * .1) * 320; if (r <= 0) continue; ctx.strokeStyle = `rgba(${c},${a})`; ctx.lineWidth = 5 - k; ctx.beginPath(); ctx.ellipse(MX, GROUND, r, r * .22, 0, 0, Math.PI * 2); ctx.stroke(); }
+      for (let i = 0; i < 10; i++) { const y = GROUND - ((q * 400 + i * 37) % GROUND); star(MX + Math.sin(i * 7 + t * 6) * bw * .8, y, 4 * a + 1, `rgba(255,255,255,${a})`); }
+      if (q >= 1) awk = null;
+    }
+    ctx.restore();
+  }
   function drawFx() {
+    if (awk) drawAwk();
     if (fx && fx.fz) { fx.t += 1 / 60; drawFuseFx(); } else if (fx && fx.two) { fx.t += 1 / 60; drawFx2(); } else if (fx) drawFx1();
     if (cut) { cut.t += 1 / 60; drawCut(); if (cut.t > .95) cut = null; }
   }
@@ -1248,6 +1307,14 @@ button.sec-h { cursor: pointer; }
       $("adv2Txt").textContent = "스킬이 [" + j.sk + "] → [" + j.sk2 + "](으)로 진화! 훨씬 세고 화려해져요.";
       $("adv2").hidden = false; renderJob();
       [523, 659, 784, 1046, 1318].forEach((f, k) => setTimeout(() => beep(f, 0.15, "square", 0.04), k * 90));
+    } else if (S.adv === 2 && S.job && S.stage >= JOB3) {   // ✨ 3차 전직 (합성 영웅은 각성)
+      S.adv = 3; save();
+      const j = J(), fk = F() ? fuseKey(S.job, S.fuse) : null;
+      $("adv2Ic").textContent = "✨" + iconOf(S);
+      $("adv2Title").textContent = fk ? "각성! " + nameOf(S) : j.n[2] + "(으)로 3차 전직!";
+      $("adv2Txt").textContent = (fk ? "[" + FSK[fk][0] + "]" : "[" + j.sk2 + "]") + " 뒤에 [" + (fk ? "각성 일격" : SK3[S.job]) + "]이(가) 이어져요! 화려한 새 모습 + 공격력 1.5배 · 체력 1.3배";
+      $("adv2").hidden = false; renderJob();
+      [523, 659, 784, 1046, 1318, 1568].forEach((f, k) => setTimeout(() => beep(f, 0.18, "triangle", 0.05), k * 100));
     }
   }
   $("adv2Ok").addEventListener("click", () => { $("adv2").hidden = true; komiHp = maxHp(); });
@@ -1260,9 +1327,9 @@ button.sec-h { cursor: pointer; }
     $("jobIc").textContent = iconOf(S);
     $("jobName").textContent = j ? jobName() : "직업 없음";
     $("jobTxt").textContent = j && F()
-      ? "🧬 합성 영웅 (" + FUSE[fuseKey(S.job, S.fuse)][1] + ") · 두 직업의 장점 모두 + 공격력 1.3배 · " + skillCd().toFixed(1).replace(".0", "") + "초마다 전용 스킬 [" + FSK[fuseKey(S.job, S.fuse)][0] + "]"
+      ? "🧬 합성 영웅 (" + FUSE[fuseKey(S.job, S.fuse)][1] + ") · 두 직업의 장점 모두 + 공격력 1.3배 · " + skillCd().toFixed(1).replace(".0", "") + "초마다 전용 스킬 [" + FSK[fuseKey(S.job, S.fuse)][0] + "]" + (S.adv >= 3 ? " + 각성 일격 · ✨ 각성 완료!" : " · 스테이지 250 대마왕을 잡으면 각성")
       : j
-      ? j.d + " · " + skillCd().toFixed(1).replace(".0", "") + "초마다 [" + (S.adv >= 2 ? j.sk2 : j.sk) + "]" + (S.adv < 2 ? " · 스테이지 " + JOB2 + "에서 2차 전직" : " · 2차 전직 완료!")
+      ? j.d + " · " + skillCd().toFixed(1).replace(".0", "") + "초마다 [" + (S.adv >= 3 ? j.sk2 + " + " + SK3[S.job] : S.adv >= 2 ? j.sk2 : j.sk) + "]" + (S.adv < 2 ? " · 스테이지 " + JOB2 + "에서 2차 전직" : S.adv < 3 ? " · 스테이지 250 대마왕을 잡으면 3차 전직" : " · ✨ 3차 전직 완료!")
       : "스테이지 1 보스를 잡으면 직업을 고를 수 있어요 (검사·궁수·마법사·조련사·닌자·악마·음유시인)";
   }
 
@@ -1288,7 +1355,7 @@ button.sec-h { cursor: pointer; }
   $("bossBtn").addEventListener("click", () => { wake(); bossFail = false; bossGo = true; komiHp = maxHp(); if (evOn) ev().kill = PER_STAGE; else S.kill = PER_STAGE; $("bossBtn").hidden = true; newMon(); });
   let resetArm = 0;
   $("reset").addEventListener("click", () => {
-    if (Date.now() - resetArm < 3000) { S = Object.assign(fresh(), { seen: true, top: S.top }, keepMeta(), { gear: { weapon: null, hat: null, ring: null } }, S.fuse ? { job: S.job, fuse: S.fuse, adv: 2 } : {}); renderGear(); $("boxMsg").textContent = "장비가 초기화됐어요. 상자를 다시 열어 보세요!"; save(); komiHp = maxHp(); faint = 0; bossFail = false; $("bossBtn").hidden = true; newMon(); $("reset").textContent = "처음부터 다시"; renderUps(); renderJob(); renderMode(); return; }
+    if (Date.now() - resetArm < 3000) { S = Object.assign(fresh(), { seen: true, top: S.top }, keepMeta(), { gear: { weapon: null, hat: null, ring: null } }, S.fuse ? { job: S.job, fuse: S.fuse, adv: Math.max(2, S.adv) } : {}); renderGear(); $("boxMsg").textContent = "장비가 초기화됐어요. 상자를 다시 열어 보세요!"; save(); komiHp = maxHp(); faint = 0; bossFail = false; $("bossBtn").hidden = true; newMon(); $("reset").textContent = "처음부터 다시"; renderUps(); renderJob(); renderMode(); return; }
     resetArm = Date.now(); $("reset").textContent = "정말? 한 번 더 누르기";
     setTimeout(() => { $("reset").textContent = "처음부터 다시"; }, 3000);
   });
@@ -1513,7 +1580,7 @@ button.sec-h { cursor: pointer; }
       const [ia, ib] = fusePick, a = B.slots[ia], d = B.slots[ib];
       if (!grad(a) || !grad(d) || a.job === d.job) return;
       if (!armed("fuse")) { renderSlots(); return; }
-      a.fuse = d.job; a.adv = 2; B.slots[ib] = null;
+      a.fuse = d.job; a.adv = Math.max(2, a.adv); B.slots[ib] = null;
       if (B.cur === ib) B.cur = ia;
       reloadWith();
     }
@@ -1693,6 +1760,7 @@ button.sec-h { cursor: pointer; }
   //   마법사: 보라 고깔모자 → 대마법사: 큰 별 모자·반짝이·남색 로브
   //   조련사: 탐험가 모자·바나나 가방 → 원숭이 대장: 선장 모자·금 견장·노란 망토
   function drawOutfit(job, lv, w, h, now, back) {
+    if (lv >= 3) return drawJob3(job, w, h, now, back);
     if (job === "ninja") return drawNinja(w, h, now, lv, back);
     if (job === "demon") return drawDemon(w, h, now, lv, back);
     if (job === "bard") return drawBard(w, h, now, lv, back);
@@ -2211,6 +2279,196 @@ button.sec-h { cursor: pointer; }
     }
     ctx.restore();
   }
+  function drawAwake(w, h, now, c, back) {   // ✨ 합성 영웅 각성 모습 (3차 전직은 drawJob3)
+    if (back) { rays(w, h, now, c, 14, 1.05); flames(w, h, now, "rgba(" + c + ",.75)", "rgba(" + c + ",0)", 7, 0.7); return; }
+    sparkles(w, h, now, "rgba(255,255,255,A)", 7);
+  }
+  // ---- ✨ 3차 전직 그리기 도우미 ----
+  function rays(w, h, now, c, n, len) {   // 꼬미 뒤에서 빙글 도는 빛줄기 + 빛 번짐 (c = "r,g,b" 또는 "rainbow")
+    ctx.save(); ctx.translate(0, -0.5 * h); ctx.rotate(now * 0.4);
+    for (let i = 0; i < n; i++) {
+      ctx.rotate(Math.PI * 2 / n);
+      const cc = c === "rainbow" ? "hsla(" + ((i * 360 / n + now * 80) % 360) + ",95%,70%," : "rgba(" + c + ",";
+      const g = ctx.createLinearGradient(0, 0, len * w, 0); g.addColorStop(0, cc + ".6)"); g.addColorStop(1, cc + "0)");
+      ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(len * w, -0.08 * w); ctx.lineTo(len * w, 0.08 * w); ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+    const a = ctx.createRadialGradient(0, -0.5 * h, 2, 0, -0.5 * h, 0.75 * h); a.addColorStop(0, "rgba(255,255,255,.35)"); a.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = a; ctx.beginPath(); ctx.arc(0, -0.5 * h, 0.75 * h, 0, Math.PI * 2); ctx.fill();
+  }
+  function sparkles(w, h, now, col, n) {   // 위로 떠오르는 반짝이 (col 의 A = 투명도)
+    for (let i = 0; i < n; i++) { const p = (now * 0.6 + i / n) % 1; star(Math.sin(i * 2.3 + now) * 0.62 * w, -0.05 * h - p * h, 0.045 * w * (1 - p) + 1, col.replace("A", (1 - p).toFixed(2))); }
+  }
+  function flames(w, h, now, c1, c2, n, hgt) {   // 몸 뒤로 타오르는 불꽃 (가운데가 제일 높음)
+    for (let i = 0; i < n; i++) {
+      const k = i / (n - 1), x = (k - 0.5) * 1.0 * w, fh = hgt * h * (1 - Math.abs(k - 0.5) * 0.9) * (0.75 + 0.25 * Math.sin(now * 7 + i * 1.7)), wb = Math.sin(now * 9 + i) * 0.05 * w;
+      const g = ctx.createLinearGradient(0, 0, 0, -fh); g.addColorStop(0, c1); g.addColorStop(1, c2); ctx.fillStyle = g;
+      ctx.beginPath(); ctx.moveTo(x - 0.11 * w, 0); ctx.quadraticCurveTo(x - 0.11 * w, -fh * 0.5, x + wb, -fh); ctx.quadraticCurveTo(x + 0.11 * w, -fh * 0.5, x + 0.11 * w, 0); ctx.closePath(); ctx.fill();
+    }
+  }
+  function crown(cx, y, wd, ht, col, line, gems) {   // 왕관 (뾰족 6개 + 보석)
+    ctx.fillStyle = col; ctx.strokeStyle = line; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(cx - wd / 2, y);
+    for (let i = 0; i <= 10; i++) ctx.lineTo(cx - wd / 2 + i * wd / 10, y - (i % 2 ? ht * 0.5 : ht));
+    ctx.lineTo(cx + wd / 2, y); ctx.closePath(); ctx.fill(); ctx.stroke();
+    for (let i = 0; i <= 10; i += 2) { ctx.fillStyle = "#fff7d6"; ctx.beginPath(); ctx.arc(cx - wd / 2 + i * wd / 10, y - ht, wd * 0.035, 0, Math.PI * 2); ctx.fill(); }
+    gems.forEach((g, i) => gem(cx + (i - (gems.length - 1) / 2) * wd * 0.28, y - ht * 0.22, wd * 0.07, g));
+  }
+  function katana(x, y, ang, len, glow, now) {   // 칼집에 든 닌자도 (등에 멤)
+    ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
+    if (glow) { ctx.shadowColor = glow; ctx.shadowBlur = 10 + Math.sin(now * 6) * 4; }
+    ctx.fillStyle = "#0b0b12"; ctx.strokeStyle = glow || "#3f3f46"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.roundRect(-len * 0.045, -len * 0.72, len * 0.09, len * 0.72, 3); ctx.fill(); ctx.stroke(); ctx.shadowBlur = 0;
+    ctx.fillStyle = "#fbbf24"; ctx.beginPath(); ctx.ellipse(0, -len * 0.74, len * 0.1, len * 0.025, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#1c1917"; ctx.fillRect(-len * 0.035, -len, len * 0.07, len * 0.25);
+    ctx.strokeStyle = "#dc2626"; ctx.lineWidth = 1.5; for (let i = 0; i < 5; i++) { const yy = -len + i * len * 0.05; seg(-len * 0.035, yy, len * 0.035, yy + len * 0.04); }
+    ctx.restore();
+  }
+  // ✨ 직업마다 3차 전용 옷 (뒤에서 도는 빛줄기 + 화려한 장비 + 무기)
+  //   성기사: 날개 달린 황금 투구 · 금 견갑 · 흰 망토 · 태양 방패 · 빛나는 성검
+  //   바람의 궁신: 금 월계관 · 바람 리본 · 바람 고리 · 비취 활과 빛 화살
+  //   대현자: 초승달 별 모자 · 뒤에서 도는 마법진 · 떠다니는 마법책 · 수정 지팡이 · 마법 구슬
+  //   원숭이 왕: 보석 왕관 · 흰 털 목도리 · 빨간 왕실 망토 · 바나나 왕홀 · 바나나 훈장
+  //   그림자 군주: 보라 그림자 불꽃 · 엇갈린 쌍검 · 뿔 달린 검은 두건 · 붉은 눈빛 · 보라 마검
+  //   대마왕: 뿔 4개 · 작은 금관 · 지옥불 · 거대 불꽃 날개 · 가시 목깃 · 불타는 삼지창
+  //   천상의 가수: 무지개 빛줄기 · 별 티아라 · 헤드셋 마이크 · 황금 하프 · 무지개 음표
+  function drawJob3(job, w, h, now, back) {
+    const cx = HX * w, by = HY * h, u = w / 80, sw = Math.sin(now * 3);
+    ctx.save(); ctx.lineCap = "round";
+    if (back) rays(w, h, now, job === "bard" ? "rainbow" : ACOL[job], 14, 1.05);
+    if (job === "sword") {
+      if (back) {
+        drawCape(w, h, now, ["#f8fafc", "#d4a017"]);
+        ctx.strokeStyle = "#fbbf24"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(0.40 * w + sw * 0.04 * w, -0.02 * h); ctx.quadraticCurveTo(-0.03 * w + sw * 0.04 * w, 0.04 * h, -0.46 * w + sw * 0.04 * w, -0.02 * h); ctx.stroke();
+      } else {
+        fHelm(w, h, "#fff7d6", "#e0b13a", "#7a5a08", "#fbbf24");
+        wing(cx - 0.33 * w, by - 0.08 * h, -1, Math.sin(now * 4) * 0.12, u * 1.15); wing(cx + 0.33 * w, by - 0.08 * h, 1, Math.sin(now * 4) * 0.12, u * 1.15);
+        star(cx, by - 0.25 * h, 0.075 * w, "#ffffff"); gem(cx, by - 0.012 * h, 0.04 * w, "#38bdf8");
+        for (const sx of [-0.3, 0.24]) { ctx.fillStyle = "#fbbf24"; ctx.strokeStyle = "#7a5a08"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(sx * w, -0.41 * h, 0.12 * w, 0.05 * h, 0, Math.PI, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+        ctx.save(); ctx.translate(-0.36 * w, -0.22 * h); ctx.shadowColor = "#ffd66b"; ctx.shadowBlur = 12;   // 태양 방패
+        ctx.fillStyle = "#fbbf24"; ctx.strokeStyle = "#7a5a08"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, 0.18 * w, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.shadowBlur = 0;
+        ctx.fillStyle = "#fff7d6"; ctx.beginPath(); ctx.arc(0, 0, 0.13 * w, 0, Math.PI * 2); ctx.fill();
+        ctx.rotate(now); star(0, 0, 0.11 * w, "#f59e0b"); ctx.restore();
+        fSword(0.44 * w, -0.14 * h, 0.28, 0.88 * h, "#fffbe6", "#ffd66b", now, "#38bdf8");
+        sparkles(w, h, now, "rgba(255,240,180,A)", 6);
+      }
+    } else if (job === "bow") {
+      if (back) {
+        drawQuiver(w, h, 2);
+        drawCape(w, h, now, ["#059669", "#064e3b"]);
+        tails(-0.2 * w, -0.47 * h, w, h, now, "rgba(236,253,245,.9)", 0.95); tails(-0.2 * w, -0.32 * h, w, h, now + 1.3, "rgba(52,211,153,.9)", 0.85);
+        for (let i = 0; i < 3; i++) { const ph = now * 3 + i * 2; ctx.strokeStyle = "rgba(167,243,208,.75)"; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(0, -0.15 * h - i * 0.28 * h, 0.62 * w - i * 0.08 * w, 0.09 * h, 0, Math.PI + ph % 1, Math.PI * 2 + ph % 1); ctx.stroke(); }
+      } else {
+        for (let i = 0; i < 9; i++) { const a = Math.PI + 0.2 + i * (Math.PI - 0.4) / 8, x = cx + Math.cos(a) * 0.35 * w, y = by + 0.02 * h + Math.sin(a) * 0.21 * h;
+          ctx.fillStyle = i % 2 ? "#fbbf24" : "#fde047"; ctx.strokeStyle = "#7a5a08"; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(x, y, 0.075 * w, 0.03 * h, a + Math.PI / 2, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+        gem(cx, by - 0.21 * h, 0.06 * w, "#34d399");
+        for (let i = 0; i < 3; i++) { const ph = now * 3 + i * 2; ctx.strokeStyle = "rgba(209,250,229,.85)"; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(0, -0.15 * h - i * 0.28 * h, 0.62 * w - i * 0.08 * w, 0.09 * h, 0, ph % 1, Math.PI + ph % 1); ctx.stroke(); }
+        fBow(0.40 * w, -0.42 * h, 0, 0.5 * h, "#10b981", "#ecfdf5", "#6ee7b7", "#ffffff");
+        sparkles(w, h, now, "rgba(209,250,229,A)", 6);
+      }
+    } else if (job === "magic") {
+      if (back) {
+        ctx.save(); ctx.translate(0, -0.55 * h); ctx.rotate(now * 0.8); ctx.shadowColor = "#a78bfa"; ctx.shadowBlur = 10; ctx.strokeStyle = "rgba(196,181,253,.85)"; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(0, 0, 0.8 * w, 0, Math.PI * 2); ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0, 0.66 * w, 0, Math.PI * 2); ctx.stroke();
+        for (let s2 = 0; s2 < 2; s2++) { ctx.beginPath(); for (let q = 0; q <= 3; q++) { const an = -Math.PI / 2 + s2 * Math.PI / 3 + q * Math.PI * 2 / 3; ctx[q ? "lineTo" : "moveTo"](Math.cos(an) * 0.66 * w, Math.sin(an) * 0.66 * w); } ctx.stroke(); }
+        ctx.fillStyle = "#e9d5ff"; for (let i = 0; i < 12; i++) { const an = i * Math.PI / 6; ctx.beginPath(); ctx.arc(Math.cos(an) * 0.73 * w, Math.sin(an) * 0.73 * w, 0.025 * w, 0, Math.PI * 2); ctx.fill(); }
+        ctx.restore();
+        drawCape(w, h, now, ["#1e1b4b", "#0b0820"]);
+        for (const [a, b] of [[-0.36, -0.12], [0.30, -0.10], [-0.40, -0.30], [0.34, -0.30], [0, -0.06]]) star(a * w + Math.sin(now * 2.5) * 0.03 * w, b * h, 0.04 * w, "rgba(253,230,138,.95)");
+      } else {
+        drawWizard(w, h, now, 2);
+        ctx.fillStyle = "#fde68a"; ctx.beginPath(); ctx.arc(cx + 0.0 * w, by - 0.2 * h, 0.09 * w, 0, Math.PI * 2); ctx.fill();   // 모자의 초승달
+        ctx.fillStyle = "#2b2a7a"; ctx.beginPath(); ctx.arc(cx + 0.04 * w, by - 0.215 * h, 0.08 * w, 0, Math.PI * 2); ctx.fill();
+        gem(cx - 0.12 * w, by - 0.035 * h, 0.035 * w, "#f472b6"); gem(cx + 0.12 * w, by - 0.035 * h, 0.035 * w, "#38bdf8");
+        ctx.save(); ctx.translate(-0.62 * w, -0.62 * h + sw * 0.03 * h); ctx.rotate(-0.15);   // 떠다니는 마법책
+        glowDot(0, 0, 0.3 * w, "167,139,250", 0.6);
+        ctx.fillStyle = "#4c1d95"; ctx.fillRect(-0.24 * w, -0.13 * w, 0.48 * w, 0.28 * w);
+        ctx.fillStyle = "#fef3c7"; ctx.fillRect(-0.22 * w, -0.11 * w, 0.21 * w, 0.24 * w); ctx.fillRect(0.01 * w, -0.11 * w, 0.21 * w, 0.24 * w);
+        ctx.strokeStyle = "#8b5cf6"; ctx.lineWidth = 1.2; for (let i = 0; i < 4; i++) { seg(-0.19 * w, -0.06 * w + i * 0.05 * w, -0.04 * w, -0.06 * w + i * 0.05 * w); seg(0.04 * w, -0.06 * w + i * 0.05 * w, 0.19 * w, -0.06 * w + i * 0.05 * w); }
+        ctx.restore();
+        ctx.save(); ctx.translate(0.42 * w, -0.02 * h); ctx.rotate(0.1);   // 수정 지팡이
+        ctx.strokeStyle = "#7c4a1e"; ctx.lineWidth = 4 * u; seg(0, 0, 0, -0.78 * h);
+        ctx.strokeStyle = "#fbbf24"; ctx.lineWidth = 2 * u; ctx.beginPath(); ctx.arc(0, -0.86 * h, 0.1 * w, 0.3, Math.PI - 0.3, true); ctx.stroke();
+        glowDot(0, -0.88 * h, 0.2 * w + sw * 0.02 * w, "167,139,250", 1); gem(0, -0.88 * h, 0.06 * w, "#c4b5fd");
+        ctx.restore();
+        for (const [i, c] of [[0, "56,189,248"], [1, "244,114,182"], [2, "250,204,21"]]) { const a = now * 1.6 + i * 2.09; glowDot(Math.cos(a) * 0.62 * w, -0.5 * h + Math.sin(a) * 0.38 * h, 0.09 * w, c, 0.95); }
+      }
+    } else if (job === "tamer") {
+      if (back) {
+        drawCape(w, h, now, ["#b91c1c", "#450a0a"]);
+        ctx.fillStyle = "#ffffff"; ctx.strokeStyle = "#d4d4d8"; ctx.lineWidth = 1;
+        for (let i = 0; i < 9; i++) { const x = (-0.44 + i * 0.105) * w + Math.sin(now * 2.5) * 0.04 * w; ctx.beginPath(); ctx.arc(x, -0.02 * h, 0.06 * w, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+      } else {
+        crown(cx, -0.86 * h, 0.58 * w, 0.24 * h, "#fbbf24", "#7a5a08", ["#ef4444", "#3b82f6", "#22c55e"]);
+        emoji("🍌", cx, -1.11 * h, 0.2 * w, 0.4);
+        ctx.fillStyle = "#ffffff"; ctx.strokeStyle = "#d4d4d8"; ctx.lineWidth = 1.5;   // 흰 털 목도리 (검은 점)
+        ctx.beginPath(); ctx.ellipse(-0.02 * w, -0.43 * h, 0.32 * w, 0.06 * h, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#111"; for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.ellipse((-0.22 + i * 0.1) * w, -0.43 * h + (i % 2 ? 0.015 : -0.01) * h, 0.012 * w, 0.02 * h, 0, 0, Math.PI * 2); ctx.fill(); }
+        ctx.fillStyle = "#fbbf24"; ctx.strokeStyle = "#7a5a08"; ctx.beginPath(); ctx.arc(-0.02 * w, -0.3 * h, 0.07 * w, 0, Math.PI * 2); ctx.fill(); ctx.stroke();   // 바나나 훈장
+        emoji("🍌", -0.02 * w, -0.3 * h, 0.09 * w, 0);
+        ctx.save(); ctx.translate(0.44 * w, 0.0 * h); ctx.rotate(0.12);   // 바나나 왕홀
+        ctx.strokeStyle = "#fbbf24"; ctx.lineWidth = 4 * u; seg(0, 0, 0, -0.72 * h);
+        ctx.fillStyle = "#fbbf24"; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(0, -0.2 * h - i * 0.2 * h, 0.035 * w, 0, Math.PI * 2); ctx.fill(); }
+        glowDot(0, -0.82 * h, 0.2 * w + sw * 0.02 * w, "250,204,21", 0.9); emoji("🍌", 0, -0.8 * h, 0.22 * w, 0.5);
+        ctx.restore();
+        sparkles(w, h, now, "rgba(255,236,150,A)", 6);
+      }
+    } else if (job === "ninja") {
+      if (back) {
+        flames(w, h, now, "rgba(88,28,135,.95)", "rgba(255,32,80,0)", 7, 1.05);
+        for (let i = 1; i >= 0; i--) shadowKomi(-0.36 * w - i * 0.22 * w, -0.06 * h - i * 0.05 * h + Math.sin(now * 3 + i) * 2, w * (0.9 - i * 0.08), 0.5 - i * 0.12, "#ff2050");
+        tails(cx - 0.33 * w, by - 0.01 * h, w, h, now, "#7f1d1d", 0.6); tails(-0.22 * w, -0.42 * h, w, h, now + 1, "#b91c1c", 0.9);
+        katana(-0.05 * w, -0.22 * h, 0.85, 0.95 * h, "#ff2050", now); katana(0.02 * w, -0.22 * h, -0.85, 0.95 * h, "#a855f7", now);
+      } else {
+        hood(w, h, "#09090f", "#000000", "#7f1d1d", "#fbbf24");
+        for (const d of [-1, 1]) horn(cx + d * 0.22 * w, -0.88 * h, d, 0.17 * h, "#b91c1c", "#fca5a5");
+        ninjaMask(w, h, "#09090f", "#000000"); neckScarf(w, h, "#b91c1c", "#450a0a");
+        const gl = (Math.sin(now * 3) + 1) / 2;
+        for (const ex of [-0.17, 0.13]) star(cx + ex * w + 0.08 * w, -0.70 * h, 0.03 * w + gl * 0.04 * w, "rgba(255,40,80," + (0.5 + gl * 0.5).toFixed(2) + ")");
+        fSword(0.44 * w, -0.12 * h, 0.4, 0.78 * h, "#1f1f2e", "#a855f7", now, "#ff2050");
+        for (let i = 0; i < 4; i++) { const p = (now * 0.9 + i / 4) % 1; ctx.globalAlpha = 1 - p; glowDot((i - 1.5) * 0.3 * w, -0.1 * h - p * 0.6 * h, 0.07 * w, "147,51,234", 0.9); ctx.globalAlpha = 1; }
+      }
+    } else if (job === "demon") {
+      if (back) {
+        flames(w, h, now, "rgba(220,38,38,.95)", "rgba(251,146,60,0)", 7, 1.1);
+        drawCape(w, h, now, ["#450a0a", "#1a0008"]);
+        const f = Math.sin(now * 5) * 0.15;
+        ctx.save(); ctx.shadowColor = "#ff4d1a"; ctx.shadowBlur = 14;
+        batWing(-0.22 * w, -0.40 * h, 2.1 * u, -1, f, "#1f0a14", "#ff4d1a"); batWing(0.18 * w, -0.40 * h, 2.1 * u, 1, f, "#1f0a14", "#ff4d1a");
+        ctx.restore();
+      } else {
+        for (const d of [-1, 1]) horn(cx + d * 0.25 * w, -0.83 * h, d, 0.38 * h, "#18181b", "#ef4444");
+        for (const d of [-1, 1]) horn(cx + d * 0.1 * w, -0.92 * h, d, 0.18 * h, "#18181b", "#f97316");
+        crown(cx, -0.92 * h, 0.22 * w, 0.1 * h, "#fbbf24", "#7a5a08", ["#ef4444"]);
+        ctx.fillStyle = "#18181b"; ctx.strokeStyle = "#ef4444"; ctx.lineWidth = 1.5;   // 가시 목깃
+        ctx.beginPath(); ctx.roundRect(-0.3 * w, -0.46 * h, 0.56 * w, 0.06 * h, 3); ctx.fill(); ctx.stroke();
+        for (let i = 0; i < 6; i++) { const x = (-0.27 + i * 0.1) * w; ctx.fillStyle = "#fbbf24"; ctx.beginPath(); ctx.moveTo(x - 0.03 * w, -0.46 * h); ctx.lineTo(x, -0.52 * h); ctx.lineTo(x + 0.03 * w, -0.46 * h); ctx.fill(); }
+        ctx.save(); ctx.translate(0.46 * w, 0.02 * h); ctx.rotate(0.12); ctx.shadowColor = "#ff2050"; ctx.shadowBlur = 14 + sw * 4;   // 불타는 삼지창
+        ctx.strokeStyle = "#fbbf24"; ctx.lineWidth = 3.5 * u; seg(0, 0, 0, -0.82 * h);
+        ctx.lineWidth = 3 * u; ctx.beginPath(); ctx.moveTo(-0.16 * w, -0.95 * h); ctx.quadraticCurveTo(-0.16 * w, -0.8 * h, 0, -0.8 * h); ctx.quadraticCurveTo(0.16 * w, -0.8 * h, 0.16 * w, -0.95 * h); ctx.stroke(); seg(0, -0.8 * h, 0, -1.0 * h);
+        ctx.fillStyle = "#ef4444"; for (const x of [-0.16, 0, 0.16]) { ctx.beginPath(); ctx.moveTo(x * w - 0.04 * w, (x ? -0.95 : -1.0) * h); ctx.lineTo(x * w, (x ? -1.02 : -1.08) * h); ctx.lineTo(x * w + 0.04 * w, (x ? -0.95 : -1.0) * h); ctx.fill(); }
+        ctx.restore();
+        for (let i = 0; i < 4; i++) { const p = (now * 1.1 + i / 4) % 1; ctx.globalAlpha = 1 - p; glowDot((i - 1.5) * 0.35 * w, -0.15 * h - p * 0.7 * h, 0.08 * w, i % 2 ? "255,90,30" : "239,68,68", 0.95); ctx.globalAlpha = 1; }
+      }
+    } else if (job === "bard") {
+      if (back) {
+        drawCape(w, h, now, ["#ec4899", "#831843"]);
+        ctx.save(); ctx.translate(-0.48 * w, -0.42 * h + sw * 0.02 * h); ctx.rotate(-0.2); ctx.shadowColor = "#fde68a"; ctx.shadowBlur = 12;   // 황금 하프
+        ctx.strokeStyle = "#fbbf24"; ctx.lineWidth = 3.5 * u; ctx.beginPath(); ctx.moveTo(-0.15 * w, 0.25 * h); ctx.lineTo(-0.15 * w, -0.25 * h); ctx.quadraticCurveTo(0.05 * w, -0.32 * h, 0.2 * w, -0.12 * h); ctx.lineTo(-0.15 * w, 0.25 * h); ctx.stroke(); ctx.shadowBlur = 0;
+        ctx.strokeStyle = "rgba(255,255,255,.85)"; ctx.lineWidth = 1; for (let i = 1; i <= 4; i++) { const x = -0.15 * w + i * 0.07 * w; seg(x, -0.27 * h + i * 0.03 * h, x, 0.25 * h - i * 0.09 * h); }
+        ctx.restore();
+      } else {
+        beret(w, h, "#fdf2f8", "#be185d", "#fbbf24", "#fde68a", "#f59e0b", true, now);
+        crown(cx + 0.03 * w, -0.88 * h, 0.34 * w, 0.1 * h, "#fde68a", "#b45309", ["#ec4899", "#a78bfa", "#38bdf8"]);
+        ctx.save(); ctx.shadowColor = "#ffffff"; ctx.shadowBlur = 12; star(cx + 0.03 * w, -1.02 * h, 0.075 * w + sw * 0.01 * w, "#fff7d6"); ctx.restore();
+        ctx.strokeStyle = "#1f1f2e"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0.3 * w, -0.66 * h); ctx.quadraticCurveTo(0.26 * w, -0.5 * h, 0.1 * w, -0.5 * h); ctx.stroke();   // 헤드셋 마이크
+        ctx.fillStyle = "#1f1f2e"; ctx.beginPath(); ctx.arc(0.09 * w, -0.5 * h, 0.03 * w, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#ec4899"; ctx.beginPath(); ctx.arc(0.3 * w, -0.66 * h, 0.045 * w, 0, Math.PI * 2); ctx.fill();
+        for (let i = 0; i < 6; i++) { const a = now * 1.6 + i * Math.PI / 3; note(Math.cos(a) * 0.68 * w, -0.52 * h + Math.sin(a) * 0.38 * h, 0.19 * w, "hsl(" + ((i * 60 + now * 90) % 360) + ",95%,70%)", i % 2); }
+        sparkles(w, h, now, "rgba(255,240,250,A)", 6);
+      }
+    }
+    ctx.restore();
+  }
   function drawKomi(now) {
     const t = tier();
     const w = 78 + t * 6, h = w * 398 / 331;
@@ -2221,9 +2479,9 @@ button.sec-h { cursor: pointer; }
     ctx.fillStyle = "rgba(0,0,0,.35)"; ctx.beginPath(); ctx.ellipse(x, y + 3, 30, 6, 0, 0, Math.PI * 2); ctx.fill();
     if (t >= 4) { const a = ctx.createRadialGradient(x, y - h / 2, 10, x, y - h / 2, h * 0.8); a.addColorStop(0, "rgba(255,214,107,.45)"); a.addColorStop(1, "rgba(255,214,107,0)"); ctx.fillStyle = a; ctx.fillRect(x - h, y - h * 1.4, h * 2, h * 1.6); }
     // 직업 옷: 1차 = 기본 / 2차 = 1차가 진화한 화려한 모습 (drawOutfit 참고)
-    const lv = S.job ? (S.adv >= 2 ? 2 : 1) : 0, fk = F() ? fuseKey(S.job, S.fuse) : null;
+    const lv = S.job ? (S.adv >= 3 ? 3 : S.adv >= 2 ? 2 : 1) : 0, fk = F() ? fuseKey(S.job, S.fuse) : null;
     if (fk) { const c = FAURA[fk] || "255,255,255", a = ctx.createRadialGradient(x, y - h / 2, 8, x, y - h / 2, h * 0.75); a.addColorStop(0, "rgba(" + c + "," + (0.38 + Math.sin(now * 3) * 0.08).toFixed(2) + ")"); a.addColorStop(1, "rgba(" + c + ",0)"); ctx.fillStyle = a; ctx.fillRect(x - h, y - h * 1.4, h * 2, h * 1.6); }
-    if (k.complete) { ctx.save(); ctx.translate(x - (komiHit > 0 ? 8 : 0), y); ctx.rotate(faint > 0 ? -1.2 : lunge * 0.004); if (komiHit > 0) ctx.filter = "sepia(1) saturate(4) hue-rotate(-30deg)"; ctx.scale(1 - breathe, 1 + breathe); if (fk) drawFused(fk, w, h, now, true, lunge); else if (lv) drawOutfit(S.job, lv, w, h, now, true); ctx.drawImage(k, -w / 2, -h, w, h); if (fk) drawFused(fk, w, h, now, false, lunge); else if (lv) drawOutfit(S.job, lv, w, h, now, false); ctx.restore(); }
+    if (k.complete) { ctx.save(); ctx.translate(x - (komiHit > 0 ? 8 : 0), y); ctx.rotate(faint > 0 ? -1.2 : lunge * 0.004); if (komiHit > 0) ctx.filter = "sepia(1) saturate(4) hue-rotate(-30deg)"; ctx.scale(1 - breathe, 1 + breathe); if (S.adv >= 3 && fk) drawAwake(w, h, now, awkCol(), true); if (fk) drawFused(fk, w, h, now, true, lunge); else if (lv) drawOutfit(S.job, lv, w, h, now, true); ctx.drawImage(k, -w / 2, -h, w, h); if (fk) drawFused(fk, w, h, now, false, lunge); else if (lv) drawOutfit(S.job, lv, w, h, now, false); if (S.adv >= 3 && fk) drawAwake(w, h, now, awkCol(), false); ctx.restore(); }
     if (songT > 0) for (let i = 0; i < 3; i++) { const a = now * 2.5 + i * 2.09; note(x + Math.cos(a) * w * 0.7, y - h * 0.5 + Math.sin(a) * h * 0.4, 16, ["#ffd66b", "#f9a8d4", "#7fd8ff"][i], i % 2); }   // 🎵 노래 버프 중
     if (S.evHat) emoji("🎃", x + w * 0.32, y - h * 0.84 + Math.sin(now * 3) * 1.5, 20, 0.3);   // 할로윈 한정 호박 장식
     const gear = TIERS[t][2];
@@ -2231,7 +2489,7 @@ button.sec-h { cursor: pointer; }
     if (gear === "🗡️" && !J()) emoji("🗡️", x + 34, y - h * 0.45, 30, -0.6 + lunge * 0.03);
     if (gear === "👑" && !F()) emoji("👑", x + 2, y - h + 8 + Math.sin(now * 3) * 2, 30);
     // 직업 무기 (2차 전직하면 더 크게 + 반짝)
-    if (J() && (!F() || MIXK[fk])) {
+    if (J() && (!F() || MIXK[fk]) && !(S.adv >= 3 && !F())) {   // 3차는 옷에 전용 무기가 있음
       const big = S.adv >= 2 ? 1.3 : 1, mx = fk && MIXK[fk];
       if (S.adv >= 2) { ctx.fillStyle = "rgba(127,216,255,.25)"; ctx.beginPath(); ctx.arc(x + 36, y - h * 0.45, 24 + Math.sin(now * 5) * 3, 0, Math.PI * 2); ctx.fill(); }
       wpDraw(mx ? mx[0] : S.job, x + 36, y - h * 0.32, 30 * big, -0.4 + lunge * 0.03 + Math.sin(now * 2) * .08, now);
@@ -2246,7 +2504,7 @@ button.sec-h { cursor: pointer; }
     ctx.font = "12px 'Gowun Dodum', sans-serif"; ctx.textAlign = "center"; ctx.fillStyle = "#f4eefe";
     ctx.fillText(J() ? jobName() + " · " + TIERS[t][1].replace(" 꼬미", "") : TIERS[t][1], 92, GROUND + 38);
     // 꼬미 체력 막대
-    const bw = 96, bx = 92 - bw / 2, by = GROUND - h - 22;
+    const bw = 96, bx = 92 - bw / 2, by = GROUND - h - (S.adv >= 3 ? 36 : 22);   // 3차는 머리 장식이 높아서 체력 막대를 위로
     ctx.fillStyle = "rgba(0,0,0,.5)"; ctx.beginPath(); ctx.roundRect(bx, by, bw, 9, 5); ctx.fill();
     const r = Math.max(0, komiHp / maxHp());
     ctx.fillStyle = r < 0.3 ? "#ff4d6a" : "#5fe3a1"; ctx.beginPath(); ctx.roundRect(bx, by, Math.max(4, bw * r), 9, 5); ctx.fill();
@@ -2262,7 +2520,7 @@ button.sec-h { cursor: pointer; }
       ctx.fillStyle = "#5fe3a1"; ctx.beginPath(); ctx.roundRect(m.x - 20, GROUND - s - 14, 40, 6, 3); ctx.fill();
     }
     if (!mon) return;
-    const size = mon.big ? 124 : mon.boss ? 104 : 74;
+    const size = mon.final ? 150 : mon.big ? 124 : mon.boss ? 104 : 74;
     const sh = (mon.hit > 0 ? (Math.random() - .5) * 8 : 0) - (mon.lunge > 0 ? Math.sin(mon.lunge * Math.PI) * 40 : 0);
     const dy = Math.sin(now * 4) * 4;
     let a = 1, sc = 1;
