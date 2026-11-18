@@ -393,8 +393,8 @@ button.sec-h { cursor: pointer; }
     bard:  { ic: "🎵", wp: "🎸", n: ["음유시인 꼬미", "전설의 가수 꼬미", "천상의 가수 꼬미"], d: "체력 1.1배, 노래로 잠깐 공격력 UP, 바나나 +10%", sk: "힘의 노래", sk2: "대합창 콘서트", cd: 6, hp: [1.1, 1.25], gold: [1.1, 1.15], song: [1.4, 1.6] },   // 버프 + 돈
   };
   const OLDJ = ["sword", "bow", "magic", "tamer"], NEWJ = ["ninja", "demon", "bard"];
-  // ✨ 3차 전직 (스테이지 250 마감 대마왕을 잡으면): 2차 스킬 + 각성 일격, 공격력 1.5배 · 체력 1.3배. 합성 영웅은 "각성"
-  const JOB3 = 251;
+  // ✨ 3차 전직 (스테이지 150 보스를 잡으면 → 대마왕 원정을 3차의 힘으로): 2차 스킬 + 각성 일격, 공격력 1.5배 · 체력 1.3배. 합성 영웅은 "각성"
+  const JOB3 = 151;
   const SK3 = { sword: "성검 심판", bow: "천공의 화살", magic: "대현자의 별비", tamer: "원숭이 왕의 행차", ninja: "그림자 군주 난무", demon: "대마왕 강림", bard: "천상의 대합창" };
   const AWK = { atk: 1.5, hp: 1.3 };
   const ACOL = { sword: "255,214,107", bow: "134,239,172", magic: "167,139,250", tamer: "250,204,21", ninja: "255,60,100", demon: "239,68,68", bard: "244,114,182" };
@@ -492,7 +492,7 @@ button.sec-h { cursor: pointer; }
     { n: "☁️ 하늘 섬", sky: ["#0369a1", "#7dd3fc"], gr: "#4d7c0f", line: "#facc15", sc: "sky", mons: [["🦅", "독수리"], ["🎈", "풍선 괴물"], ["⚡", "번개 정령"]], boss: ["🌪️", "폭풍 거인"], big: ["⛈️", "천둥 군주"] },
     { n: "🌌 우주", sky: ["#000000", "#2e1065"], gr: "#1f1f2e", line: "#e879f9", sc: "space", mons: [["👽", "외계인"], ["🌑", "그림자 별"], ["🛰️", "고장 위성"]], boss: ["🛸", "UFO 함장"], big: ["🪐", "행성 파괴자"] },
   ];
-  // 🏰 대마왕 원정: 스테이지 151~250 은 마감 대마왕의 성. 10스테이지마다 대마왕 부하 9명 → 250에서 마감 대마왕 (잡으면 3차 전직)
+  // 🏰 대마왕 원정: 스테이지 151~250 은 마감 대마왕의 성. 10스테이지마다 대마왕 부하 9명 → 250에서 마감 대마왕 (3차 전직은 150 보스를 잡을 때)
   const XZ = { n: "🏰 대마왕 원정", sky: ["#1a0005", "#7f1d1d"], gr: "#1c0a0a", line: "#ef4444", sc: "castle",
     mons: [["😈", "꼬마 마귀"], ["👺", "도깨비 병사"], ["🦇", "마왕성 박쥐"], ["💀", "해골 기사"], ["🕷️", "독거미"]], boss: ["👿", "마왕 친위대장"], big: ["🧟", "좀비 장군"] };
   const XBIG = [["🧟", "좀비 장군"], ["🧌", "트롤 문지기"], ["🐍", "저주 뱀 여왕"], ["🦂", "독침 사령관"], ["👹", "오니 장군"], ["🧙", "어둠의 마녀"], ["🐲", "흑룡"], ["🗿", "저주받은 거상"], ["🧛", "흡혈 백작"]];
@@ -662,7 +662,7 @@ button.sec-h { cursor: pointer; }
       if (isXp(xpSt) && xpSt % 10 === 0 && xpFirst && xpSt < 250) { pops.push({ t: -0.6, x: W / 2, y: 190, text: "🎁 원정 보상: 장비 상자!", c: "#ffd66b", big: true }); setTimeout(() => openGearBox(true), 1200); }
       if (xpSt === 250) pops.push({ t: -0.6, x: W / 2, y: 190, text: "👑 마감 대마왕 격파!!", c: "#ffd66b", big: true, huge: true });
       if (S.stage === LATE + 1) pops.push({ t: -1.2, x: W / 2, y: 190, text: "⚠️ 이제 악당이 단단해지고 보스가 기술을 써요!", c: "#ff7a9a", big: true });
-      if (S.stage === 151) pops.push({ t: -1.2, x: W / 2, y: 190, text: "250에서 대마왕을 잡으면 3차 전직!", c: "#ff7a9a", big: true });
+      if (S.stage === 151) pops.push({ t: -1.2, x: W / 2, y: 190, text: "🏰 대마왕 원정 시작! 250의 마감 대마왕을 잡아요!", c: "#ff7a9a", big: true });
       S.st.boss++; if (S.job) S.jtop[S.job] = Math.max(S.jtop[S.job] || 0, S.stage);
       S.top = Math.max(S.top || 1, S.stage);
       komiHp = maxHp();   // 스테이지를 깨면 체력 가득
@@ -1372,9 +1372,9 @@ button.sec-h { cursor: pointer; }
     $("jobIc").textContent = iconOf(S);
     $("jobName").textContent = j ? jobName() : "직업 없음";
     $("jobTxt").textContent = j && F()
-      ? "🧬 합성 영웅 (" + FUSE[fuseKey(S.job, S.fuse)][1] + ") · 두 직업의 장점 모두 + 공격력 1.3배 · " + skillCd().toFixed(1).replace(".0", "") + "초마다 전용 스킬 [" + FSK[fuseKey(S.job, S.fuse)][0] + "]" + (S.adv >= 3 ? " + 각성 일격 · ✨ 각성 완료!" : " · 스테이지 250 대마왕을 잡으면 각성")
+      ? "🧬 합성 영웅 (" + FUSE[fuseKey(S.job, S.fuse)][1] + ") · 두 직업의 장점 모두 + 공격력 1.3배 · " + skillCd().toFixed(1).replace(".0", "") + "초마다 전용 스킬 [" + FSK[fuseKey(S.job, S.fuse)][0] + "]" + (S.adv >= 3 ? " + 각성 일격 · ✨ 각성 완료!" : " · 스테이지 150 보스를 잡으면 각성")
       : j
-      ? j.d + " · " + skillCd().toFixed(1).replace(".0", "") + "초마다 [" + (S.adv >= 3 ? j.sk2 + " + " + SK3[S.job] : S.adv >= 2 ? j.sk2 : j.sk) + "]" + (S.adv < 2 ? " · 스테이지 " + JOB2 + "에서 2차 전직" : S.adv < 3 ? " · 스테이지 250 대마왕을 잡으면 3차 전직" : " · ✨ 3차 전직 완료!")
+      ? j.d + " · " + skillCd().toFixed(1).replace(".0", "") + "초마다 [" + (S.adv >= 3 ? j.sk2 + " + " + SK3[S.job] : S.adv >= 2 ? j.sk2 : j.sk) + "]" + (S.adv < 2 ? " · 스테이지 " + JOB2 + "에서 2차 전직" : S.adv < 3 ? " · 스테이지 150 보스를 잡으면 3차 전직" : " · ✨ 3차 전직 완료!")
       : "스테이지 1 보스를 잡으면 직업을 고를 수 있어요 (검사·궁수·마법사·조련사·닌자·악마·음유시인)";
   }
 
