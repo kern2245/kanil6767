@@ -601,6 +601,7 @@ button.sec-h { cursor: pointer; }
       pops.push({ t: 0, x: 262, y: 64, text: "💚 보스 회복 +" + fmt(hl), c: "#5fe3a1", big: true });
     }
   }
+  const WANT_A = 100, WANT_B = 200, WANT_T = 20;   // 💰 현상수배 보스: 나오는 스테이지, 제한 시간
   function newMon() {
     const isBoss = bossGo;
     bossGo = false;
@@ -614,6 +615,15 @@ button.sec-h { cursor: pointer; }
       mon = { e: pick[0], name: (zb ? "👑 " : "") + pick[1], hp, max: hp, boss: true, big: zb, final: fin, x: W + 60, hit: 0, dead: 0 };
       bossTime = fin ? 40 : st <= EASY ? 30 : 25;   // 보스 제한 시간 20초 → 25초
       if (fin) pops.push({ t: 0, x: W / 2, y: 60, text: "👿 마감 대마왕 등장!", c: "#ff4d6a", big: true, huge: true });
+      return;
+    }
+    // 💰 현상수배 보스: 100~200 에서 가끔 (스테이지마다 최대 1번)
+    if (!evOn && st >= WANT_A && st <= WANT_B && S.wantSt !== st && Math.random() < 0.06) {
+      S.wantSt = st;
+      const p = Z.boss, hp = Math.floor(monHp(st) * 8);
+      mon = { e: p[0], name: "💰 현상수배 " + p[1], hp, max: hp, boss: false, wanted: WANT_T, x: W + 60, hit: 0, dead: 0 };
+      pops.push({ t: 0, x: W / 2, y: 60, text: "💰 현상수배 보스 등장! " + WANT_T + "초 안에 잡아요!", c: "#ffd66b", big: true, huge: true });
+      [880, 1175, 880, 1175].forEach((f, k) => setTimeout(() => beep(f, 0.1, "square", 0.04), k * 110));
       return;
     }
     // 잡몹: 스테이지 1은 1마리씩, 2부터는 1~3마리가 한꺼번에 몰려옴 (보스까지 남은 수보다 많이는 안 나옴)
@@ -674,10 +684,16 @@ button.sec-h { cursor: pointer; }
       return;
     }
     // 일반 몬스터(잡몹)를 잡아도 체력은 회복되지 않음 (보스를 잡으면 아래에서 가득 회복)
-    const g = Math.ceil((mon.boss ? mGold(curLv()) * 12 : mGold(curLv())) * (1 + gearB("ring") + misB()) * (evOn ? 2 : 1) * GOLD_MUL * goldJ());   // 이벤트 = 바나나 2배   // 반지 = 바나나 보너스
+    const g = Math.ceil((mon.boss ? mGold(curLv()) * 12 : mon.wanted ? mGold(curLv()) * 36 : mGold(curLv())) * (1 + gearB("ring") + misB()) * (evOn ? 2 : 1) * GOLD_MUL * goldJ());   // 이벤트 = 바나나 2배   // 반지 = 바나나 보너스
     S.gold += g;
     for (let i = 0; i < (mon.boss ? 12 : 5); i++) coins.push({ x: 262, y: 160, vx: (Math.random() - .5) * 220, vy: -200 - Math.random() * 200, t: 0 });
     pops.push({ t: 0, x: 262, y: 70, text: "+🍌 " + fmt(g), c: "#ffd66b", big: true });
+    if (mon.wanted) {   // 💰 현상금!
+      S.st.wanted = (S.st.wanted || 0) + 1; shake = 10;
+      for (let i = 0; i < 20; i++) coins.push({ x: 262, y: 160, vx: (Math.random() - .5) * 320, vy: -220 - Math.random() * 240, t: 0 });
+      pops.push({ t: -0.3, x: W / 2, y: 150, text: "💰 현상금 획득! + 장비 상자", c: "#ffd66b", big: true, huge: true });
+      setTimeout(() => openGearBox(true), 1100);
+    }
     beep(988, 0.07, "square", 0.04); setTimeout(() => beep(1318, 0.1, "square", 0.04), 60);
     if (evOn) {   // 🎃 이벤트 진행 (평소 스테이지는 그대로)
       const E = ev();
@@ -699,6 +715,7 @@ button.sec-h { cursor: pointer; }
       }
       if (xpSt === 250) pops.push({ t: -0.6, x: W / 2, y: 190, text: "👑 마감 대마왕 격파!!", c: "#ffd66b", big: true, huge: true });
       if (S.stage === LATE + 1) pops.push({ t: -1.2, x: W / 2, y: 190, text: "⚠️ 이제 악당이 단단해지고 보스마다 다른 기술을 써요!", c: "#ff7a9a", big: true });
+      if (S.stage === WANT_A + 1) pops.push({ t: -1.5, x: W / 2, y: 220, text: "💰 이제 가끔 현상수배 보스가 나타나요!", c: "#ffd66b", big: true });
       if (S.stage === 151) pops.push({ t: -1.2, x: W / 2, y: 190, text: "🏰 대마왕 원정 시작! 250의 마감 대마왕을 잡아요!", c: "#ff7a9a", big: true });
       if (S.stage === OTHER_TOP && !evOn) { pops.push({ t: -0.9, x: W / 2, y: 150, text: "🚀 따라잡기 완료!", c: "#7fd8ff", big: true }); renderJob(); }
       S.st.boss++; if (S.job) S.jtop[S.job] = Math.max(S.jtop[S.job] || 0, S.stage);
@@ -2636,17 +2653,26 @@ button.sec-h { cursor: pointer; }
       ctx.fillStyle = "#5fe3a1"; ctx.beginPath(); ctx.roundRect(m.x - 20, GROUND - s - 14, 40, 6, 3); ctx.fill();
     }
     if (!mon) return;
-    const size = mon.final ? 150 : mon.big ? 124 : mon.boss ? 104 : 74;
+    const size = mon.final ? 150 : mon.big ? 124 : mon.boss ? 104 : mon.wanted != null ? 96 : 74;
     const sh = (mon.hit > 0 ? (Math.random() - .5) * 8 : 0) - (mon.lunge > 0 ? Math.sin(mon.lunge * Math.PI) * 40 : 0);
     const dy = Math.sin(now * 4) * 4;
     let a = 1, sc = 1;
     if (mon.dead) { a = Math.max(0, 1 - mon.dead / 0.4); sc = 1 + mon.dead; }
     ctx.globalAlpha = a;
     ctx.fillStyle = "rgba(0,0,0,.35)"; ctx.beginPath(); ctx.ellipse(mon.x, GROUND + 3, size * 0.4, 7, 0, 0, Math.PI * 2); ctx.fill();
+    if (mon.wanted > 0 && !mon.dead) {   // 💰 황금빛 + 남은 시간
+      const cy = GROUND - size / 2, r = ctx.createRadialGradient(mon.x, cy, 6, mon.x, cy, size * 0.9);
+      r.addColorStop(0, "rgba(255,214,107," + (0.5 + Math.sin(now * 8) * 0.15).toFixed(2) + ")"); r.addColorStop(1, "rgba(255,214,107,0)");
+      ctx.fillStyle = r; ctx.beginPath(); ctx.arc(mon.x, cy, size * 0.9, 0, Math.PI * 2); ctx.fill();
+      for (let i = 0; i < 5; i++) { const p = (now * 0.7 + i / 5) % 1; star(mon.x + Math.sin(i * 2.1 + now) * size * 0.5, GROUND - p * size * 1.1, 4 * (1 - p) + 1, "rgba(255,240,180," + (1 - p).toFixed(2) + ")"); }
+      ctx.save(); ctx.font = "bold 17px sans-serif"; ctx.textAlign = "center"; ctx.lineWidth = 4; ctx.strokeStyle = "rgba(40,20,0,.85)"; ctx.fillStyle = mon.wanted < 5 ? "#ff4d6a" : "#ffd66b";
+      const tx = "💰 " + Math.ceil(mon.wanted) + "초"; ctx.strokeText(tx, mon.x, GROUND - size - 4); ctx.fillText(tx, mon.x, GROUND - size - 4); ctx.restore();
+      ctx.fillStyle = "#000";   // 이모지가 반짝이의 투명한 색을 물려받지 않게
+    }
     if (mon.rage && !mon.dead) { const r = ctx.createRadialGradient(mon.x, GROUND - size / 2, 6, mon.x, GROUND - size / 2, size * 0.85); r.addColorStop(0, "rgba(255,40,60," + (0.45 + Math.sin(now * 12) * 0.15).toFixed(2) + ")"); r.addColorStop(1, "rgba(255,40,60,0)"); ctx.fillStyle = r; ctx.beginPath(); ctx.arc(mon.x, GROUND - size / 2, size * 0.85, 0, Math.PI * 2); ctx.fill(); }
-    if (mon.dodge > 0 && !mon.dead) ctx.globalAlpha = 0.4 + Math.sin(now * 14) * 0.15;
+    if (mon.dodge > 0 && !mon.dead) ctx.globalAlpha = a * (0.4 + Math.sin(now * 14) * 0.15);
     emoji(mon.e, mon.x + sh, GROUND - 4 + dy * (mon.dead ? 0 : 1), size, mon.hit > 0 ? 0.15 : 0, -sc, sc);
-    ctx.globalAlpha = 1;
+    ctx.globalAlpha = a;
     if (mon.shield > 0 && !mon.dead) {   // 🛡️ 파란 방어막 거품
       const a = Math.min(1, mon.shield) * 0.9, cy = GROUND - size / 2;
       ctx.save(); ctx.shadowColor = "#7fd8ff"; ctx.shadowBlur = 14;
@@ -2692,6 +2718,15 @@ button.sec-h { cursor: pointer; }
       if (atkTimer >= 1 / aps()) { atkTimer = 0; swing = 1; hit(atk(), "komi", true); }
       if (helpers() > 0) { helpTimer += dt; if (helpTimer >= 1) { helpTimer = 0; hit(helpDps(), "help", false); } }
       if (J()) { skillT += dt; if (skillT >= skillCd()) { skillT = 0; useSkill(); } }
+      if (mon && mon.wanted > 0 && !mon.dead) {   // 💰 현상수배 보스 시간
+        mon.wanted -= dt;
+        if (mon.wanted <= 0) {
+          mon.wanted = 0; mon.fled = true; mon.dead = 0.001;
+          pops.push({ t: 0, x: W / 2, y: 60, text: "💨 현상수배 보스가 도망갔어요…", c: "#c4b5fd", big: true });
+          beep(600, .4, "sine", .04, -400);
+          const me = mon; setTimeout(() => { if (mon === me) newMon(); }, 450);   // 다음 악당
+        }
+      }
       // 악당의 반격!
       if (mon && !mon.dead) {
         monAtkT += dt;
