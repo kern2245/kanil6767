@@ -58,6 +58,11 @@ h1 span { color: var(--sekai); }
 .stage { position: relative; border-radius: 18px; overflow: hidden; background: var(--card); box-shadow: 0 10px 40px rgba(0,0,0,.45); touch-action: manipulation; }
 canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
 .bossbar { display: flex; gap: 8px; align-items: center; }
+/* 🎃 기간 한정 이벤트 줄 (게임 화면 바로 아래) */
+.evbar { display: flex; gap: 10px; align-items: center; margin-top: 8px; padding: 8px 10px; border-radius: 12px; background: linear-gradient(90deg, rgba(255,140,26,.28), rgba(124,58,237,.28)); border: 1px solid rgba(255,160,60,.45); }
+.evbar[hidden] { display: none; }
+.evbar .btn { flex: none; background: #ff8c1a; color: #1a0b00; }
+.evbar small { font-size: .78rem; line-height: 1.35; color: var(--ink); }
 .bossbar .btn { flex: 1; }
 .ups { display: flex; flex-direction: column; gap: 8px; }
 .buyrow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
@@ -256,6 +261,11 @@ button.sec-h { cursor: pointer; }
     </div>
   </div>
 
+  <div class="evbar" id="evBar" hidden>
+    <button class="btn" id="evBtn" type="button">🎃 이벤트 입장</button>
+    <small id="evTxt"></small>
+  </div>
+
   <nav class="tabs" role="tablist" aria-label="메뉴">
     <button type="button" role="tab" id="tb-up" data-tab="up" aria-selected="true">⚔️ 강화</button>
     <button type="button" role="tab" id="tb-gear" data-tab="gear" aria-selected="false">🎁 장비</button>
@@ -364,7 +374,7 @@ button.sec-h { cursor: pointer; }
   const META = () => ({ gear: { weapon: null, hat: null, ring: null }, ach: [], st: { boss: 0, deaths: 0, boxes: 0, legend: 0, kills: 0, skills: 0, ups: 0 }, jtop: {}, mis: {} });
   delete S.ach;   // 예전 업적 기록은 지움
   { const m = META(); for (const k in m) if (!S[k] || typeof S[k] !== "object") S[k] = m[k]; S.gear = Object.assign(m.gear, S.gear); S.st = Object.assign(m.st, S.st); }
-  const keepMeta = () => ({ gear: S.gear, st: S.st, jtop: S.jtop, mis: S.mis });
+  const keepMeta = () => ({ gear: S.gear, st: S.st, jtop: S.jtop, mis: S.mis, ev: S.ev, evHat: S.evHat });
   // 장비: 무기(공격력) · 모자(체력) · 반지(바나나), 등급 4개, 같은 등급이 또 나오면 ★ (최대 5, ★마다 +20%)
   const RAR = [["일반", 60, 5], ["희귀", 28, 12], ["영웅", 10, 25], ["전설", 2, 50]];   // 이름, 확률%, 기본 보너스%
   const SLOTS = { weapon: ["🗡️", "무기", "공격력"], hat: ["🎩", "모자", "체력"], ring: ["💍", "반지", "바나나"] };
@@ -459,6 +469,18 @@ button.sec-h { cursor: pointer; }
   const zoneName = (st) => { const r = Math.floor((st - 1) / 100); return zoneOf(st).n + (r ? " (" + (r + 1) + "회차)" : ""); };
 
   // ---- 전투 상태 ----
+  // ---- 🎃 기간 한정 이벤트: 11월 = 할로윈 (평소 스테이지와 진행 기록이 따로: S.ev) ----
+  //   단계마다 잡몹 5마리 → 보스. 처음 10단계까지는 단계를 깰 때마다 무료 장비 상자, 10단계를 깨면 한정 호박 장식(S.evHat)
+  //   악당 레벨 = 지금 스테이지 - 5 + (단계 - 1) → 내 실력에 맞춰 조금씩 세짐 (10단계 = 지금 스테이지 + 4). 바나나는 평소의 2배
+  let evOn = false;
+  const evLive = () => new Date().getMonth() === 10;
+  const EV_Y = () => new Date().getFullYear();
+  const ev = () => { if (!S.ev || S.ev.y !== EV_Y()) S.ev = { y: EV_Y(), st: 1, kill: 0 }; return S.ev; };
+  const evLv = () => Math.max(1, S.stage - 5) + (ev().st - 1);
+  const curLv = () => (evOn ? evLv() : S.stage);
+  const curKill = () => (evOn ? ev().kill : S.kill);
+  const HZ = { n: "🎃 할로윈 이벤트", sky: ["#12051f", "#4a1d5e"], gr: "#24152e", line: "#ff8c1a", sc: "halloween",
+    mons: [["🎃", "잭오랜턴"], ["👻", "장난 유령"], ["🦇", "박쥐 떼"], ["🕷️", "왕거미"], ["🍬", "사탕 도둑"]], boss: ["🧙", "심술 마녀"], big: ["🎃", "거대 호박 대마왕"] };
   let pack = [];   // 지금 악당 뒤에서 기다리는 잡몹들 (스테이지 2부터 1~3마리씩 몰려옴)
   let mon = null, swing = 0, atkTimer = 0, helpTimer = 0, laughT = 0, pops = [], parts = [], coins = [], shake = 0;
   let bossTime = 0, bossFail = false, bossFailT = 0, skillT = 0, fx = null;
@@ -468,10 +490,11 @@ button.sec-h { cursor: pointer; }
   function die() {
     komiHp = 0; faint = 3;
     S.st.deaths++; S.top = Math.max(S.top || 1, S.stage);
-    S.kill = 0; bossFail = false; bossGo = false; $("bossBtn").hidden = true;
+    if (evOn) ev().kill = 0; else S.kill = 0;
+    bossFail = false; bossGo = false; $("bossBtn").hidden = true;
     shake = 14;
     beep(300, .5, "sawtooth", .07, -250); setTimeout(() => beep(110, .6, "square", .06, -40), 200);
-    pops.push({ t: 0, x: W / 2, y: 60, text: "😵 쓰러졌다! " + S.stage + "스테이지 처음부터", c: "#ff7a9a", big: true });
+    pops.push({ t: 0, x: W / 2, y: 60, text: "😵 쓰러졌다! " + (evOn ? "이벤트 " + ev().st + "단계" : S.stage + "스테이지") + " 처음부터", c: "#ff7a9a", big: true });
     save();
     if (mon) mon.dead = 0.001;   // 지금 악당(보스)은 사라지고
     pack = [];
@@ -482,7 +505,7 @@ button.sec-h { cursor: pointer; }
     komiHp = maxHp(); skillT = 0; monAtkT = 0; pops = []; newMon(); renderUps(); renderJob(); renderMode();
   }
   function failBoss(msg) { // 보스 실패 → 이 스테이지에서 바나나 더 모으기
-    bossFail = true; S.kill = 0;   // 실패하면 5마리 더 잡고 다시 자동 도전
+    bossFail = true; if (evOn) ev().kill = 0; else S.kill = 0;   // 실패하면 5마리 더 잡고 다시 자동 도전
     pops.push({ t: 0, x: W / 2, y: 60, text: msg, c: "#ff4d6a", big: true });
     beep(300, .4, "sawtooth", .05, -200); bossFailT = 1.5;
     newMon();
@@ -491,8 +514,8 @@ button.sec-h { cursor: pointer; }
     const isBoss = bossGo;
     bossGo = false;
     if (isBoss) { bossFail = false; komiHp = maxHp(); }   // 보스전 시작: 체력 가득
-    const st = S.stage;
-    const Z = zoneOf(st), zb = isBoss && st % 10 === 0;   // 10, 20, 30... 은 구역 대보스
+    const st = curLv();
+    const Z = evOn ? HZ : zoneOf(st), zb = isBoss && (evOn ? ev().st % 10 === 0 : st % 10 === 0);   // 10, 20, 30... 은 구역 대보스
     pack = [];
     if (isBoss) {
       const pick = zb ? Z.big : Z.boss, hp = monHp(st) * (st <= EASY ? 5 : 10);
@@ -501,9 +524,9 @@ button.sec-h { cursor: pointer; }
       return;
     }
     // 잡몹: 스테이지 1은 1마리씩, 2부터는 1~3마리가 한꺼번에 몰려옴 (보스까지 남은 수보다 많이는 안 나옴)
-    const left = Math.max(1, PER_STAGE - S.kill);
-    const n = st >= 2 ? Math.min(left, 1 + Math.floor(Math.random() * 3)) : 1;
-    const mob = (i) => { const pick = st >= 2 ? Z.mons[Math.floor(Math.random() * Z.mons.length)] : Z.mons[(st * 3 + S.kill) % Z.mons.length], hp = monHp(st); return { e: pick[0], name: pick[1] + " Lv." + st, hp, max: hp, boss: false, x: W + 60 + i * 34, hit: 0, dead: 0 }; };
+    const left = Math.max(1, PER_STAGE - curKill());
+    const n = evOn || st >= 2 ? Math.min(left, 1 + Math.floor(Math.random() * 3)) : 1;
+    const mob = (i) => { const pick = evOn || st >= 2 ? Z.mons[Math.floor(Math.random() * Z.mons.length)] : Z.mons[(st * 3 + S.kill) % Z.mons.length], hp = monHp(st); return { e: pick[0], name: pick[1] + " Lv." + st, hp, max: hp, boss: false, x: W + 60 + i * 34, hit: 0, dead: 0 }; };
     mon = mob(0);
     for (let i = 1; i < n; i++) pack.push(mob(i));
     if (n > 1) pops.push({ t: 0, x: 210, y: 70, text: "악당 " + n + "마리 등장!", c: "#ffb347", big: true });
@@ -546,12 +569,22 @@ button.sec-h { cursor: pointer; }
     mon.dead = 0.001; laughT = 0.6;
     if (!mon.boss) S.st.kills++;
     // 일반 몬스터(잡몹)를 잡아도 체력은 회복되지 않음 (보스를 잡으면 아래에서 가득 회복)
-    const g = Math.ceil((mon.boss ? mGold(S.stage) * 12 : mGold(S.stage)) * (1 + gearB("ring") + misB()));   // 반지 = 바나나 보너스
+    const g = Math.ceil((mon.boss ? mGold(curLv()) * 12 : mGold(curLv())) * (1 + gearB("ring") + misB()) * (evOn ? 2 : 1));   // 이벤트 = 바나나 2배   // 반지 = 바나나 보너스
     S.gold += g;
     for (let i = 0; i < (mon.boss ? 12 : 5); i++) coins.push({ x: 262, y: 160, vx: (Math.random() - .5) * 220, vy: -200 - Math.random() * 200, t: 0 });
     pops.push({ t: 0, x: 262, y: 70, text: "+🍌 " + fmt(g), c: "#ffd66b", big: true });
     beep(988, 0.07, "square", 0.04); setTimeout(() => beep(1318, 0.1, "square", 0.04), 60);
-    if (mon.boss) {
+    if (evOn) {   // 🎃 이벤트 진행 (평소 스테이지는 그대로)
+      const E = ev();
+      if (mon.boss) {
+        E.st++; E.kill = 0; bossFail = false; $("bossBtn").hidden = true; komiHp = maxHp(); S.st.boss++;
+        pops.push({ t: 0, x: W / 2, y: 40, text: "🎃 이벤트 " + (E.st - 1) + "단계 클리어!", c: "#ff9f1c", big: true, huge: true });
+        if (E.st <= 11) setTimeout(() => openGearBox(true), 600);   // 처음 10단계: 단계마다 무료 장비 상자
+        if (E.st === 11 && !S.evHat) { S.evHat = true; pops.push({ t: -0.9, x: W / 2, y: 150, text: "🎃 한정 호박 장식 획득!", c: "#ffb347", big: true, huge: true }); }
+        [523, 659, 784, 1046].forEach((f, k) => setTimeout(() => beep(f, 0.15, "square", 0.04), k * 90));
+        save(); renderEv();
+      } else if (E.kill < PER_STAGE) { E.kill++; if (E.kill >= PER_STAGE) bossGo = true; }
+    } else if (mon.boss) {
       S.stage++; S.kill = 0; bossFail = false; $("bossBtn").hidden = true;
       S.st.boss++; if (S.job) S.jtop[S.job] = Math.max(S.jtop[S.job] || 0, S.stage);
       S.top = Math.max(S.top || 1, S.stage);
@@ -1013,7 +1046,25 @@ button.sec-h { cursor: pointer; }
   }
 
   // ---- 입력 ----
-  $("bossBtn").addEventListener("click", () => { wake(); bossFail = false; bossGo = true; komiHp = maxHp(); S.kill = PER_STAGE; $("bossBtn").hidden = true; newMon(); });
+  // ---- 🎃 이벤트 입장 / 나가기 (11월에만 버튼이 보임, 기간이 끝나면 자동으로 원래 스테이지로) ----
+  function renderEv() {
+    const live = evLive(); $("evBar").hidden = !live;
+    if (!live) { if (evOn) setEv(false); return; }
+    const E = ev(), days = 31 - new Date().getDate();
+    $("evBtn").textContent = evOn ? "↩ 원래 스테이지로" : "🎃 할로윈 이벤트 입장";
+    $("evTxt").textContent = evOn
+      ? "🎃 " + (E.st <= 10 ? E.st + "/10단계" : E.st + "단계 (무한)") + " · 바나나 2배" + (E.st <= 10 ? " · 단계마다 장비 상자" : "") + " · 평소 스테이지 " + S.stage + "은 그대로예요"
+      : "11월 한정 · " + days + "일 남음! 바나나 2배 · 단계마다 장비 상자 · 10단계 깨면 " + (S.evHat ? "한정 호박 장식 ✔ 받음" : "한정 호박 장식");
+  }
+  function setEv(on) {
+    evOn = on; bossGo = false; bossFail = false; $("bossBtn").hidden = true; pack = []; fx = null; faint = 0; komiHp = maxHp(); monAtkT = 0;
+    if (on) { const E = ev(); if (E.kill >= PER_STAGE) bossGo = true; pops.push({ t: 0, x: W / 2, y: 60, text: "🎃 할로윈 이벤트 입장!", c: "#ff9f1c", big: true, huge: true }); }
+    else { if (S.kill >= PER_STAGE) bossGo = true; pops.push({ t: 0, x: W / 2, y: 60, text: "스테이지 " + S.stage + "(으)로 돌아왔어요", c: "#a855f7", big: true }); }
+    newMon(); renderEv(); save();
+  }
+  $("evBtn").addEventListener("click", () => { wake(); setEv(!evOn); });
+  renderEv(); setInterval(renderEv, 60000);
+  $("bossBtn").addEventListener("click", () => { wake(); bossFail = false; bossGo = true; komiHp = maxHp(); if (evOn) ev().kill = PER_STAGE; else S.kill = PER_STAGE; $("bossBtn").hidden = true; newMon(); });
   let resetArm = 0;
   $("reset").addEventListener("click", () => {
     if (Date.now() - resetArm < 3000) { S = Object.assign(fresh(), { seen: true, top: S.top }, keepMeta(), { gear: { weapon: null, hat: null, ring: null } }, S.fuse ? { job: S.job, fuse: S.fuse, adv: 2 } : {}); renderGear(); $("boxMsg").textContent = "장비가 초기화됐어요. 상자를 다시 열어 보세요!"; save(); komiHp = maxHp(); faint = 0; bossFail = false; $("bossBtn").hidden = true; newMon(); $("reset").textContent = "처음부터 다시"; renderUps(); renderJob(); renderMode(); return; }
@@ -1075,7 +1126,7 @@ button.sec-h { cursor: pointer; }
     $("gold").textContent = fmt(S.gold);
     $("dps").textContent = fmt(dps());
     const bc = boxCost(); $("openBox").disabled = S.gold < bc; $("tb-gear").classList.toggle("dot", S.gold >= bc); if (typeof misHtml === "string") { $("tb-mis").classList.toggle("dot", misReady()); if (!$("tab-mis").hidden) renderMis(); } $("openBox").textContent = "상자 열기 🍌 " + fmt(bc);
-    $("stg").textContent = S.stage + "-" + (mon && mon.boss ? "보스" : Math.min(PER_STAGE, S.kill + 1));
+    $("stg").textContent = (evOn ? "🎃" + ev().st : S.stage) + "-" + (mon && mon.boss ? "보스" : Math.min(PER_STAGE, curKill() + 1));
   }
 
   // ---- 🎁 장비 상자 ----
@@ -1287,7 +1338,7 @@ button.sec-h { cursor: pointer; }
   let scroll = 0;
   const STARS = Array.from({ length: 46 }, (_, i) => [(i * 97) % 360, (i * 53) % 200, 0.6 + (i % 3) * 0.6, i]);
   function bg(now) {
-    const boss = mon && mon.boss, Z = zoneOf(S.stage), par = scroll * 0.3;
+    const boss = mon && mon.boss, Z = evOn ? HZ : zoneOf(S.stage), par = scroll * 0.3;
     const g = ctx.createLinearGradient(0, 0, 0, GROUND);
     g.addColorStop(0, Z.sky[0]); g.addColorStop(1, Z.sky[1]);
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
@@ -1384,6 +1435,30 @@ button.sec-h { cursor: pointer; }
       const m = (now * 0.4) % 1.6;
       if (m < 1) { const mx = 360 - m * 300, my = 20 + m * 90; ctx.strokeStyle = "rgba(255,255,255,.8)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(mx + 30, my - 9); ctx.stroke(); }
       each(120, 0.5, (x, h) => { ctx.fillStyle = "#2a2a40"; ctx.beginPath(); ctx.ellipse(x + 60, GROUND, 70, 18 + (h % 12), 0, Math.PI, Math.PI * 2); ctx.fill(); });
+    }
+    if (sc === "halloween") {   // 🎃 할로윈: 큰 주황 달 + 날아다니는 박쥐 + 마른 나무 + 무덤 + 호박 등불 + 보라 안개
+      twinkle(20, 0.5);
+      disc(290, 58, 50, "rgba(255,160,60,.18)"); disc(290, 58, 34, "#ffb347");
+      ctx.fillStyle = "rgba(200,90,20,.35)"; ctx.beginPath(); ctx.arc(280, 52, 7, 0, Math.PI * 2); ctx.arc(300, 66, 5, 0, Math.PI * 2); ctx.fill();
+      for (let i = 0; i < 4; i++) { const bx = ((i * 97 + now * 40) % (W + 60)) - 30, by = 40 + i * 18 + Math.sin(now * 5 + i) * 6; emoji("🦇", bx, by, 16, Math.sin(now * 8 + i) * .2); }
+      each(170, 0.4, (x, h) => {
+        const tx = x + 60, th = 90 + (h % 30);
+        ctx.strokeStyle = "#1b0f2e"; ctx.lineCap = "round"; ctx.lineWidth = 6;
+        ctx.beginPath(); ctx.moveTo(tx, GROUND); ctx.lineTo(tx, GROUND - th); ctx.stroke(); ctx.lineWidth = 3;
+        for (const [a, l, yy] of [[-0.8, 30, 0.75], [0.7, 26, 0.6], [-0.5, 20, 0.95], [0.9, 18, 0.9]]) { const y0 = GROUND - th * yy; ctx.beginPath(); ctx.moveTo(tx, y0); ctx.lineTo(tx + Math.sin(a) * l, y0 - Math.cos(a) * l * 0.7); ctx.stroke(); }
+      });
+      each(80, 1, (x, h) => {
+        if (h % 3 === 0) {
+          const gl = ctx.createRadialGradient(x + 40, GROUND - 12, 2, x + 40, GROUND - 12, 26 + Math.sin(now * 4 + h) * 3); gl.addColorStop(0, "rgba(255,170,60,.55)"); gl.addColorStop(1, "rgba(255,120,20,0)");
+          ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(x + 40, GROUND - 12, 30, 0, Math.PI * 2); ctx.fill();
+          emoji("🎃", x + 40, GROUND - 2, 24);
+        } else {
+          ctx.fillStyle = "#4b4560"; ctx.beginPath(); ctx.roundRect(x + 28, GROUND - 34, 24, 34, [12, 12, 0, 0]); ctx.fill();
+          ctx.fillStyle = "#2f2a40"; ctx.fillRect(x + 36, GROUND - 24, 8, 2); ctx.fillRect(x + 39, GROUND - 29, 2, 11);
+        }
+      });
+      ctx.fillStyle = "rgba(196,181,253,.13)";
+      for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.ellipse(((i * 150 + now * 15) % (W + 200)) - 100, GROUND - 8 - i * 8, 120, 14, 0, 0, Math.PI * 2); ctx.fill(); }
     }
     if (boss) { ctx.fillStyle = "rgba(140,0,40,.28)"; ctx.fillRect(0, 0, W, GROUND); }   // 보스전: 화면이 붉어짐
     ctx.fillStyle = Z.gr; ctx.fillRect(0, GROUND, W, H - GROUND);
@@ -1721,6 +1796,7 @@ button.sec-h { cursor: pointer; }
     const lv = S.job ? (S.adv >= 2 ? 2 : 1) : 0, fk = F() ? fuseKey(S.job, S.fuse) : null;
     if (fk) { const c = FAURA[fk] || "255,255,255", a = ctx.createRadialGradient(x, y - h / 2, 8, x, y - h / 2, h * 0.75); a.addColorStop(0, "rgba(" + c + "," + (0.38 + Math.sin(now * 3) * 0.08).toFixed(2) + ")"); a.addColorStop(1, "rgba(" + c + ",0)"); ctx.fillStyle = a; ctx.fillRect(x - h, y - h * 1.4, h * 2, h * 1.6); }
     if (k.complete) { ctx.save(); ctx.translate(x - (komiHit > 0 ? 8 : 0), y); ctx.rotate(faint > 0 ? -1.2 : lunge * 0.004); if (komiHit > 0) ctx.filter = "sepia(1) saturate(4) hue-rotate(-30deg)"; ctx.scale(1 - breathe, 1 + breathe); if (fk) drawFused(fk, w, h, now, true, lunge); else if (lv) drawOutfit(S.job, lv, w, h, now, true); ctx.drawImage(k, -w / 2, -h, w, h); if (fk) drawFused(fk, w, h, now, false, lunge); else if (lv) drawOutfit(S.job, lv, w, h, now, false); ctx.restore(); }
+    if (S.evHat) emoji("🎃", x + w * 0.32, y - h * 0.84 + Math.sin(now * 3) * 1.5, 20, 0.3);   // 할로윈 한정 호박 장식
     const gear = TIERS[t][2];
     if (gear === "⭐") emoji("⭐", x + 14, y - h + 6, 22, Math.sin(now * 2) * .2);
     if (gear === "🗡️" && !J()) emoji("🗡️", x + 34, y - h * 0.45, 30, -0.6 + lunge * 0.03);
@@ -1807,7 +1883,7 @@ button.sec-h { cursor: pointer; }
           monAtkT = 0; mon.lunge = 1;
           setTimeout(() => {
             if (!mon || mon.dead || faint > 0) return;
-            const d = mDmg(S.stage, mon.boss);
+            const d = mDmg(curLv(), mon.boss);
             komiHp -= d; komiHit = 0.25; shake = Math.max(shake, mon.boss ? 7 : 4);
             pops.push({ t: 0, x: 92 + (Math.random() - .5) * 30, y: 120, text: "-" + fmt(d), c: "#ff4d6a" });
             beep(140, 0.12, "sawtooth", 0.05, -60);
@@ -1850,15 +1926,15 @@ button.sec-h { cursor: pointer; }
       ctx.strokeText(p.text, p.x, p.y - p.t * 36); ctx.fillText(p.text, p.x, p.y - p.t * 36);
     }
     ctx.globalAlpha = 1;
-    { const zl = zoneName(S.stage) + " " + ((S.stage - 1) % 10 + 1) + "/10";
+    { const zl = evOn ? HZ.n + " " + (ev().st <= 10 ? ev().st + "/10단계" : ev().st + "단계 (무한)") : zoneName(S.stage) + " " + ((S.stage - 1) % 10 + 1) + "/10";
       ctx.font = "12px 'Gowun Dodum', sans-serif"; ctx.textAlign = "left"; ctx.lineWidth = 3; ctx.strokeStyle = "rgba(10,5,25,.7)"; ctx.fillStyle = "rgba(255,255,255,.92)";
       ctx.strokeText(zl, 12, 46); ctx.fillText(zl, 12, 46); }
     if (mon && mon.boss && !mon.dead) {
       ctx.fillStyle = bossTime < 8 ? "#ff4d6a" : "#f4eefe"; ctx.font = "18px 'Black Han Sans', sans-serif"; ctx.textAlign = "left";
       ctx.fillText("⏳ " + Math.ceil(bossTime) + "초", 12, 28);
-    } else if (S.kill < PER_STAGE) {
+    } else if (curKill() < PER_STAGE) {
       ctx.fillStyle = "rgba(244,238,254,.8)"; ctx.font = "13px 'Gowun Dodum', sans-serif"; ctx.textAlign = "left";
-      ctx.fillText("보스까지 " + Math.max(0, PER_STAGE - S.kill) + "마리", 12, 26);
+      ctx.fillText("보스까지 " + Math.max(0, PER_STAGE - curKill()) + "마리", 12, 26);
     } else {
       ctx.fillStyle = "#ff8a9c"; ctx.font = "13px 'Gowun Dodum', sans-serif"; ctx.textAlign = "left";
       ctx.fillText("바나나 모으는 중 · 준비되면 보스 도전!", 12, 26);
