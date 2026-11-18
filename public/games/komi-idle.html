@@ -219,7 +219,7 @@ button.sec-h { cursor: pointer; }
 
     <div class="overlay" id="slotBox" hidden role="dialog" aria-modal="true" aria-labelledby="slotTitle">
       <h2 id="slotTitle">👥 영웅 슬롯</h2>
-      <p>영웅을 3명까지 따로 키울 수 있어요. 영웅마다 스테이지·강화·장비·미션이 따로 저장돼요.</p>
+      <p>영웅을 5명까지 따로 키울 수 있어요. 새 영웅은 다른 영웅의 최고 스테이지까지 🚀 따라잡기(바나나 3배 · 공격력 2배)를 받아요. 영웅마다 스테이지·강화·장비·미션이 따로 저장돼요.</p>
       <div class="slots" id="slotList"></div>
       <h3>🧬 영웅 합성</h3>
       <p>2차 전직 + 스테이지 100을 깬 <b style="color:var(--ink)">서로 다른 직업</b> 영웅 2명을 고르면 합성 영웅이 돼요. 먼저 고른 영웅이 남고(스테이지·강화·장비 그대로), 두 번째 영웅은 재료로 사라져요.</p>
@@ -344,10 +344,11 @@ button.sec-h { cursor: pointer; }
   const fresh = () => ({ gold: 0, stage: 1, kill: 0, atk: 0, spd: 0, crit: 0, tap: 0, help: 0, last: Date.now(), seen: false, job: null, adv: 0, buy: "1", top: 1, jsk: 0 });
   let needHpMig = false;
   let S = fresh();
-  // 영웅 슬롯 3개: B = { cur: 지금 슬롯, t: 마지막 저장 시각, slots: [영웅 기록 | null] × 3 }
+  // 영웅 슬롯 5개: B = { cur: 지금 슬롯, t: 마지막 저장 시각, slots: [영웅 기록 | null] × 5 }  (예전 3칸 기록도 그대로 읽힘)
   const KEY2 = "komi-slots-v1";
-  let B = { cur: 0, t: 0, slots: [null, null, null] };
-  const fixB = (o) => ({ cur: Math.min(2, Math.max(0, o.cur | 0)), t: typeof o.t === "number" ? o.t : (typeof o.last === "number" ? o.last : 0), slots: [0, 1, 2].map((i) => (o.slots[i] && typeof o.slots[i] === "object" ? o.slots[i] : null)) });
+  const NSLOT = 5;
+  let B = { cur: 0, t: 0, slots: Array(NSLOT).fill(null) };
+  const fixB = (o) => ({ cur: Math.min(NSLOT - 1, Math.max(0, o.cur | 0)), t: typeof o.t === "number" ? o.t : (typeof o.last === "number" ? o.last : 0), slots: [...Array(NSLOT).keys()].map((i) => (o.slots[i] && typeof o.slots[i] === "object" ? o.slots[i] : null)) });
   try {
     const rb = localStorage.getItem(KEY2);
     if (rb) { const o = JSON.parse(rb); if (o && Array.isArray(o.slots)) B = fixB(o); }
@@ -421,7 +422,10 @@ button.sec-h { cursor: pointer; }
 
   // ---- 능력치 ----
   const baseAtk = (l) => Math.floor(5 * Math.pow(1.13, l) + l * 3);
-  const atkMul = () => jm("atk") * (1 + gearB("weapon"));   // 직업 · 무기 보너스
+  // 🚀 따라잡기: 다른 슬롯 영웅 중 최고 스테이지까지는 바나나 3배 · 공격력 2배
+  const OTHER_TOP = B.slots.reduce((m, d, i) => (d && i !== B.cur ? Math.max(m, d.top || d.stage || 1) : m), 0);
+  const catchUp = () => !evOn && S.stage < OTHER_TOP;
+  const atkMul = () => jm("atk") * (1 + gearB("weapon")) * (catchUp() ? 2 : 1);   // 직업 · 무기 보너스
   const atk = () => Math.floor(baseAtk(S.atk) * atkMul());
   const apsAt = (l) => Math.min(5 * jm("aps"), (1 + l * 0.2) * jm("aps"));   // 20레벨이면 1초에 5번
   const aps = () => apsAt(S.spd);
@@ -440,7 +444,7 @@ button.sec-h { cursor: pointer; }
   const songDur = () => (S.adv >= 2 ? 4 : 3) + (S.job === "bard" ? 0.4 * (S.jsk || 0) : 0);   // 🎵 노래(공격력 UP) 시간
   let songT = 0;
   const songMul = () => (songT > 0 ? jv("song", 1) : 1);
-  const goldJ = () => jv("gold", 1);   // 🎵 음유시인: 바나나 +10%
+  const goldJ = () => jv("gold", 1) * (catchUp() ? 3 : 1);   // 🎵 음유시인: 바나나 +10%
   const JSK = {
     sword: { ic: "⚔️", nm: "베기 수련", max: 10, ef: (l) => "스킬 피해 +" + l * 10 + "% → +" + (l + 1) * 10 + "%", cost: (l) => 300 * Math.pow(1.55, l) },
     bow:   { ic: "🎯", nm: "화살 추가", max: 6, ef: (l) => "스킬 화살 +" + l + "발 → +" + (l + 1) + "발", cost: (l) => 500 * Math.pow(2.2, l) },
@@ -696,6 +700,7 @@ button.sec-h { cursor: pointer; }
       if (xpSt === 250) pops.push({ t: -0.6, x: W / 2, y: 190, text: "👑 마감 대마왕 격파!!", c: "#ffd66b", big: true, huge: true });
       if (S.stage === LATE + 1) pops.push({ t: -1.2, x: W / 2, y: 190, text: "⚠️ 이제 악당이 단단해지고 보스마다 다른 기술을 써요!", c: "#ff7a9a", big: true });
       if (S.stage === 151) pops.push({ t: -1.2, x: W / 2, y: 190, text: "🏰 대마왕 원정 시작! 250의 마감 대마왕을 잡아요!", c: "#ff7a9a", big: true });
+      if (S.stage === OTHER_TOP && !evOn) { pops.push({ t: -0.9, x: W / 2, y: 150, text: "🚀 따라잡기 완료!", c: "#7fd8ff", big: true }); renderJob(); }
       S.st.boss++; if (S.job) S.jtop[S.job] = Math.max(S.jtop[S.job] || 0, S.stage);
       S.top = Math.max(S.top || 1, S.stage);
       komiHp = maxHp();   // 스테이지를 깨면 체력 가득
@@ -1407,7 +1412,7 @@ button.sec-h { cursor: pointer; }
   $("keepJob").addEventListener("click", () => { wake(); S.job = lastJob; S.adv = 1; save(); restart(); });
   $("changeJob").addEventListener("click", () => { wake(); restart(); $("jobPick").hidden = false; });
   function renderJob() {
-    setTimeout(() => { const el = $("jobTxt"), m = medals(); if (el && S.job && !el.textContent.includes("🎖️")) el.textContent += " · 🎖️ 훈장 " + m + "/3" + (m ? " (스킬 +" + m * 20 + "%)" : "") + (m < 3 ? " · 다음: 스테이지 " + MEDAL[m] + " 보스" : ""); }, 0);
+    setTimeout(() => { const el = $("jobTxt"), m = medals(); if (el && catchUp() && !el.textContent.includes("🚀")) el.textContent += " · 🚀 따라잡기 중: 스테이지 " + OTHER_TOP + "까지 바나나 3배 · 공격력 2배"; if (el && S.job && !el.textContent.includes("🎖️")) el.textContent += " · 🎖️ 훈장 " + m + "/3" + (m ? " (스킬 +" + m * 20 + "%)" : "") + (m < 3 ? " · 다음: 스테이지 " + MEDAL[m] + " 보스" : ""); }, 0);
     $("slotOpen").textContent = fuseReady() ? "👥 영웅 슬롯 · 🧬 합성 가능!" : "👥 영웅 슬롯";
     const j = J();
     $("jobIc").textContent = iconOf(S);
