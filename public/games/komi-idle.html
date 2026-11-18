@@ -1332,6 +1332,8 @@ button.sec-h { cursor: pointer; }
     });
     jobsEl.appendChild(b);
   });
+  // 🧬 이 영웅이 합성 준비가 됐나? (2차 전직 + 이 직업으로 스테이지 100, 아직 합성 안 함)
+  const fuseReady = () => !!(S.job && !S.fuse && S.adv >= 2 && ((S.jtop && S.jtop[S.job]) || 0) >= FUSE_STAGE);
   function checkJob() {
     if (!$("intro").hidden || !$("welcome").hidden) return;
     if (S.adv === 0 && S.stage >= JOB1) $("jobPick").hidden = false;
@@ -1350,6 +1352,13 @@ button.sec-h { cursor: pointer; }
       $("adv2Txt").textContent = (fk ? "[" + FSK[fk][0] + "]" : "[" + j.sk2 + "]") + " 뒤에 [" + (fk ? "각성 일격" : SK3[S.job]) + "]이(가) 이어져요! 화려한 새 모습 + 공격력 1.5배 · 체력 1.3배";
       $("adv2").hidden = false; renderJob();
       [523, 659, 784, 1046, 1318, 1568].forEach((f, k) => setTimeout(() => beep(f, 0.18, "triangle", 0.05), k * 100));
+    } else if (fuseReady() && !S.fuseTip) {   // 🧬 합성 준비 완료 안내 (한 번만)
+      S.fuseTip = true; save();
+      $("adv2Ic").textContent = "🧬";
+      $("adv2Title").textContent = "합성 준비 완료!";
+      $("adv2Txt").textContent = nameOf(S) + "(으)로 스테이지 " + FUSE_STAGE + "을 넘었어요! 아래 [👥 영웅 슬롯]에서 다른 직업 영웅과 합치면 합성 영웅이 돼요. (같이 합칠 영웅도 2차 전직 + 그 직업으로 스테이지 " + FUSE_STAGE + "이 필요해요)";
+      $("adv2").hidden = false; renderJob();
+      [392, 523, 659, 784, 1046].forEach((f, k) => setTimeout(() => beep(f, 0.15, "triangle", 0.05), k * 80));
     }
   }
   $("adv2Ok").addEventListener("click", () => { $("adv2").hidden = true; komiHp = maxHp(); });
@@ -1358,6 +1367,7 @@ button.sec-h { cursor: pointer; }
   $("keepJob").addEventListener("click", () => { wake(); S.job = lastJob; S.adv = 1; save(); restart(); });
   $("changeJob").addEventListener("click", () => { wake(); restart(); $("jobPick").hidden = false; });
   function renderJob() {
+    $("slotOpen").textContent = fuseReady() ? "👥 영웅 슬롯 · 🧬 합성 가능!" : "👥 영웅 슬롯";
     const j = J();
     $("jobIc").textContent = iconOf(S);
     $("jobName").textContent = j ? jobName() : "직업 없음";
