@@ -375,6 +375,8 @@ button.sec-h { cursor: pointer; }
   const META = () => ({ gear: { weapon: null, hat: null, ring: null }, ach: [], st: { boss: 0, deaths: 0, boxes: 0, legend: 0, kills: 0, skills: 0, ups: 0 }, jtop: {}, mis: {} });
   delete S.ach;   // 예전 업적 기록은 지움
   { const m = META(); for (const k in m) if (!S[k] || typeof S[k] !== "object") S[k] = m[k]; S.gear = Object.assign(m.gear, S.gear); S.st = Object.assign(m.st, S.st); }
+  // 🎖️ 훈장: 스테이지 40·60·80 보스를 잡을 때마다 하나 (최고 기록으로 셈 → 처음부터 다시 해도 유지) · 하나에 스킬 위력 +20%
+  const MEDAL = [40, 60, 80], medals = () => MEDAL.filter((m) => (S.top || 1) > m).length, medalMul = () => 1 + 0.2 * medals();
   const keepMeta = () => ({ gear: S.gear, st: S.st, jtop: S.jtop, mis: S.mis, ev: S.ev, evHat: S.evHat });
   // 장비: 무기(공격력) · 모자(체력) · 반지(바나나), 등급 4개, 같은 등급이 또 나오면 ★ (최대 5, ★마다 +20%)
   const RAR = [["일반", 60, 5], ["희귀", 28, 12], ["영웅", 10, 25], ["전설", 2, 50]];   // 이름, 확률%, 기본 보너스%
@@ -545,6 +547,21 @@ button.sec-h { cursor: pointer; }
   }
   // ⚔️ 보스 기술 (스테이지 50 이후): 6초마다 방어막 → 부하 소환 → 회복 차례로, 체력 30% 아래면 분노
   function bossAI(dt) {
+    if (!mon.sks) {   // 처음: 이 보스의 기술 정하기 (스테이지마다 정해진 조합)
+      const st = curLv(), all = ["shield", "summon", "heal", "smash", "poison", "dodge"];
+      const n = st === 250 ? 6 : isXp(st) && st % 10 === 0 ? 4 : 3;
+      let r = st * 9301 + 49297; const rnd = () => (r = (r * 9301 + 49297) % 233280) / 233280;
+      const pool = all.slice(); for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+      mon.sks = pool.slice(0, n);
+      const IC = { shield: "🛡️", summon: "👥", heal: "💚", smash: "💥", poison: "🤢", dodge: "👻" };
+      pops.push({ t: -0.4, x: 262, y: 64, text: "보스 기술: " + mon.sks.map((k) => IC[k]).join(" "), c: "#ffd66b", big: true });
+    }
+    if (mon.dodge > 0) mon.dodge -= dt;
+    if (mon.poison > 0 && faint <= 0 && komiHp > 0) {   // 🤢 독: 1초에 최대 체력 3%
+      mon.poison -= dt; komiHp -= maxHp() * 0.03 * dt;
+      if ((mon.pT = (mon.pT || 0) + dt) > 0.8) { mon.pT = 0; pops.push({ t: 0, x: 92 + (Math.random() - .5) * 30, y: 110, text: "🤢 독", c: "#84cc16" }); }
+      if (komiHp <= 0) { komiHp = 0; die(); return; }
+    }
     if (mon.shield > 0) mon.shield -= dt;
     if (!mon.rage && mon.hp < mon.max * 0.3) {
       mon.rage = true; shake = 10; beep(90, .5, "sawtooth", .07, -40);
@@ -553,17 +570,28 @@ button.sec-h { cursor: pointer; }
     mon.skT = (mon.skT || 0) + dt;
     if (mon.skT < 6) return;
     mon.skT = 0;
-    const k = (mon.skN = (mon.skN || 0) + 1) % 3;
-    if (k === 1) {   // 🛡️ 방어막 3초
+    let sk = mon.sks[(mon.skN = (mon.skN || 0) + 1) % mon.sks.length];
+    if (sk === "summon" && pack.length) sk = "heal";
+    if (sk === "smash") {   // 💥 강타: 1.2초 뒤 큰 한 방 (공격 3배)
+      pops.push({ t: 0, x: 262, y: 64, text: "💥 강타 준비!", c: "#ff8a3d", big: true }); beep(200, .4, "sawtooth", .05, 300);
+      const me = mon;
+      setTimeout(() => { if (mon !== me || me.dead || faint > 0) return; me.lunge = 1; const d = Math.ceil(mDmg(curLv(), true) * 3); komiHp -= d; komiHit = 0.4; shake = 14; pops.push({ t: 0, x: 92, y: 110, text: "💥 -" + fmt(d), c: "#ff4d6a", big: true }); beep(90, .3, "square", .07, -30); if (komiHp <= 0) die(); }, 1200);
+    } else if (sk === "poison") {   // 🤢 독 4초
+      mon.poison = 4; beep(330, .3, "sine", .04, -150);
+      pops.push({ t: 0, x: 262, y: 64, text: "🤢 독 안개! (체력이 계속 줄어요)", c: "#84cc16", big: true });
+    } else if (sk === "dodge") {   // 👻 회피 3초: 공격 절반이 빗나감
+      mon.dodge = 3; beep(880, .25, "sine", .03, -500);
+      pops.push({ t: 0, x: 262, y: 64, text: "👻 회피! (공격 절반이 빗나가요)", c: "#c4b5fd", big: true });
+    } else if (sk === "shield") {   // 🛡️ 방어막 3초
       mon.shield = 3; beep(660, .3, "sine", .04, 300);
       pops.push({ t: 0, x: 262, y: 64, text: "🛡️ 방어막! (피해 80%↓)", c: "#7fd8ff", big: true });
-    } else if (k === 2 && !pack.length) {   // 👥 부하 2마리 소환 → 부하를 먼저 잡아야 보스에게 돌아감
+    } else if (sk === "summon") {   // 👥 부하 2마리 소환 → 부하를 먼저 잡아야 보스에게 돌아감
       const Z = evOn ? HZ : zoneOf(curLv()), st = curLv();
       const mk = (i) => { const p = Z.mons[Math.floor(Math.random() * Z.mons.length)], hp = Math.floor(monHp(st) * 0.6); return { e: p[0], name: "부하 " + p[1], hp, max: hp, boss: false, minion: true, x: 262 + 60 + i * 34, hit: 0, dead: 0 }; };
       const b = mon; b.x = 262 + 34 * 2; mon = mk(0); pack = [mk(1), b]; monAtkT = 0;
       beep(300, .3, "square", .04, -100);
       pops.push({ t: 0, x: 262, y: 64, text: "👥 부하 소환!", c: "#ffb347", big: true });
-    } else {   // 💚 체력 8% 회복
+    } else if (sk === "heal") {   // 💚 체력 8% 회복
       const hl = Math.floor(mon.max * 0.08); mon.hp = Math.min(mon.max, mon.hp + hl);
       beep(520, .3, "triangle", .04, 200);
       pops.push({ t: 0, x: 262, y: 64, text: "💚 보스 회복 +" + fmt(hl), c: "#5fe3a1", big: true });
@@ -619,7 +647,8 @@ button.sec-h { cursor: pointer; }
   function hit(base, from, canCrit) {
     if (!mon || mon.dead || mon.x > 270 || faint >= 50) return;
     const crit = canCrit && Math.random() < critP();
-    const d = Math.floor(base * (crit ? critX() : 1) * songMul() * (mon.shield > 0 ? 0.2 : 1));   // 🛡️ 보스 방어막 = 피해 80% 줄임
+    if (mon.dodge > 0 && from !== "burn" && Math.random() < 0.5) { pops.push({ t: 0, x: 262 + (Math.random() - .5) * 40, y: 110, text: "빗나감!", c: "#c4b5fd" }); return; }   // 👻 보스 회피
+    const d = Math.floor(base * (crit ? critX() : 1) * songMul() * (mon.shield > 0 ? 0.2 : 1) * (from === "skill" ? medalMul() : 1));   // 🎖️ 훈장 = 스킬 위력↑   // 🛡️ 보스 방어막 = 피해 80% 줄임
     mon.hp -= d; mon.hit = 0.15; if (crit) shake = 6;
     pops.push({ t: 0, x: 262 + (Math.random() - .5) * 40, y: 110, text: (crit ? "치명타! " : "") + fmt(d), c: crit ? "#ff4d6a" : from === "skill" ? "#7fd8ff" : from === "tap" ? "#ffffff" : from === "help" ? "#5fe3a1" : from === "burn" ? "#ff8a3d" : from === "curse" ? "#c084fc" : "#ffd66b", big: crit || from === "skill" });
     for (let i = 0; i < (crit ? 10 : 4); i++) parts.push({ x: 262, y: 160, vx: (Math.random() - .5) * 300, vy: -Math.random() * 260, t: 0, life: .4, c: crit ? "#ff4d6a" : "#ffd66b" });
@@ -660,8 +689,12 @@ button.sec-h { cursor: pointer; }
       S.stage++; S.kill = 0; bossFail = false; $("bossBtn").hidden = true;
       const xpFirst = S.stage > (S.top || 1), xpSt = S.stage - 1;
       if (isXp(xpSt) && xpSt % 10 === 0 && xpFirst && xpSt < 250) { pops.push({ t: -0.6, x: W / 2, y: 190, text: "🎁 원정 보상: 장비 상자!", c: "#ffd66b", big: true }); setTimeout(() => openGearBox(true), 1200); }
+      if (MEDAL.includes(xpSt) && xpFirst) {   // 🎖️ 훈장 획득
+        pops.push({ t: -0.6, x: W / 2, y: 190, text: "🎖️ 훈장 획득! 스킬 위력 +20% · 장비 상자!", c: "#ffd66b", big: true, huge: true });
+        setTimeout(() => { openGearBox(true); renderJob(); }, 1200);
+      }
       if (xpSt === 250) pops.push({ t: -0.6, x: W / 2, y: 190, text: "👑 마감 대마왕 격파!!", c: "#ffd66b", big: true, huge: true });
-      if (S.stage === LATE + 1) pops.push({ t: -1.2, x: W / 2, y: 190, text: "⚠️ 이제 악당이 단단해지고 보스가 기술을 써요!", c: "#ff7a9a", big: true });
+      if (S.stage === LATE + 1) pops.push({ t: -1.2, x: W / 2, y: 190, text: "⚠️ 이제 악당이 단단해지고 보스마다 다른 기술을 써요!", c: "#ff7a9a", big: true });
       if (S.stage === 151) pops.push({ t: -1.2, x: W / 2, y: 190, text: "🏰 대마왕 원정 시작! 250의 마감 대마왕을 잡아요!", c: "#ff7a9a", big: true });
       S.st.boss++; if (S.job) S.jtop[S.job] = Math.max(S.jtop[S.job] || 0, S.stage);
       S.top = Math.max(S.top || 1, S.stage);
@@ -1352,6 +1385,13 @@ button.sec-h { cursor: pointer; }
       $("adv2Txt").textContent = (fk ? "[" + FSK[fk][0] + "]" : "[" + j.sk2 + "]") + " 뒤에 [" + (fk ? "각성 일격" : SK3[S.job]) + "]이(가) 이어져요! 화려한 새 모습 + 공격력 1.5배 · 체력 1.3배";
       $("adv2").hidden = false; renderJob();
       [523, 659, 784, 1046, 1318, 1568].forEach((f, k) => setTimeout(() => beep(f, 0.18, "triangle", 0.05), k * 100));
+    } else if (S.fuseGift && F()) {   // 🎁 합성 직후 물려받은 것 안내 (한 번만)
+      const t = S.fuseGift; delete S.fuseGift; save();
+      $("adv2Ic").textContent = "🧬" + iconOf(S);
+      $("adv2Title").textContent = nameOf(S) + " 탄생!";
+      $("adv2Txt").textContent = t + " 두 직업의 장점 + 공격력 1.3배로 싸워요.";
+      $("adv2").hidden = false; renderJob();
+      [523, 784, 1046, 1318].forEach((f, k) => setTimeout(() => beep(f, 0.16, "triangle", 0.05), k * 90));
     } else if (fuseReady() && !S.fuseTip) {   // 🧬 합성 준비 완료 안내 (한 번만)
       S.fuseTip = true; save();
       $("adv2Ic").textContent = "🧬";
@@ -1367,6 +1407,7 @@ button.sec-h { cursor: pointer; }
   $("keepJob").addEventListener("click", () => { wake(); S.job = lastJob; S.adv = 1; save(); restart(); });
   $("changeJob").addEventListener("click", () => { wake(); restart(); $("jobPick").hidden = false; });
   function renderJob() {
+    setTimeout(() => { const el = $("jobTxt"), m = medals(); if (el && S.job && !el.textContent.includes("🎖️")) el.textContent += " · 🎖️ 훈장 " + m + "/3" + (m ? " (스킬 +" + m * 20 + "%)" : "") + (m < 3 ? " · 다음: 스테이지 " + MEDAL[m] + " 보스" : ""); }, 0);
     $("slotOpen").textContent = fuseReady() ? "👥 영웅 슬롯 · 🧬 합성 가능!" : "👥 영웅 슬롯";
     const j = J();
     $("jobIc").textContent = iconOf(S);
@@ -1609,7 +1650,7 @@ button.sec-h { cursor: pointer; }
       const a = B.slots[fusePick[0]], b = B.slots[fusePick[1]];
       const same = a.job === b.job;
       $("fuseList").insertAdjacentHTML("beforeend", same ? "<small style='color:var(--alarm)'>서로 다른 직업이어야 합성할 수 있어요.</small>"
-        : `<button class="btn" type="button" data-act="fuse">${slotArm.k === "fuse" ? "정말 합성? (한 번 더)" : "🧬 " + FUSE[fuseKey(a.job, b.job)][0] + " 만들기"}</button>`);
+        : `<small>② 영웅은 사라지지만, 바나나 절반 + 더 좋은 장비가 ① 영웅에게 넘어가요.</small><button class="btn" type="button" data-act="fuse">${slotArm.k === "fuse" ? "정말 합성? (한 번 더)" : "🧬 " + FUSE[fuseKey(a.job, b.job)][0] + " 만들기"}</button>`);
     }
   }
   $("slotOpen").addEventListener("click", () => { wake(); fusePick = []; $("slotMsg").textContent = ""; renderSlots(); $("slotBox").hidden = false; $("slotClose").focus(); });
@@ -1625,6 +1666,13 @@ button.sec-h { cursor: pointer; }
       const [ia, ib] = fusePick, a = B.slots[ia], d = B.slots[ib];
       if (!grad(a) || !grad(d) || a.job === d.job) return;
       if (!armed("fuse")) { renderSlots(); return; }
+      // 🎁 사라지는 영웅(d)이 남는 영웅(a)에게: 바나나 절반 + 칸마다 더 좋은 장비 + 직업별 최고 기록
+      const gv = (g) => (g ? RAR[g.r][2] * (1 + 0.2 * g.s) : 0), gift = Math.floor((d.gold || 0) / 2);
+      a.gold = (a.gold || 0) + gift; let gn = 0;
+      a.gear = a.gear || { weapon: null, hat: null, ring: null };
+      for (const k of ["weapon", "hat", "ring"]) { const dg = d.gear && d.gear[k]; if (dg && gv(dg) > gv(a.gear[k])) { a.gear[k] = Object.assign({}, dg); gn++; } }
+      a.jtop = a.jtop || {}; for (const k in (d.jtop || {})) a.jtop[k] = Math.max(a.jtop[k] || 0, d.jtop[k]);
+      a.fuseGift = "🍌 바나나 " + fmt(gift) + (gn ? " + 더 좋은 장비 " + gn + "개" : "") + "를 물려받았어요!";
       a.fuse = d.job; a.adv = Math.max(2, a.adv); B.slots[ib] = null;
       if (B.cur === ib) B.cur = ia;
       reloadWith();
@@ -2324,9 +2372,27 @@ button.sec-h { cursor: pointer; }
     }
     ctx.restore();
   }
-  function drawAwake(w, h, now, c, back) {   // ✨ 합성 영웅 각성 모습 (3차 전직은 drawJob3)
+  function drawAwake(w, h, now, c, back) {   // (예전 합성 각성 모습 · 안 씀, 되돌리기용)
     if (back) { rays(w, h, now, c, 14, 1.05); flames(w, h, now, "rgba(" + c + ",.75)", "rgba(" + c + ",0)", 7, 0.7); return; }
     sparkles(w, h, now, "rgba(255,255,255,A)", 7);
+  }
+  // ✨ 각성한 합성 영웅: 남는 영웅(a)의 3차 전용 옷 + 합친 영웅(b)의 3차 뒷모습 + 두 직업 색이 번갈아 도는 빛줄기
+  function drawAwakeMix(a, b, w, h, now, back) {
+    if (back) {
+      ctx.save(); ctx.translate(0, -0.5 * h); ctx.rotate(-now * 0.5);   // 두 색 빛줄기 (반대로 돔)
+      for (let i = 0; i < 16; i++) {
+        ctx.rotate(Math.PI / 8);
+        const c = (i % 2 ? (b === "bard" ? "244,114,182" : ACOL[b]) : (a === "bard" ? "244,114,182" : ACOL[a])), g = ctx.createLinearGradient(0, 0, 1.15 * w, 0);
+        g.addColorStop(0, "rgba(" + c + ",.65)"); g.addColorStop(1, "rgba(" + c + ",0)");
+        ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(1.15 * w, -0.09 * w); ctx.lineTo(1.15 * w, 0.09 * w); ctx.closePath(); ctx.fill();
+      }
+      ctx.restore();
+      ctx.save(); ctx.globalAlpha = 0.85; ctx.scale(1.12, 1.06); drawJob3(b, w, h, now, true, true); ctx.restore();   // 합친 직업의 뒷모습 (조금 크게, 뒤에)
+      drawJob3(a, w, h, now, true, true);
+      return;
+    }
+    drawJob3(a, w, h, now, false);
+    sparkles(w, h, now, "rgba(" + (b === "bard" ? "244,114,182" : ACOL[b]) + ",A)", 6);   // 합친 직업 색 반짝이
   }
   // ---- ✨ 3차 전직 그리기 도우미 ----
   function rays(w, h, now, c, n, len) {   // 꼬미 뒤에서 빙글 도는 빛줄기 + 빛 번짐 (c = "r,g,b" 또는 "rainbow")
@@ -2376,10 +2442,10 @@ button.sec-h { cursor: pointer; }
   //   그림자 군주: 보라 그림자 불꽃 · 엇갈린 쌍검 · 뿔 달린 검은 두건 · 붉은 눈빛 · 보라 마검
   //   대마왕: 뿔 4개 · 작은 금관 · 지옥불 · 거대 불꽃 날개 · 가시 목깃 · 불타는 삼지창
   //   천상의 가수: 무지개 빛줄기 · 별 티아라 · 헤드셋 마이크 · 황금 하프 · 무지개 음표
-  function drawJob3(job, w, h, now, back) {
+  function drawJob3(job, w, h, now, back, noRays) {
     const cx = HX * w, by = HY * h, u = w / 80, sw = Math.sin(now * 3);
     ctx.save(); ctx.lineCap = "round";
-    if (back) rays(w, h, now, job === "bard" ? "rainbow" : ACOL[job], 14, 1.05);
+    if (back && !noRays) rays(w, h, now, job === "bard" ? "rainbow" : ACOL[job], 14, 1.05);
     if (job === "sword") {
       if (back) {
         drawCape(w, h, now, ["#f8fafc", "#d4a017"]);
@@ -2526,7 +2592,7 @@ button.sec-h { cursor: pointer; }
     // 직업 옷: 1차 = 기본 / 2차 = 1차가 진화한 화려한 모습 (drawOutfit 참고)
     const lv = S.job ? (S.adv >= 3 ? 3 : S.adv >= 2 ? 2 : 1) : 0, fk = F() ? fuseKey(S.job, S.fuse) : null;
     if (fk) { const c = FAURA[fk] || "255,255,255", a = ctx.createRadialGradient(x, y - h / 2, 8, x, y - h / 2, h * 0.75); a.addColorStop(0, "rgba(" + c + "," + (0.38 + Math.sin(now * 3) * 0.08).toFixed(2) + ")"); a.addColorStop(1, "rgba(" + c + ",0)"); ctx.fillStyle = a; ctx.fillRect(x - h, y - h * 1.4, h * 2, h * 1.6); }
-    if (k.complete) { ctx.save(); ctx.translate(x - (komiHit > 0 ? 8 : 0), y); ctx.rotate(faint > 0 ? -1.2 : lunge * 0.004); if (komiHit > 0) ctx.filter = "sepia(1) saturate(4) hue-rotate(-30deg)"; ctx.scale(1 - breathe, 1 + breathe); if (S.adv >= 3 && fk) drawAwake(w, h, now, awkCol(), true); if (fk) drawFused(fk, w, h, now, true, lunge); else if (lv) drawOutfit(S.job, lv, w, h, now, true); ctx.drawImage(k, -w / 2, -h, w, h); if (fk) drawFused(fk, w, h, now, false, lunge); else if (lv) drawOutfit(S.job, lv, w, h, now, false); if (S.adv >= 3 && fk) drawAwake(w, h, now, awkCol(), false); ctx.restore(); }
+    if (k.complete) { ctx.save(); ctx.translate(x - (komiHit > 0 ? 8 : 0), y); ctx.rotate(faint > 0 ? -1.2 : lunge * 0.004); if (komiHit > 0) ctx.filter = "sepia(1) saturate(4) hue-rotate(-30deg)"; ctx.scale(1 - breathe, 1 + breathe); const awk = S.adv >= 3 && fk; if (awk) drawAwakeMix(S.job, S.fuse, w, h, now, true); else if (fk) drawFused(fk, w, h, now, true, lunge); else if (lv) drawOutfit(S.job, lv, w, h, now, true); ctx.drawImage(k, -w / 2, -h, w, h); if (awk) drawAwakeMix(S.job, S.fuse, w, h, now, false); else if (fk) drawFused(fk, w, h, now, false, lunge); else if (lv) drawOutfit(S.job, lv, w, h, now, false); ctx.restore(); }
     if (songT > 0) for (let i = 0; i < 3; i++) { const a = now * 2.5 + i * 2.09; note(x + Math.cos(a) * w * 0.7, y - h * 0.5 + Math.sin(a) * h * 0.4, 16, ["#ffd66b", "#f9a8d4", "#7fd8ff"][i], i % 2); }   // 🎵 노래 버프 중
     if (S.evHat) emoji("🎃", x + w * 0.32, y - h * 0.84 + Math.sin(now * 3) * 1.5, 20, 0.3);   // 할로윈 한정 호박 장식
     const gear = TIERS[t][2];
@@ -2534,7 +2600,7 @@ button.sec-h { cursor: pointer; }
     if (gear === "🗡️" && !J()) emoji("🗡️", x + 34, y - h * 0.45, 30, -0.6 + lunge * 0.03);
     if (gear === "👑" && !F()) emoji("👑", x + 2, y - h + 8 + Math.sin(now * 3) * 2, 30);
     // 직업 무기 (2차 전직하면 더 크게 + 반짝)
-    if (J() && (!F() || MIXK[fk]) && !(S.adv >= 3 && !F())) {   // 3차는 옷에 전용 무기가 있음
+    if (J() && (!F() || MIXK[fk]) && !(S.adv >= 3)) {   // 3차는 옷에 전용 무기가 있음
       const big = S.adv >= 2 ? 1.3 : 1, mx = fk && MIXK[fk];
       if (S.adv >= 2) { ctx.fillStyle = "rgba(127,216,255,.25)"; ctx.beginPath(); ctx.arc(x + 36, y - h * 0.45, 24 + Math.sin(now * 5) * 3, 0, Math.PI * 2); ctx.fill(); }
       wpDraw(mx ? mx[0] : S.job, x + 36, y - h * 0.32, 30 * big, -0.4 + lunge * 0.03 + Math.sin(now * 2) * .08, now);
@@ -2573,7 +2639,9 @@ button.sec-h { cursor: pointer; }
     ctx.globalAlpha = a;
     ctx.fillStyle = "rgba(0,0,0,.35)"; ctx.beginPath(); ctx.ellipse(mon.x, GROUND + 3, size * 0.4, 7, 0, 0, Math.PI * 2); ctx.fill();
     if (mon.rage && !mon.dead) { const r = ctx.createRadialGradient(mon.x, GROUND - size / 2, 6, mon.x, GROUND - size / 2, size * 0.85); r.addColorStop(0, "rgba(255,40,60," + (0.45 + Math.sin(now * 12) * 0.15).toFixed(2) + ")"); r.addColorStop(1, "rgba(255,40,60,0)"); ctx.fillStyle = r; ctx.beginPath(); ctx.arc(mon.x, GROUND - size / 2, size * 0.85, 0, Math.PI * 2); ctx.fill(); }
+    if (mon.dodge > 0 && !mon.dead) ctx.globalAlpha = 0.4 + Math.sin(now * 14) * 0.15;
     emoji(mon.e, mon.x + sh, GROUND - 4 + dy * (mon.dead ? 0 : 1), size, mon.hit > 0 ? 0.15 : 0, -sc, sc);
+    ctx.globalAlpha = 1;
     if (mon.shield > 0 && !mon.dead) {   // 🛡️ 파란 방어막 거품
       const a = Math.min(1, mon.shield) * 0.9, cy = GROUND - size / 2;
       ctx.save(); ctx.shadowColor = "#7fd8ff"; ctx.shadowBlur = 14;
