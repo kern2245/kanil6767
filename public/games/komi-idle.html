@@ -96,6 +96,11 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
 }
 .btn.ghost { background: var(--card); color: var(--dim); font-size: .85rem; padding: 8px 14px; }
 .btn:focus-visible, .up:focus-visible, .link:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.doors { display: flex; gap: 8px; width: min(340px, 100%); }
+.door { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 12px 4px; border-radius: 14px; cursor: pointer;
+  background: linear-gradient(#3b2a14, #1f1408); border: 2px solid rgba(255, 214, 107, .55); color: #fff7d6; font: inherit; }
+.door:hover, .door:focus-visible { border-color: #ffd66b; transform: translateY(-2px); }
+.door span { font-size: 2rem; line-height: 1.2; } .door b { font-size: .95rem; } .door small { font-size: .72rem; opacity: .8; }
 .overlay {
   position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 10px; padding: 18px; text-align: center; background: rgba(12, 8, 26, .85); cursor: default;
@@ -259,6 +264,16 @@ button.sec-h { cursor: pointer; }
       <h2 id="adv2Title">2차 전직!</h2>
       <p id="adv2Txt"></p>
       <button class="btn" id="adv2Ok" type="button">좋아!</button>
+    </div>
+
+    <div class="overlay" id="doors" hidden>
+      <h2 style="margin:0">🚪 갈림길!</h2>
+      <p style="margin:0">문 하나를 골라요</p>
+      <div class="doors">
+        <button class="door" type="button" data-d="gold"><span>💰</span><b>보물방</b><small>바나나 듬뿍</small></button>
+        <button class="door" type="button" data-d="shop"><span>🛒</span><b>떠돌이 상인</b><small>강화 +3 공짜</small></button>
+        <button class="door" type="button" data-d="mys"><span>❓</span><b>수상한 방</b><small>대박? 아니면 함정!</small></button>
+      </div>
     </div>
   </div>
 
@@ -428,7 +443,7 @@ button.sec-h { cursor: pointer; }
   const atkMul = () => jm("atk") * (1 + gearB("weapon")) * (catchUp() ? 2 : 1);   // 직업 · 무기 보너스
   const atk = () => Math.floor(baseAtk(S.atk) * atkMul());
   const apsAt = (l) => Math.min(5 * jm("aps"), (1 + l * 0.2) * jm("aps"));   // 20레벨이면 1초에 5번
-  const aps = () => apsAt(S.spd);
+  const aps = () => apsAt(S.spd) * (feverT > 0 ? 2 : 1);   // 🔥 피버 = 공격 속도 2배
   const critP = () => Math.min(0.45, 0.05 + S.crit * 0.02 + jv("crit", 0));
   const critX = () => jv("critX", 2.5);
   // 조수 꼬미: 강화로 사지 않고, 조련사 직업만 데리고 다님 (1차 2마리, 2차 4마리)
@@ -444,7 +459,7 @@ button.sec-h { cursor: pointer; }
   const songDur = () => (S.adv >= 2 ? 4 : 3) + (S.job === "bard" ? 0.4 * (S.jsk || 0) : 0);   // 🎵 노래(공격력 UP) 시간
   let songT = 0;
   const songMul = () => (songT > 0 ? jv("song", 1) : 1);
-  const goldJ = () => jv("gold", 1) * (catchUp() ? 3 : 1);   // 🎵 음유시인: 바나나 +10%
+  const goldJ = () => jv("gold", 1) * (catchUp() ? 3 : 1) * (feverT > 0 ? 2 : 1);   // 🔥 피버 = 바나나 2배   // 🎵 음유시인: 바나나 +10%
   const JSK = {
     sword: { ic: "⚔️", nm: "베기 수련", max: 10, ef: (l) => "스킬 피해 +" + l * 10 + "% → +" + (l + 1) * 10 + "%", cost: (l) => 300 * Math.pow(1.55, l) },
     bow:   { ic: "🎯", nm: "화살 추가", max: 6, ef: (l) => "스킬 화살 +" + l + "발 → +" + (l + 1) + "발", cost: (l) => 500 * Math.pow(2.2, l) },
@@ -601,7 +616,59 @@ button.sec-h { cursor: pointer; }
       pops.push({ t: 0, x: 262, y: 64, text: "💚 보스 회복 +" + fmt(hl), c: "#5fe3a1", big: true });
     }
   }
-  const WANT_A = 100, WANT_B = 200, WANT_T = 20;   // 💰 현상수배 보스: 나오는 스테이지, 제한 시간
+  const WANT_A = 100, WANT_B = 200, WANT_T = 20;
+  // 🎈 풍선 · 🔥 피버 (var: 다른 곳에서 먼저 불려도 괜찮게)
+  var balloons = [], balloonT = 10, fever = 0, feverT = 0, tapLast = 0;
+  const FEVER_T = 10;
+  function addFever(n) {
+    if (feverT > 0) return;
+    fever = Math.min(100, fever + n);
+    if (fever >= 100) {
+      fever = 0; feverT = FEVER_T; shake = 8;
+      pops.push({ t: -0.3, x: W / 2, y: 110, text: "🔥 피버 타임!", c: "#ff8a3d", big: true, huge: true });
+      pops.push({ t: -0.3, x: W / 2, y: 140, text: "공격 속도 2배 · 바나나 2배", c: "#ffd66b", big: true });
+      [392, 523, 659, 784, 1046].forEach((f, k) => setTimeout(() => beep(f, 0.12, "sawtooth", 0.04), k * 70));
+    }
+  }
+  function popBalloon(b) {
+    b.pop = 0.001; const by = b.y + Math.sin(b.t * 3) * 6;
+    for (let i = 0; i < 12; i++) parts.push({ x: b.x, y: by, vx: (Math.random() - .5) * 260, vy: -Math.random() * 200, t: 0, life: .5, c: b.k === "bomb" ? "#ff4d6a" : b.k === "box" ? "#a855f7" : "#ffd66b" });
+    beep(1200, .06, "square", .05, -600);
+    if (b.k === "gold") {
+      const g = Math.ceil(mGold(curLv()) * 10 * (1 + gearB("ring") + misB()) * GOLD_MUL * goldJ()); S.gold += g;
+      for (let i = 0; i < 8; i++) coins.push({ x: b.x, y: by, vx: (Math.random() - .5) * 200, vy: -100 - Math.random() * 150, t: 0 });
+      pops.push({ t: 0, x: b.x, y: by - 10, text: "🎈 +🍌 " + fmt(g), c: "#ffd66b", big: true });
+    } else if (b.k === "bomb") {
+      shake = 12; pops.push({ t: 0, x: b.x, y: by - 10, text: "💣 펑!", c: "#ff4d6a", big: true });
+      if (mon && !mon.dead) setTimeout(() => { burst(24, ["#ff4d1a", "#ffd66b", "#ffffff"], 320); hit(atk() * 20, "skill", false); }, 150);
+    } else {
+      pops.push({ t: 0, x: b.x, y: by - 10, text: "🎁 장비 상자!", c: "#c4b5fd", big: true });
+      setTimeout(() => openGearBox(true), 500);
+    }
+  }
+  // 🚪 갈림길
+  function showDoors() { if (!$("adv2").hidden || !$("jobPick").hidden) return; $("doors").hidden = false; beep(523, .15, "triangle", .04); setTimeout(() => beep(784, .2, "triangle", .04), 120); }
+  $("doors").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-d]"); if (!b) return;
+    const d = b.dataset.d, st = curLv(); $("doors").hidden = true;
+    const big = (k) => Math.ceil(mGold(st) * k * (1 + gearB("ring") + misB()) * GOLD_MUL * goldJ());
+    if (d === "gold") {
+      const g = big(15); S.gold += g;
+      for (let i = 0; i < 16; i++) coins.push({ x: W / 2, y: 140, vx: (Math.random() - .5) * 300, vy: -200 - Math.random() * 200, t: 0 });
+      pops.push({ t: -0.3, x: W / 2, y: 130, text: "💰 보물방! +🍌 " + fmt(g), c: "#ffd66b", big: true, huge: true });
+    } else if (d === "shop") {
+      S.atk += 3; renderUps();
+      pops.push({ t: -0.3, x: W / 2, y: 130, text: "🛒 공격력 강화 +3 (공짜!)", c: "#7fd8ff", big: true, huge: true });
+    } else if (Math.random() < 0.5) {
+      const g = big(40); S.gold += g; setTimeout(() => openGearBox(true), 900);
+      for (let i = 0; i < 24; i++) coins.push({ x: W / 2, y: 140, vx: (Math.random() - .5) * 340, vy: -220 - Math.random() * 240, t: 0 });
+      pops.push({ t: -0.3, x: W / 2, y: 130, text: "❓ 대박!! +🍌 " + fmt(g), c: "#ffd66b", big: true, huge: true });
+    } else {
+      komiHp = Math.max(1, Math.floor(komiHp * 0.4)); shake = 12; komiHit = 0.4;
+      pops.push({ t: -0.3, x: W / 2, y: 130, text: "❓ 함정! 체력이 확 줄었어요", c: "#ff4d6a", big: true, huge: true });
+    }
+    save();
+  });   // 💰 현상수배 보스: 나오는 스테이지, 제한 시간
   function newMon() {
     const isBoss = bossGo;
     bossGo = false;
@@ -729,7 +796,11 @@ button.sec-h { cursor: pointer; }
       [523, 659, 784, 1046].forEach((f, k) => setTimeout(() => beep(f, 0.15, "square", 0.04), k * 90));
       save();
       setTimeout(checkJob, 700);
-    } else if (S.kill < PER_STAGE) { S.kill++; if (S.kill >= PER_STAGE) bossGo = true; }   // 5마리 잡으면 자동으로 보스
+    } else if (S.kill < PER_STAGE) {
+      S.kill++; if (S.kill >= PER_STAGE) bossGo = true;
+      if (S.kill === 3 && S.stage >= 5 && S.doorSt !== S.stage && Math.random() < 0.25) { S.doorSt = S.stage; setTimeout(showDoors, 600); }   // 🚪 가끔 갈림길
+    }
+    addFever(mon.boss ? 30 : mon.wanted ? 30 : 7);   // 🔥 잡으면 피버 게이지   // 5마리 잡으면 자동으로 보스
     if (!mon.boss && !bossGo && pack.length) { const nx = pack.shift(); setTimeout(() => { if (mon && mon.dead) { mon = nx; monAtkT = 0; } }, 300); return; }
     pack = [];
     setTimeout(newMon, 450);
@@ -1736,7 +1807,7 @@ button.sec-h { cursor: pointer; }
   function emoji(e, x, y, size, rot = 0, sx = 1, sy = 1) {
     ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.scale(sx, sy);
     ctx.font = size + "px 'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif";
-    ctx.textAlign = "center"; ctx.textBaseline = "alphabetic"; ctx.fillText(e, 0, 0); ctx.restore();
+    ctx.textAlign = "center"; ctx.textBaseline = "alphabetic"; ctx.fillStyle = "#000"; ctx.fillText(e, 0, 0); ctx.restore();
   }
   let scroll = 0;
   const STARS = Array.from({ length: 46 }, (_, i) => [(i * 97) % 360, (i * 53) % 200, 0.6 + (i % 3) * 0.6, i]);
@@ -2698,7 +2769,7 @@ button.sec-h { cursor: pointer; }
   function frame(t) {
     const dt = Math.min(0.05, (t - last) / 1000); last = t;
     const now = t / 1000;
-    const paused = !$("intro").hidden || !$("welcome").hidden || !$("jobPick").hidden || !$("adv2").hidden || faint >= 50;
+    const paused = !$("intro").hidden || !$("welcome").hidden || !$("jobPick").hidden || !$("adv2").hidden || !$("doors").hidden || faint >= 50;
 
     if (mon) {
       if (mon.x > 262) { mon.x = Math.max(262, mon.x - 520 * dt); scroll += 520 * dt * 0.5; }
@@ -2748,12 +2819,44 @@ button.sec-h { cursor: pointer; }
         if (bossTime <= 0) failBoss("시간 초과! 더 강해져서 와요");
       }
     }
+    if (!paused) {
+      balloonT -= dt;
+      if (balloonT <= 0 && S.seen) {   // 🎈 14~26초마다 풍선 하나
+        balloonT = 14 + Math.random() * 12; const r = Math.random();
+        balloons.push({ k: r < 0.58 ? "gold" : r < 0.88 ? "bomb" : "box", x: W + 24, y: 46 + Math.random() * 56, t: 0, pop: 0 });
+      }
+      for (const b of balloons) { if (b.pop) b.pop += dt; else { b.t += dt; b.x -= 34 * dt; } }
+      balloons = balloons.filter((b) => b.x > -30 && !(b.pop > 0.35));
+      if (feverT > 0) { feverT -= dt; if (feverT <= 0) { feverT = 0; pops.push({ t: 0, x: W / 2, y: 120, text: "피버 끝!", c: "#ffb347" }); } }
+    }
     if (swing > 0) swing = Math.max(0, swing - dt * 5);
     laughT -= dt; bossFailT -= dt;
 
     ctx.save();
     if (shake > 0) { ctx.translate((Math.random() - .5) * shake, (Math.random() - .5) * shake); shake *= 0.85; if (shake < .4) shake = 0; }
     bg(now); drawMon(now); drawKomi(now); drawFx();
+    for (const b of balloons) {   // 🎈 풍선
+      const by = b.y + Math.sin(b.t * 3) * 6, a = b.pop ? Math.max(0, 1 - b.pop / 0.35) : 1;
+      ctx.globalAlpha = a;
+      ctx.strokeStyle = "rgba(255,255,255,.7)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(b.x, by + 12); ctx.quadraticCurveTo(b.x + 4, by + 20, b.x, by + 26); ctx.stroke();
+      if (!b.pop) { const g = ctx.createRadialGradient(b.x, by, 2, b.x, by, 28); g.addColorStop(0, b.k === "bomb" ? "rgba(255,77,106,.45)" : b.k === "box" ? "rgba(168,85,247,.45)" : "rgba(255,214,107,.45)"); g.addColorStop(1, "rgba(0,0,0,0)"); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(b.x, by, 28, 0, Math.PI * 2); ctx.fill(); }
+      emoji("🎈", b.x, by + 10, b.pop ? 30 + b.pop * 60 : 30, Math.sin(b.t * 2) * 0.15);
+      emoji(b.k === "bomb" ? "💣" : b.k === "box" ? "🎁" : "🍌", b.x + 1, by + 40, 18);
+      ctx.globalAlpha = 1;
+    }
+    {   // 🔥 피버 게이지 (오른쪽 아래)
+      const gx = W - 112, gy = H - 16, gw = 96, p = feverT > 0 ? feverT / FEVER_T : fever / 100;
+      ctx.fillStyle = "rgba(0,0,0,.5)"; ctx.beginPath(); ctx.roundRect(gx - 2, gy - 2, gw + 4, 10, 5); ctx.fill();
+      const g = ctx.createLinearGradient(gx, 0, gx + gw, 0); g.addColorStop(0, "#ffb347"); g.addColorStop(1, feverT > 0 ? "#ff2d55" : "#ff6a1a");
+      ctx.fillStyle = g; ctx.beginPath(); ctx.roundRect(gx, gy, Math.max(0.01, gw * p), 6, 3); ctx.fill();
+      emoji("🔥", gx - 11, gy + 8, feverT > 0 ? 16 + Math.sin(now * 12) * 2 : 14);
+      if (feverT > 0) {   // 피버 중: 화면 테두리가 타오름
+        ctx.save(); ctx.strokeStyle = "rgba(255,106,26," + (0.55 + Math.sin(now * 10) * 0.25).toFixed(2) + ")"; ctx.lineWidth = 7; ctx.shadowColor = "#ff6a1a"; ctx.shadowBlur = 16;
+        ctx.strokeRect(3, 3, W - 6, H - 6); ctx.restore();
+        ctx.save(); ctx.font = "bold 13px sans-serif"; ctx.textAlign = "right"; ctx.lineWidth = 3; ctx.strokeStyle = "rgba(40,10,0,.8)"; ctx.fillStyle = "#ffd66b";
+        ctx.strokeText("FEVER " + Math.ceil(feverT) + "초", W - 14, gy - 6); ctx.fillText("FEVER " + Math.ceil(feverT) + "초", W - 14, gy - 6); ctx.restore();
+      }
+    }
     if (J()) { // 스킬 충전 표시 (오른쪽 위)
       const p = Math.min(1, skillT / skillCd());
       ctx.fillStyle = "rgba(0,0,0,.45)"; ctx.beginPath(); ctx.arc(W - 26, 26, 17, 0, Math.PI * 2); ctx.fill();
@@ -2798,6 +2901,12 @@ button.sec-h { cursor: pointer; }
   }
   renderUps();
   requestAnimationFrame(frame);
+  cv.addEventListener("pointerdown", (e) => {   // 🎈 풍선 누르기 · 🔥 화면 연타로 피버 게이지
+    const r = cv.getBoundingClientRect(), x = (e.clientX - r.left) * W / r.width, y = (e.clientY - r.top) * H / r.height;
+    for (const b of balloons) { if (b.pop) continue; const by = b.y + Math.sin(b.t * 3) * 6; if (Math.hypot(x - b.x, y - (by + 18)) < 30) { popBalloon(b); return; } }
+    const t = performance.now(); if (t - tapLast < 90) return; tapLast = t;
+    if (mon && !mon.dead && feverT <= 0) { addFever(1.5); for (let i = 0; i < 4; i++) parts.push({ x, y, vx: (Math.random() - .5) * 160, vy: -Math.random() * 160, t: 0, life: .3, c: "#ffb347" }); }
+  });
 
   // 세카이 사이트 안에서 처음 누르면 전체 화면 요청 (페이지를 열 때마다 1번)
   addEventListener("pointerdown", function askFull() {
