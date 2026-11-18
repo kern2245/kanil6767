@@ -666,6 +666,9 @@ button.sec-h { cursor: pointer; }
     } else if (b.k === "bomb") {
       shake = 12; pops.push({ t: 0, x: b.x, y: by - 10, text: "💣 펑!", c: "#ff4d6a", big: true });
       if (mon && !mon.dead) setTimeout(() => { burst(24, ["#ff4d1a", "#ffd66b", "#ffffff"], 320); hit(atk() * 20, "skill", false); }, 150);
+    } else if (b.k === "stone") {   // 🔨 강화석 풍선
+      const n = 2 + Math.floor(curLv() / 50); S.stone = (S.stone || 0) + n; renderGear();
+      pops.push({ t: 0, x: b.x, y: by - 10, text: "🔨 강화석 +" + n, c: "#cbd5e1", big: true });
     } else {
       pops.push({ t: 0, x: b.x, y: by - 10, text: "🎁 장비 상자!", c: "#c4b5fd", big: true });
       setTimeout(() => openGearBox(true), 500);
@@ -783,7 +786,9 @@ button.sec-h { cursor: pointer; }
     if (mon.wanted) {   // 💰 현상금!
       S.st.wanted = (S.st.wanted || 0) + 1; shake = 10;
       for (let i = 0; i < 20; i++) coins.push({ x: 262, y: 160, vx: (Math.random() - .5) * 320, vy: -220 - Math.random() * 240, t: 0 });
-      pops.push({ t: -0.3, x: W / 2, y: 150, text: "💰 현상금 획득! + 장비 상자", c: "#ffd66b", big: true, huge: true });
+      const ws = 5 + Math.floor(curLv() / 20); S.stone = (S.stone || 0) + ws;   // 🔨 현상금 강화석
+      pops.push({ t: -0.3, x: W / 2, y: 150, text: "💰 현상금 획득!", c: "#ffd66b", big: true, huge: true });
+      pops.push({ t: -0.3, x: W / 2, y: 182, text: "🔨 강화석 +" + ws + " · 🎁 장비 상자", c: "#e2e8f0", big: true }); renderGear();
       setTimeout(() => openGearBox(true), 1100);
     }
     beep(988, 0.07, "square", 0.04); setTimeout(() => beep(1318, 0.1, "square", 0.04), 60);
@@ -2886,7 +2891,7 @@ button.sec-h { cursor: pointer; }
       balloonT -= dt;
       if (balloonT <= 0 && S.seen) {   // 🎈 14~26초마다 풍선 하나
         balloonT = 14 + Math.random() * 12; const r = Math.random();
-        balloons.push({ k: r < 0.58 ? "gold" : r < 0.88 ? "bomb" : "box", x: W + 24, y: 46 + Math.random() * 56, t: 0, pop: 0 });
+        balloons.push({ k: r < 0.5 ? "gold" : r < 0.75 ? "bomb" : r < 0.9 ? "stone" : "box", x: W + 24, y: 46 + Math.random() * 56, t: 0, pop: 0 });
       }
       for (const b of balloons) { if (b.pop) b.pop += dt; else { b.t += dt; b.x -= 34 * dt; } }
       balloons = balloons.filter((b) => b.x > -30 && !(b.pop > 0.35));
@@ -2902,9 +2907,9 @@ button.sec-h { cursor: pointer; }
       const by = b.y + Math.sin(b.t * 3) * 6, a = b.pop ? Math.max(0, 1 - b.pop / 0.35) : 1;
       ctx.globalAlpha = a;
       ctx.strokeStyle = "rgba(255,255,255,.7)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(b.x, by + 12); ctx.quadraticCurveTo(b.x + 4, by + 20, b.x, by + 26); ctx.stroke();
-      if (!b.pop) { const g = ctx.createRadialGradient(b.x, by, 2, b.x, by, 28); g.addColorStop(0, b.k === "bomb" ? "rgba(255,77,106,.45)" : b.k === "box" ? "rgba(168,85,247,.45)" : "rgba(255,214,107,.45)"); g.addColorStop(1, "rgba(0,0,0,0)"); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(b.x, by, 28, 0, Math.PI * 2); ctx.fill(); }
+      if (!b.pop) { const g = ctx.createRadialGradient(b.x, by, 2, b.x, by, 28); g.addColorStop(0, b.k === "bomb" ? "rgba(255,77,106,.45)" : b.k === "box" ? "rgba(168,85,247,.45)" : b.k === "stone" ? "rgba(148,163,184,.55)" : "rgba(255,214,107,.45)"); g.addColorStop(1, "rgba(0,0,0,0)"); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(b.x, by, 28, 0, Math.PI * 2); ctx.fill(); }
       emoji("🎈", b.x, by + 10, b.pop ? 30 + b.pop * 60 : 30, Math.sin(b.t * 2) * 0.15);
-      emoji(b.k === "bomb" ? "💣" : b.k === "box" ? "🎁" : "🍌", b.x + 1, by + 40, 18);
+      emoji(b.k === "bomb" ? "💣" : b.k === "box" ? "🎁" : b.k === "stone" ? "🔨" : "🍌", b.x + 1, by + 40, 18);
       ctx.globalAlpha = 1;
     }
     {   // 🔥 피버 게이지 (오른쪽 아래)
