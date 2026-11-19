@@ -2953,15 +2953,23 @@ button.sec-h { cursor: pointer; }
     { const zl = evOn ? HZ.n + " " + (ev().st <= 10 ? ev().st + "/10단계" : ev().st + "단계 (무한)") : zoneName(S.stage) + " " + ((S.stage - 1) % 10 + 1) + "/10";
       ctx.font = "12px 'Gowun Dodum', sans-serif"; ctx.textAlign = "left"; ctx.lineWidth = 3; ctx.strokeStyle = "rgba(10,5,25,.7)"; ctx.fillStyle = "rgba(255,255,255,.92)";
       ctx.strokeText(zl, 12, 46); ctx.fillText(zl, 12, 46); }
+    let hudX = 0;
     if (mon && mon.boss && !mon.dead) {
       ctx.fillStyle = bossTime < 8 ? "#ff4d6a" : "#f4eefe"; ctx.font = "18px 'Black Han Sans', sans-serif"; ctx.textAlign = "left";
-      ctx.fillText("⏳ " + Math.ceil(bossTime) + "초", 12, 28);
+      ctx.fillText("⏳ " + Math.ceil(bossTime) + "초", 12, 28); hudX = 12 + ctx.measureText("⏳ " + Math.ceil(bossTime) + "초").width;
     } else if (curKill() < PER_STAGE) {
       ctx.fillStyle = "rgba(244,238,254,.8)"; ctx.font = "13px 'Gowun Dodum', sans-serif"; ctx.textAlign = "left";
-      ctx.fillText("보스까지 " + Math.max(0, PER_STAGE - curKill()) + "마리", 12, 26);
+      ctx.fillText("보스까지 " + Math.max(0, PER_STAGE - curKill()) + "마리", 12, 26); hudX = 12 + ctx.measureText("보스까지 " + Math.max(0, PER_STAGE - curKill()) + "마리").width;
     } else {
       ctx.fillStyle = "#ff8a9c"; ctx.font = "13px 'Gowun Dodum', sans-serif"; ctx.textAlign = "left";
-      ctx.fillText("바나나 모으는 중 · 준비되면 보스 도전!", 12, 26);
+      ctx.fillText("바나나 모으는 중 · 준비되면 보스 도전!", 12, 26); hudX = 999;
+    }
+    {   // 🍌 바나나 · 🔨 강화석 개수 (시간 칸 옆, 자리가 모자라면 구역 이름 아래)
+      ctx.font = "14px 'Black Han Sans', sans-serif"; ctx.textAlign = "left"; ctx.lineWidth = 4; ctx.strokeStyle = "rgba(20,10,40,.85)";
+      const t1 = "🍌 " + fmt(S.gold), t2 = "🔨 " + fmt(S.stone || 0), w1 = ctx.measureText(t1).width, w2 = ctx.measureText(t2).width;
+      let x = hudX + 12, y = 27; if (x + w1 + 10 + w2 > W - 62) { x = 12; y = 64; }
+      ctx.fillStyle = "#ffd66b"; ctx.strokeText(t1, x, y); ctx.fillText(t1, x, y);
+      ctx.fillStyle = "#cbd5e1"; ctx.strokeText(t2, x + w1 + 10, y); ctx.fillText(t2, x + w1 + 10, y);
     }
     ctx.restore();
 
