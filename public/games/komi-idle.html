@@ -199,6 +199,8 @@ button.sec-h { cursor: pointer; }
 .rate { display: block; margin-top: 6px; color: var(--dim); font-size: .7rem; text-align: center; }
 .r0 { color: #b9c0cf; } .r1 { color: #5fb0ff; } .r2 { color: #c38bff; } .r3 { color: #ff6b8b; } .r4 { color: #ffcf5c; }
 .slot.r0 { border-color: #6b7286; } .slot.r1 { border-color: #3d86e0; } .slot.r2 { border-color: #9b5cf0; } .slot.r3 { border-color: #ff6b8b; box-shadow: 0 0 10px rgba(255,107,139,.35); } .slot.r4 { border-color: #ffcf5c; box-shadow: 0 0 14px rgba(255,207,92,.45); }
+.readlink { display: block; margin: 8px 0 2px; padding: 8px 10px; border-radius: 10px; background: rgba(168,85,247,.16); border: 1px solid rgba(168,85,247,.45); color: var(--ink); font-size: .8rem; text-align: center; text-decoration: none; }
+.readlink:hover, .readlink:focus-visible { background: rgba(168,85,247,.28); }
 .boxmsg { min-height: 1.3em; text-align: center; font-size: .9rem; color: var(--dim); }
 .boxmsg b { font-family: var(--display); font-weight: 400; }
 #openBox:disabled { opacity: .45; cursor: not-allowed; }
@@ -246,6 +248,13 @@ button.sec-h { cursor: pointer; }
       <p>꼬미가 혼자서도 열심히 싸웠어요!</p>
       <div class="big" id="offGold">🍌 0</div>
       <button class="btn" id="takeOff" type="button">받기</button>
+    </div>
+
+    <div class="overlay" id="readBox" hidden>
+      <h2>📖 웹툰 보상</h2>
+      <p id="readTxt">웹툰을 끝까지 봐서 선물이 왔어요!</p>
+      <div class="big" id="readGift">🎁 1 · 🔨 5</div>
+      <button class="btn" id="readTake" type="button">받기</button>
     </div>
 
     <div class="overlay" id="intro" hidden>
@@ -360,6 +369,7 @@ button.sec-h { cursor: pointer; }
     <div class="sec-h"><b>🎁 장비 상자</b><small id="stoneTxt">🔨 강화석 0개</small></div>
     <div class="gear" id="gear"></div>
     <button class="btn" id="openBox" type="button">상자 열기</button>
+    <a class="readlink" href="/" target="_top">📖 웹툰 한 화 끝까지 보면 🎁 상자 + 🔨 강화석 5개 (하루 5화) →</a>
     <div class="boxmsg" id="boxMsg" aria-live="polite">🍌 바나나로 ★ 강화 · ★5가 되면 🔨 강화석으로 다음 등급 승급!</div>
     <small class="rate" id="rateTxt"></small>
   </section>
@@ -1816,6 +1826,36 @@ button.sec-h { cursor: pointer; }
   if (!S.seen) $("intro").hidden = false;
   $("go").addEventListener("click", () => { wake(); S.seen = true; $("intro").hidden = true; save(); });
   renderJob(); checkJob(); renderGear();
+
+  // ---- 📖 웹툰 보면 보상 ----
+  const READ_MAX = 5, READ_STONE = 5;
+  const today = () => { const d = new Date(); return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate(); };
+  const lsGet = (k, def) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? def : v; } catch (e) { return def; } };
+  const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+  let readN = 0;
+  function checkReads() {
+    if (!S.seen || !$("readBox").hidden || !$("welcome").hidden || !$("intro").hidden) return;
+    const list = lsGet("komi-reads", []); if (!Array.isArray(list)) return;
+    const day = lsGet("komi-read-day", {}), used = day.d === today() ? day.n || 0 : 0;
+    const wait = list.filter((r) => r && !r.c).length; readN = Math.min(wait, READ_MAX - used);
+    if (readN <= 0) return;
+    $("readTxt").textContent = "웹툰 " + readN + "화를 끝까지 봐서 선물이 왔어요!" + (wait > readN ? " (남은 " + (wait - readN) + "화는 내일 받아요)" : "");
+    $("readGift").textContent = "🎁 " + readN + " · 🔨 " + readN * READ_STONE;
+    $("readBox").hidden = false;
+  }
+  $("readTake").addEventListener("click", () => {
+    wake(); $("readBox").hidden = true;
+    const list = lsGet("komi-reads", []), day = lsGet("komi-read-day", {}), used = day.d === today() ? day.n || 0 : 0;
+    let n = 0; for (const r of list) { if (n >= readN || used + n >= READ_MAX) break; if (r && !r.c) { r.c = true; n++; } }
+    if (!n) return;
+    lsSet("komi-reads", list); lsSet("komi-read-day", { d: today(), n: used + n });
+    S.stone = (S.stone || 0) + n * READ_STONE;
+    for (let i = 0; i < n; i++) openGearBox(true);
+    pops.push({ t: 0, x: W / 2, y: 70, text: "📖 웹툰 보상! 🎁×" + n + " 🔨+" + n * READ_STONE, c: "#c4b5fd", big: true, huge: true });
+    [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => beep(f, .1, "triangle", .05), i * 80));
+    renderGear(); renderUps(); save();
+  });
+  setInterval(checkReads, 2000);
 
   setInterval(save, 5000);
 

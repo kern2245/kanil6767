@@ -12,6 +12,7 @@ import { EpisodeViewCounter } from "@/components/sections/episode-view-counter";
 import { formatViews, getViewCounts } from "@/lib/views";
 import { getCurrentArtist } from "@/lib/admin-auth";
 import { ReportButton } from "@/components/sections/report-button";
+import { KomiReadReward } from "@/components/sections/komi-read-reward";
 import { getT } from "@/lib/lang";
 import type { Dict, Lang } from "@/lib/i18n";
 
@@ -173,6 +174,8 @@ export default async function EpisodeViewerPage(props: PageProps<"/webtoon/[id]/
 
       {/* 아래쪽: 좋아요 / 싫어요 → 이전화 / 목록 / 다음화 */}
       <div className="mx-auto max-w-3xl px-4 pt-10 pb-28">
+        {/* 📖 끝까지 보면 꼬미 키우기 보상 기록 + 안내 */}
+        <KomiReadReward episodeId={episode.id} lang={lang} />
         <EpisodeReactions episodeId={episode.id} path={`/webtoon/${id}/${number}`} t={tv} />
         <div className="mt-8">
           <EpisodeNav webtoonId={id} prev={prev} next={next} t={tv} />
