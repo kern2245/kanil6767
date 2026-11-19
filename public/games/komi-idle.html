@@ -188,8 +188,6 @@ button.sec-h { cursor: pointer; }
 .slot.r0 { border-color: #6b7286; } .slot.r1 { border-color: #3d86e0; } .slot.r2 { border-color: #9b5cf0; } .slot.r3 { border-color: #ff6b8b; box-shadow: 0 0 10px rgba(255,107,139,.35); } .slot.r4 { border-color: #ffcf5c; box-shadow: 0 0 14px rgba(255,207,92,.45); }
 .boxmsg { min-height: 1.3em; text-align: center; font-size: .9rem; color: var(--dim); }
 .boxmsg b { font-family: var(--display); font-weight: 400; }
-.boxbtns { display: flex; gap: 8px; } .boxbtns #openBox { flex: 1.4; } .boxbtns .stonebox { flex: 1; font-size: .9rem; padding: 12px 8px; background: #3a3150; }
-#stoneBox:disabled { opacity: .45; cursor: not-allowed; }
 #openBox:disabled { opacity: .45; cursor: not-allowed; }
 .achs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .achs li { display: grid; grid-template-columns: 28px 1fr auto; gap: 8px; align-items: center; background: var(--card2); border-radius: 10px; padding: 7px 10px; font-size: .82rem; }
@@ -347,7 +345,7 @@ button.sec-h { cursor: pointer; }
   <section class="box" aria-label="장비 상자">
     <div class="sec-h"><b>🎁 장비 상자</b><small id="stoneTxt">🔨 강화석 0개</small></div>
     <div class="gear" id="gear"></div>
-    <div class="boxbtns"><button class="btn" id="openBox" type="button">상자 열기</button><button class="btn stonebox" id="stoneBox" type="button">🔨 20개로 열기</button></div>
+    <button class="btn" id="openBox" type="button">상자 열기</button>
     <div class="boxmsg" id="boxMsg" aria-live="polite">🍌 바나나로 ★ 강화 · ★5가 되면 🔨 강화석으로 다음 등급 승급!</div>
     <small class="rate" id="rateTxt"></small>
   </section>
@@ -1643,7 +1641,7 @@ button.sec-h { cursor: pointer; }
     }
     $("gold").textContent = fmt(S.gold);
     $("dps").textContent = fmt(dps());
-    const bc = boxCost(); $("openBox").disabled = S.gold < bc; $("tb-gear").classList.toggle("dot", S.gold >= bc); if (typeof misHtml === "string") { $("tb-mis").classList.toggle("dot", misReady()); if (!$("tab-mis").hidden) renderMis(); } $("openBox").textContent = "상자 열기 🍌 " + fmt(bc); $("stoneBox").disabled = (S.stone || 0) < 20;
+    const bc = boxCost(); $("openBox").disabled = S.gold < bc; $("tb-gear").classList.toggle("dot", S.gold >= bc); if (typeof misHtml === "string") { $("tb-mis").classList.toggle("dot", misReady()); if (!$("tab-mis").hidden) renderMis(); } $("openBox").textContent = "상자 열기 🍌 " + fmt(bc);
     document.querySelectorAll("#gear .forge.star").forEach((b) => { const g = S.gear[b.dataset.forge]; if (!g || g.s >= 5) return; const c = starCost(g); b.disabled = S.gold < c; b.innerHTML = "★ 강화<br>🍌" + fmt(c); });
     $("stg").textContent = (evOn ? "🎃" + ev().st : S.stage) + "-" + (mon && mon.boss ? "보스" : Math.min(PER_STAGE, curKill() + 1));
   }
@@ -1697,7 +1695,6 @@ button.sec-h { cursor: pointer; }
     komiHp = Math.min(komiHp, maxHp()); renderGear(); renderUps(); save();
   });
   $("openBox").addEventListener("click", () => openGearBox(false));
-  $("stoneBox").addEventListener("click", () => { if ((S.stone || 0) < 20) return; S.stone -= 20; openGearBox(true); });   // 🔨 강화석 20개로 상자
   function openGearBox(free) {
     wake();
     const c = boxCost(); if (!free && S.gold < c) return;
