@@ -327,7 +327,7 @@ button.sec-h { cursor: pointer; }
     <div class="sec-h"><b>🎁 장비 상자</b><small id="stoneTxt">🔨 강화석 0개</small></div>
     <div class="gear" id="gear"></div>
     <button class="btn" id="openBox" type="button">상자 열기</button>
-    <div class="boxmsg" id="boxMsg" aria-live="polite">필요 없는 장비는 🔨 강화석이 돼요 → 장비 ★ 강화 · ★5면 다음 등급으로 승급!</div>
+    <div class="boxmsg" id="boxMsg" aria-live="polite">🍌 바나나로 ★ 강화 · ★5가 되면 🔨 강화석으로 다음 등급 승급!</div>
     <small class="rate" id="rateTxt"></small>
   </section>
 
@@ -410,7 +410,7 @@ button.sec-h { cursor: pointer; }
   const SLOTS = { weapon: ["🗡️", "무기", "공격력"], hat: ["🎩", "모자", "체력"], ring: ["💍", "반지", "바나나"] };
   // 🔨 강화석: 분해하면 등급별로 얻음 / ★ 강화 비용 = STC[등급] × (지금 ★ + 1) / 승급 비용 = PRC[등급] (★5일 때)
   const STONE = [1, 2, 4, 8, 16], STC = [2, 4, 8, 16, 32], PRC = [10, 25, 60, 150];
-  const starCost = (g) => STC[g.r] * (g.s + 1), promoCost = (g) => PRC[g.r];
+  const starCost = (g) => Math.ceil(mGold(S.stage) * (3 + 3 * g.r) * (g.s + 1)), promoCost = (g) => PRC[g.r];
   // ② 스테이지가 높을수록 좋은 등급 확률↑ (일반 · 희귀 · 영웅 · 신화 · 전설, 합 100)
   const RATES = [[1, [56, 28, 10, 4, 2]], [50, [46, 31, 14, 6, 3]], [100, [38, 32, 18, 8, 4]], [150, [30, 32, 22, 11, 5]]];
   const rates = () => { let r = RATES[0][1]; for (const [st, w] of RATES) if (S.stage >= st) r = w; return r; };
@@ -1623,6 +1623,7 @@ button.sec-h { cursor: pointer; }
     $("gold").textContent = fmt(S.gold);
     $("dps").textContent = fmt(dps());
     const bc = boxCost(); $("openBox").disabled = S.gold < bc; $("tb-gear").classList.toggle("dot", S.gold >= bc); if (typeof misHtml === "string") { $("tb-mis").classList.toggle("dot", misReady()); if (!$("tab-mis").hidden) renderMis(); } $("openBox").textContent = "상자 열기 🍌 " + fmt(bc);
+    document.querySelectorAll("#gear .forge.star").forEach((b) => { const g = S.gear[b.dataset.forge]; if (!g || g.s >= 5) return; const c = starCost(g); b.disabled = S.gold < c; b.innerHTML = "★ 강화<br>🍌" + fmt(c); });
     $("stg").textContent = (evOn ? "🎃" + ev().st : S.stage) + "-" + (mon && mon.boss ? "보스" : Math.min(PER_STAGE, curKill() + 1));
   }
 
@@ -1636,7 +1637,7 @@ button.sec-h { cursor: pointer; }
       return g
         ? `<div class="slot r${g.r}"><div class="ic">${ic}</div><b class="r${g.r}">${RAR[g.r][0]} ${nm}</b><small>${"★".repeat(g.s) || "☆"}</small><small>${what} +${Math.round(gearB(k) * 100)}%</small>${
           g.r >= 3 ? `<small class="opt">✨ ${optTxt(g)}</small><button class="mini forge re" type="button" data-reopt="${k}" ${(S.stone || 0) >= OPT_RE[g.r - 3] ? "" : "disabled"}>🎲 옵션 바꾸기<br>🔨${OPT_RE[g.r - 3]}</button>` : ""}${
-          g.s < 5 ? `<button class="mini forge" type="button" data-forge="${k}" ${(S.stone || 0) >= starCost(g) ? "" : "disabled"}>★ 강화 🔨${starCost(g)}</button>`
+          g.s < 5 ? `<button class="mini forge star" type="button" data-forge="${k}" ${S.gold >= starCost(g) ? "" : "disabled"}>★ 강화<br>🍌${fmt(starCost(g))}</button>`
           : g.r < RAR.length - 1 ? `<button class="mini forge up" type="button" data-forge="${k}" ${(S.stone || 0) >= promoCost(g) ? "" : "disabled"}>⬆ ${RAR[g.r + 1][0]} 승급<br>🔨${promoCost(g)}</button>`
           : `<small class="r4">최고!</small>`}</div>`
         : `<div class="slot"><div class="ic" style="opacity:.35">${ic}</div><b>${nm}</b><small>비어 있음</small><small>${what} +0%</small></div>`;
@@ -1658,8 +1659,8 @@ button.sec-h { cursor: pointer; }
     const b = e.target.closest("[data-forge]"); if (!b) return;
     const k = b.dataset.forge, g = S.gear[k], [ic, nm] = SLOTS[k]; if (!g) return;
     if (g.s < 5) {
-      const c = starCost(g); if ((S.stone || 0) < c) return;
-      S.stone -= c; g.s++; $("boxMsg").innerHTML = `🔨 ${ic} <b class="r${g.r}">${RAR[g.r][0]} ${nm}</b> ★${g.s} 강화!`;
+      const c = starCost(g); if (S.gold < c) return;
+      S.gold -= c; g.s++; $("boxMsg").innerHTML = `🔨 ${ic} <b class="r${g.r}">${RAR[g.r][0]} ${nm}</b> ★${g.s} 강화!`;
       [784, 1046].forEach((f, i) => setTimeout(() => beep(f, .1, "triangle", .05), i * 80));
     } else if (g.r < RAR.length - 1) {
       const c = promoCost(g); if ((S.stone || 0) < c) return;
