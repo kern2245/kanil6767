@@ -50,7 +50,14 @@ header { display: flex; align-items: baseline; justify-content: space-between; g
 h1 { font-family: var(--display); font-weight: 400; font-size: 1.6rem; margin: 0; }
 h1 span { color: var(--sekai); }
 .brand { font-family: var(--display); font-size: .85rem; color: var(--dim); letter-spacing: .12em; }
-.hud { display: grid; grid-template-columns: 1fr 1.3fr 1fr; gap: 8px; }
+.hud { display: grid; grid-template-columns: 1fr 1.3fr .8fr 1fr; gap: 8px; }
+.hud .st b { color: #cbd5e1; }
+@media (max-width: 480px) {
+  .hud { gap: 4px; grid-template-columns: .95fr 1.42fr .78fr .95fr; }
+  .hud div { padding: 6px 5px; overflow: hidden; }
+  .hud small { font-size: .64rem; white-space: nowrap; }
+  .hud b { font-size: .95rem; letter-spacing: -.02em; }
+}
 .hud div { background: var(--card); border-radius: 12px; padding: 8px 10px; min-width: 0; }
 .hud small { display: block; color: var(--dim); font-size: .72rem; }
 .hud b { font-family: var(--display); font-weight: 400; font-size: 1.25rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -226,6 +233,7 @@ button.sec-h { cursor: pointer; }
   <div class="hud" aria-live="polite">
     <div><small>스테이지</small><b id="stg">1-1</b></div>
     <div class="g"><small>🍌 바나나</small><b id="gold">0</b></div>
+    <div class="st"><small>🔨 강화석</small><b id="stoneHud">0</b></div>
     <div><small>초당 공격력</small><b id="dps">5</b></div>
   </div>
 
@@ -1653,7 +1661,9 @@ button.sec-h { cursor: pointer; }
       b.classList.toggle("max", !!maxed);
       b.disabled = maxed || p.n === 0 || S.gold < p.total;
     }
-    $("gold").textContent = fmt(S.gold);
+    $("gold").textContent = fmt(S.gold); $("stoneHud").textContent = fmt(S.stone || 0);
+    document.querySelectorAll(".hud b").forEach((b) => { b.style.fontSize = ""; const w = b.parentNode.clientWidth - 10, bw = b.getBoundingClientRect().width;
+      if (bw > w && w > 0) b.style.fontSize = (parseFloat(getComputedStyle(b).fontSize) * w / bw).toFixed(1) + "px"; });
     $("dps").textContent = fmt(dps());
     const bc = boxCost(); $("openBox").disabled = S.gold < bc; $("tb-gear").classList.toggle("dot", S.gold >= bc); if (typeof misHtml === "string") { $("tb-mis").classList.toggle("dot", misReady()); if (!$("tab-mis").hidden) renderMis(); } $("openBox").textContent = "상자 열기 🍌 " + fmt(bc);
     document.querySelectorAll("#gear .forge.star").forEach((b) => { const g = S.gear[b.dataset.forge]; if (!g || g.s >= 5) return; const c = starCost(g); b.disabled = S.gold < c; b.innerHTML = "★ 강화<br>🍌" + fmt(c); });
