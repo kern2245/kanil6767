@@ -174,7 +174,11 @@ button.sec-h { cursor: pointer; }
 .slot .forge.up { background: linear-gradient(90deg, #ff6b8b, #ffcf5c); color: #2a1206; }
 .slot .forge:disabled { opacity: .45; }
 .slot .forge.re { background: #2a2140; color: #f4eefe; border: 1px solid rgba(255,255,255,.18); }
-.slot small.opt { color: #ffe39a; font-weight: 700; margin-top: 3px; }
+.slot small.opt { color: #ffe39a; font-weight: 700; margin-top: 3px; display: flex; align-items: center; gap: 4px; justify-content: center; }
+.slot small.opt.on { color: #fff3c4; }
+.slot .lk { flex: none; border: 1px solid rgba(255,255,255,.2); background: #2a2140; border-radius: 6px; font-size: .78rem; line-height: 1; padding: 3px 4px; cursor: pointer; }
+.slot small.opt.on .lk { background: #6b4b12; border-color: #ffd66b; }
+.slot .lk:focus-visible { outline: 2px solid var(--gold); }
 @media (max-width: 480px) {
   .gear { grid-template-columns: 1fr; gap: 6px; }
   .slot { display: grid; grid-template-columns: 40px 1fr 104px; grid-auto-flow: row dense; column-gap: 8px; row-gap: 4px; align-items: center; text-align: left; padding: 8px 10px; }
@@ -182,6 +186,8 @@ button.sec-h { cursor: pointer; }
   .slot > b, .slot > small { grid-column: 2; }
   .slot > button, .slot > small.r4 { grid-column: 3; margin-top: 0; padding: 6px 4px; font-size: .74rem; }
   .slot b { font-size: .92rem; } .slot small { font-size: .74rem; }
+  .slot small.opt { justify-content: flex-start; }
+  .slot .ic { grid-row: 1 / span 6; }
 }
 .rate { display: block; margin-top: 6px; color: var(--dim); font-size: .7rem; text-align: center; }
 .r0 { color: #b9c0cf; } .r1 { color: #5fb0ff; } .r2 { color: #c38bff; } .r3 { color: #ff6b8b; } .r4 { color: #ffcf5c; }
@@ -437,10 +443,18 @@ button.sec-h { cursor: pointer; }
   const OPT = { boss: ["보스 피해", [0.2, 0.3], "+"], skill: ["스킬 피해", [0.15, 0.25], "+"], cd: ["스킬 대기시간", [0.1, 0.15], "-"],
     crit: ["치명타 확률", [0.05, 0.08], "+"], gold: ["바나나", [0.15, 0.25], "+"], fever: ["피버 게이지", [0.5, 0.8], "+"] };
   const OPT_RE = [10, 20];   // 옵션 다시 뽑기 비용 (신화, 전설)
-  const rndOpt = (not) => { const ks = Object.keys(OPT).filter((k) => k !== not); return ks[Math.floor(Math.random() * ks.length)]; };
-  const optOf = (g) => (g && g.r >= 3 && OPT[g.o] ? OPT[g.o][1][g.r - 3] : 0);
-  const optV = (k) => { let v = 0; for (const s of ["weapon", "hat", "ring"]) { const g = S.gear && S.gear[s]; if (g && g.o === k) v += optOf(g); } return v; };
-  const optTxt = (g) => OPT[g.o][0] + " " + OPT[g.o][2] + Math.round(optOf(g) * 100) + "%";
+  const rndOpt = (not) => { const no = [].concat(not || []), ks = Object.keys(OPT).filter((k) => !no.includes(k)); return ks[Math.floor(Math.random() * ks.length)]; };
+  const fixOpt = (g) => {   // 옵션 3칸 + 잠금 칸 만들기 (예전 1칸 옵션은 첫 줄로)
+    if (!g || g.r < 3) return g;
+    if (!Array.isArray(g.os)) g.os = OPT[g.o] ? [g.o] : [];
+    g.os = g.os.filter((k, i) => OPT[k] && g.os.indexOf(k) === i).slice(0, 3);
+    while (g.os.length < 3) g.os.push(rndOpt(g.os));
+    if (!Array.isArray(g.lk)) g.lk = [false, false, false];
+    delete g.o; return g;
+  };
+  const optOf = (g, k) => (g && g.r >= 3 && OPT[k] ? OPT[k][1][g.r - 3] : 0);
+  const optV = (k) => { let v = 0; for (const s of ["weapon", "hat", "ring"]) { const g = S.gear && S.gear[s]; if (g && g.r >= 3 && Array.isArray(g.os) && g.os.includes(k)) v += optOf(g, k); } return v; };
+  const optTxt = (g, i) => { const k = g.os[i]; return OPT[k][0] + " " + OPT[k][2] + Math.round(optOf(g, k) * 100) + "%"; };
   const gearB = (slot) => { const g = S.gear[slot]; return g ? RAR[g.r][2] * (1 + 0.2 * g.s) / 100 : 0; };
 
   // ---- 직업 (스테이지 5에서 1차 전직, 25에서 2차 전직) ----
@@ -1652,12 +1666,13 @@ button.sec-h { cursor: pointer; }
   try { new IntersectionObserver((es) => { hudSeen = es[0].isIntersecting; }).observe(document.querySelector(".hud")); } catch (e) { hudSeen = false; }
   const boxCost = () => Math.ceil(mGold(S.stage) * Math.min(40, 5 * Math.pow(1.06, S.st.boxes)));
   function renderGear() {
-    for (const k in S.gear) { const g = S.gear[k]; if (g && g.r >= 3 && !OPT[g.o]) g.o = rndOpt(); }   // 예전 신화·전설에도 옵션
+    for (const k in S.gear) fixOpt(S.gear[k]);   // 예전 신화·전설도 옵션 3칸
     $("gear").innerHTML = Object.entries(SLOTS).map(([k, [ic, nm, what]]) => {
       const g = S.gear[k];
       return g
         ? `<div class="slot r${g.r}"><div class="ic">${ic}</div><b class="r${g.r}">${RAR[g.r][0]} ${nm}</b><small>${"★".repeat(g.s) || "☆"}</small><small>${what} +${Math.round(gearB(k) * 100)}%</small>${
-          g.r >= 3 ? `<small class="opt">✨ ${optTxt(g)}</small><button class="mini forge re" type="button" data-reopt="${k}" ${(S.stone || 0) >= OPT_RE[g.r - 3] ? "" : "disabled"}>🎲 옵션 바꾸기<br>🔨${OPT_RE[g.r - 3]}</button>` : ""}${
+          g.r >= 3 ? g.os.map((o, i) => `<small class="opt${g.lk[i] ? " on" : ""}"><button class="lk" type="button" data-lock="${k}:${i}" aria-pressed="${g.lk[i]}" aria-label="${g.lk[i] ? "잠금 풀기" : "잠그기"}">${g.lk[i] ? "🔒" : "🔓"}</button>${optTxt(g, i)}</small>`).join("")
+            + `<button class="mini forge re" type="button" data-reopt="${k}" ${(S.stone || 0) >= OPT_RE[g.r - 3] && g.lk.includes(false) ? "" : "disabled"}>🎲 ${g.lk.includes(false) ? "옵션 바꾸기" : "다 잠김"}<br>🔨${(S.stone || 0) < OPT_RE[g.r - 3] ? fmt(S.stone || 0) + "/" : ""}${OPT_RE[g.r - 3]}</button>` : ""}${
           g.s < 5 ? `<button class="mini forge star" type="button" data-forge="${k}" ${S.gold >= starCost(g) ? "" : "disabled"}>★ 강화<br>🍌${fmt(starCost(g))}</button>`
           : g.r < RAR.length - 1 ? `<button class="mini forge up" type="button" data-forge="${k}" ${(S.stone || 0) >= promoCost(g) ? "" : "disabled"}>⬆ ${RAR[g.r + 1][0]} 승급<br>🔨${promoCost(g)}</button>`
           : `<small class="r4">최고!</small>`}</div>`
@@ -1668,12 +1683,19 @@ button.sec-h { cursor: pointer; }
     $("rateTxt").textContent = "지금 상자 확률: " + RAR.map((r, i) => r[0] + " " + w[i] + "%").join(" · ");
   }
   $("gear").addEventListener("click", (e) => {   // 🔨 대장간: ★ 강화 / 승급
+    const lb = e.target.closest("[data-lock]");
+    if (lb) {   // 🔒 옵션 줄 잠그기 / 풀기 (공짜)
+      const [k, i] = lb.dataset.lock.split(":"), g = fixOpt(S.gear[k]); if (!g || g.r < 3) return;
+      g.lk[+i] = !g.lk[+i]; beep(g.lk[+i] ? 440 : 660, .06, "square", .03);
+      renderGear(); save(); return;
+    }
     const ro = e.target.closest("[data-reopt]");
-    if (ro) {   // 🎲 옵션 다시 뽑기 (지금과 다른 옵션)
-      const g = S.gear[ro.dataset.reopt]; if (!g || g.r < 3) return;
+    if (ro) {   // 🎲 옵션 다시 뽑기: 잠그지 않은 줄만 (지금과 다르고, 다른 줄과 겹치지 않게)
+      const g = fixOpt(S.gear[ro.dataset.reopt]); if (!g || g.r < 3 || !g.lk.includes(false)) return;
       const c = OPT_RE[g.r - 3]; if ((S.stone || 0) < c) return;
-      S.stone -= c; g.o = rndOpt(g.o);
-      $("boxMsg").innerHTML = `🎲 새 옵션: <b class="r${g.r}">✨ ${optTxt(g)}</b>`;
+      S.stone -= c; const nw = [];
+      g.os.forEach((o, i) => { if (g.lk[i]) return; g.os[i] = rndOpt(g.os); nw.push(i); });
+      $("boxMsg").innerHTML = `🎲 새 옵션: <b class="r${g.r}">` + nw.map((i) => "✨ " + optTxt(g, i)).join(" · ") + `</b>`;
       [523, 784, 1046].forEach((f, i) => setTimeout(() => beep(f, .08, "square", .04), i * 60));
       renderGear(); renderUps(); renderJob(); save(); return;
     }
@@ -1686,7 +1708,7 @@ button.sec-h { cursor: pointer; }
     } else if (g.r < RAR.length - 1) {
       const c = promoCost(g); if ((S.stone || 0) < c) return;
       S.stone -= c; g.r++; g.s = 0; if (g.r === 4) S.st.legend++;
-      if (g.r >= 3 && !g.o) g.o = rndOpt();   // 신화가 되면 옵션이 생김 (전설로 올리면 옵션 유지)
+      fixOpt(g);   // 신화가 되면 옵션 3칸이 생김 (전설로 올리면 옵션·잠금 유지)
       $("boxMsg").innerHTML = `⬆ ${ic} <b class="r${g.r}">${RAR[g.r][0]} ${nm}</b>(으)로 승급! ✨`;
       pops.push({ t: 0, x: W / 2, y: 70, text: "⬆ " + RAR[g.r][0] + " " + nm + " 승급!", c: ["#b9c0cf", "#5fb0ff", "#c38bff", "#ff6b8b", "#ffcf5c"][g.r], big: true, huge: true });
       for (let i = 0; i < 30; i++) { const a = Math.random() * Math.PI * 2, v = 100 + Math.random() * 200; parts.push({ x: W / 2, y: 110, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 80, t: 0, life: .8, c: i % 2 ? "#ffd66b" : "#ffffff" }); }
@@ -1707,7 +1729,7 @@ button.sec-h { cursor: pointer; }
     let msg;
     if (!cur || r > cur.r) {   // 더 좋은 등급: 장착하고, 원래 장비는 강화석으로
       const old = cur ? STONE[cur.r] * (1 + cur.s) : 0; S.stone = (S.stone || 0) + old;
-      S.gear[slot] = r >= 3 ? { r, s: 0, o: rndOpt() } : { r, s: 0 }; msg = `${ic} ${name} 장착! ✨` + (old ? ` (예전 장비 → 🔨 ${old})` : "");
+      S.gear[slot] = fixOpt({ r, s: 0 }); msg = `${ic} ${name} 장착! ✨` + (old ? ` (예전 장비 → 🔨 ${old})` : "");
     }
     else if (r === cur.r && cur.s < 5) { cur.s++; msg = `${ic} ${name} ★${cur.s} 강화!`; }
     else { const st = STONE[r] * (r === cur.r ? 2 : 1); S.stone = (S.stone || 0) + st; msg = `${ic} ${name} → 분해해서 🔨 강화석 +${st}`; }
