@@ -41,9 +41,11 @@ body {
   padding-bottom: max(16px, env(safe-area-inset-bottom, 0px)); margin: 0 -4px; padding-inline: 4px; }
 .tabp { display: flex; flex-direction: column; gap: 10px; }
 .tabp[hidden] { display: none; }
-.tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; background: var(--card); border-radius: 14px; padding: 4px; }
+.tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; background: var(--card); border-radius: 14px; padding: 4px; }
 .tabs button { position: relative; border: 0; background: transparent; color: var(--dim); font-family: var(--display); font-size: 1rem; padding: 9px 2px; border-radius: 10px; cursor: pointer; white-space: nowrap; }
 .tabs button[aria-selected="true"] { background: var(--sekai); color: #fff; }
+@media (max-width: 480px) { .tabs button { font-size: .9rem; letter-spacing: -.02em; } }
+#chEmpty[hidden] { display: none; }
 .tabs button:focus-visible { outline: 3px solid var(--gold); outline-offset: 1px; }
 .tabs button.dot::after { content: ""; position: absolute; top: 6px; right: 10px; width: 8px; height: 8px; border-radius: 50%; background: var(--alarm); }
 header { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
@@ -330,20 +332,11 @@ button.sec-h { cursor: pointer; }
     </div>
   </div>
 
-  <div class="evbar" id="evBar" hidden>
-    <button class="btn" id="evBtn" type="button">🎃 이벤트 입장</button>
-    <small id="evTxt"></small>
-  </div>
-
-  <div class="evbar wbbar" id="wbBar" hidden>
-    <button class="btn" id="wbBtn" type="button">👑 주간 보스</button>
-    <small id="wbTxt"></small>
-  </div>
-
   <nav class="tabs" role="tablist" aria-label="메뉴">
     <button type="button" role="tab" id="tb-up" data-tab="up" aria-selected="true">⚔️ 강화</button>
     <button type="button" role="tab" id="tb-gear" data-tab="gear" aria-selected="false">🎁 장비</button>
     <button type="button" role="tab" id="tb-mis" data-tab="mis" aria-selected="false">📜 미션</button>
+    <button type="button" role="tab" id="tb-ch" data-tab="ch" aria-selected="false">🏆 도전</button>
   </nav>
 
   <div class="panel" id="panel">
@@ -390,6 +383,20 @@ button.sec-h { cursor: pointer; }
     <div class="sec-h"><b>📜 미션 <span id="misLv"></span></b><small id="misSum"></small></div>
     <ul class="achs" id="miss"></ul>
     <div class="boxmsg">깰 때마다 다음 미션이 더 어려워지고 보상도 커져요 · 쓰러져도 그대로!</div>
+  </section>
+    </div>
+    <div class="tabp" id="tab-ch" role="tabpanel" hidden>
+  <section class="box" aria-label="도전">
+    <div class="sec-h"><b>🏆 도전</b><small>이벤트 · 주간 보스</small></div>
+  <div class="evbar" id="evBar" hidden>
+    <button class="btn" id="evBtn" type="button">🎃 이벤트 입장</button>
+    <small id="evTxt"></small>
+  </div>
+  <div class="evbar wbbar" id="wbBar" hidden>
+    <button class="btn" id="wbBtn" type="button">👑 주간 보스</button>
+    <small id="wbTxt"></small>
+  </div>
+    <div class="boxmsg" id="chEmpty">스테이지 30부터 👑 주간 보스에 도전할 수 있어요!</div>
   </section>
     </div>
   </div>
@@ -1635,13 +1642,16 @@ button.sec-h { cursor: pointer; }
   // ---- 입력 ----
   // ---- 🎃 이벤트 입장 / 나가기 (11월에만 버튼이 보임, 기간이 끝나면 자동으로 원래 스테이지로) ----
   function renderEv() {
-    const live = evLive(); $("evBar").hidden = !live;
+    const live = evLive(); $("evBar").hidden = !live; chUpd();
     if (!live) { if (evOn) setEv(false); return; }
     const E = ev(), days = 31 - new Date().getDate();
     $("evBtn").textContent = evOn ? "↩ 원래 스테이지로" : "🎃 할로윈 이벤트 입장";
     $("evTxt").textContent = evOn
       ? "🎃 " + (E.st <= 10 ? E.st + "/10단계" : E.st + "단계 (무한)") + " · 바나나 2배" + (E.st <= 10 ? " · 단계마다 장비 상자" : "") + ""
       : days + "일 남음 · 바나나 2배 · 장비 상자" + (S.evHat ? " · 🎃 장식 ✔" : " · 🎃 한정 장식");
+  }
+  function chUpd() {   // 🏆 도전 탭: 아무것도 없으면 안내
+    $("chEmpty").hidden = !($("wbBar").hidden && !evOn);   // 주간 보스가 아직 안 열렸으면 안내
   }
   function setEv(on) {
     evOn = on; bossGo = false; bossFail = false; $("bossBtn").hidden = true; pack = []; fx = null; faint = 0; komiHp = maxHp(); monAtkT = 0;
@@ -1670,10 +1680,11 @@ button.sec-h { cursor: pointer; }
   }
   function renderWB() {
     const on = !evOn && Math.max(S.top || 1, S.stage) >= WB_FROM;
-    $("wbBar").hidden = !on; if (!on) return;
+    $("wbBar").hidden = !on; chUpd(); if (!on) { $("tb-ch").classList.remove("dot"); return; }
     const B = wb(), boss = WB_BOSS[B.wk % WB_BOSS.length], pct = Math.min(1, B.dmg / B.max);
     const next = WB_TIER[B.got], left = WB_TRIES - B.tries, fighting = !!(mon && mon.world && !mon.dead);
     $("wbBtn").disabled = fighting || left <= 0 || B.got >= WB_TIER.length || !!(mon && (mon.boss || mon.wanted > 0) && !mon.dead);
+    $("tb-ch").classList.toggle("dot", !$("wbBtn").disabled);
     $("wbBtn").textContent = fighting ? "👑 싸우는 중!" : B.got >= WB_TIER.length ? "💎 처치 완료!" : left > 0 ? "👑 주간 보스 (" + left + "/" + WB_TRIES + ")" : "👑 내일 다시";
     $("wbTxt").innerHTML = boss[0] + " " + boss[1] + " · 피해 " + Math.floor(pct * 100) + "%" + (B.got ? " · " + WB_TIER[B.got - 1][0] : "")
       + (next ? " · 다음 " + next[0] + " " + Math.round(next[1] * 100) + "%" : "") + '<span class="wbm"><i style="width:' + (pct * 100).toFixed(1) + '%"></i></span>';
