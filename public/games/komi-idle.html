@@ -2354,21 +2354,38 @@ button.sec-h { cursor: pointer; }
     if (eye) { ctx.fillStyle = eye; ctx.shadowColor = eye; ctx.shadowBlur = 6; for (const ex of [-0.17, 0.13]) { ctx.beginPath(); ctx.ellipse(x + ex * s, y - s * 0.8, s * 0.05, s * 0.025, 0, 0, Math.PI * 2); ctx.fill(); } }
     ctx.restore();
   }
-  function grip(ox, oy, a, dx, dy) { return [ox + dx * Math.cos(a) - dy * Math.sin(a), oy + dx * Math.sin(a) + dy * Math.cos(a)]; }   // 돌린 무기의 손잡이 위치
-  function komiHand(sx, sy, hx, hy, u) {   // ✊ 어깨(sx,sy) → 손(hx,hy): 갈색 팔 + 살구색 주먹
-    ctx.save(); ctx.lineCap = "round"; ctx.shadowBlur = 0;
-    ctx.strokeStyle = "#1e1428"; ctx.lineWidth = 11 * u; seg(sx, sy, hx, hy);
-    ctx.strokeStyle = "#965c37"; ctx.lineWidth = 7 * u; seg(sx, sy, hx, hy);
-    ctx.fillStyle = "#fad2aa"; ctx.strokeStyle = "#1e1428"; ctx.lineWidth = 2 * u;
-    ctx.beginPath(); ctx.arc(hx, hy, 6 * u, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  // ✊ 꼬미 팔 (꼬미 발밑이 ox,oy · 폭 w · 키 h). side 1 = 오른팔(적 쪽), -1 = 왼팔
+  function handPos(w, h, a) {   // 휘두르기 각도 a 에 따른 손 위치: 준비(a<0) = 위·뒤로, 내려치기(a>0) = 앞으로
+    const k = a < 0 ? Math.min(1, -a / 0.8) : 0, f = a > 0 ? Math.min(1, a / 1.2) : 0;
+    return [0.31 * w - 0.05 * w * k + 0.09 * w * f, -0.25 * h - 0.17 * h * k + 0.03 * h * f];
+  }
+  function holdAt(hx, hy, a, dx, dy) {   // 무기를 a 만큼 돌렸을 때 손잡이(dx,dy)가 손(hx,hy)에 오도록 하는 무기 기준점
+    return [hx - (dx * Math.cos(a) - dy * Math.sin(a)), hy - (dx * Math.sin(a) + dy * Math.cos(a))];
+  }
+  function komiArm(ox, oy, w, h, hx, hy, side) {   // 어깨 → 팔꿈치 → 손 (갈색 팔)
+    const u = w / 80, sx = ox + (side > 0 ? 0.12 : -0.19) * w, sy = oy - 0.34 * h;
+    const dx = hx - sx, dy = hy - sy, L = Math.hypot(dx, dy) || 1;
+    const bx = (side > 0 ? -dy : dy) / L, by = (side > 0 ? dx : -dx) / L;   // 팔꿈치는 아래쪽으로 굽음
+    const ex = (sx + hx) / 2 + bx * L * 0.22, ey = (sy + hy) / 2 + Math.abs(by) * L * 0.22;
+    ctx.save(); ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.shadowBlur = 0;
+    const path = () => { ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo(ex, ey, hx, hy); };
+    path(); ctx.strokeStyle = "#1e1428"; ctx.lineWidth = 12 * u; ctx.stroke();
+    path(); ctx.strokeStyle = "#965c37"; ctx.lineWidth = 8.5 * u; ctx.stroke();
+    ctx.globalAlpha = 0.35; path(); ctx.strokeStyle = "#c9875a"; ctx.lineWidth = 3 * u; ctx.stroke(); ctx.globalAlpha = 1;   // 팔 위쪽 밝은 털
+    ctx.fillStyle = "#965c37"; ctx.beginPath(); ctx.arc(sx, sy, 5 * u, 0, Math.PI * 2); ctx.fill();   // 어깨 (몸과 이어지게)
     ctx.restore();
   }
-  const HOFF = { "🗡️": [-0.28, 0.28], "🏹": [-0.05, 0.1], "🔮": [0, 0.34], "🐵": [0, 0.4], "🔱": [-0.05, 0.3], "🎸": [-0.2, 0.22], shuri: [-0.3, 0.2] };   // 이모지 무기 잡는 곳 (크기 비율)
-  function armTo(kx, ky, w, h, side, ex, ey, sz, rot, id) {   // 2차 이모지 무기를 손으로 잡기 (side 1 = 오른손, -1 = 왼손)
-    const j = JOBS[id]; if (!j) return;
-    const o = HOFF[j.wp || j.ic] || [0, 0.3], g = grip(ex, ey, j.wp === "shuri" ? 0 : rot, o[0] * sz, o[1] * sz);
-    komiHand(kx + side * 0.13 * w, ky - 0.32 * h, g[0], g[1], w / 80);
+  function komiFist(hx, hy, a, u) {   // 손잡이를 감싼 주먹 (a = 무기 각도, 손가락이 손잡이를 가로지름)
+    ctx.save(); ctx.translate(hx, hy); ctx.rotate(a); ctx.shadowBlur = 0;
+    ctx.fillStyle = "#fad2aa"; ctx.strokeStyle = "#1e1428"; ctx.lineWidth = 2 * u;
+    ctx.beginPath(); ctx.roundRect(-5.5 * u, -6 * u, 11 * u, 12 * u, 5 * u); ctx.fill(); ctx.stroke();
+    ctx.lineWidth = 1.3 * u; ctx.lineCap = "round";
+    for (const fy of [-2.4, 0.6, 3.4]) seg(0.5 * u, fy * u, 5 * u, fy * u);   // 손가락 줄
+    ctx.fillStyle = "#fad2aa"; ctx.lineWidth = 1.6 * u;   // 엄지 (위에서 손잡이를 누름)
+    ctx.beginPath(); ctx.ellipse(-3.2 * u, -5 * u, 3 * u, 2.2 * u, -0.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.restore();
   }
+  const HOFF = { "🗡️": [-0.3, 0.3], "🏹": [0.02, 0.06], "🔮": [0, 0.36], "🐵": [0, 0.42], "🔱": [0, 0.3], "🎸": [-0.16, 0.18], shuri: [-0.42, 0.1] };   // 이모지 무기에서 손이 잡는 곳 (크기 비율)
   function wpDraw(id, x, y, s, rot, now) {   // 직업 무기 (닌자는 빙글 도는 수리검)
     const j = JOBS[id]; if (!j) return;
     if (j.wp === "shuri") shuri(x + Math.max(0, wSw) * 16, y - 4, s * 0.34, now * (wSw > 0 ? 20 : 8), "#d1d5db");
@@ -2927,6 +2944,7 @@ button.sec-h { cursor: pointer; }
   //   대마왕: 뿔 4개 · 작은 금관 · 지옥불 · 거대 불꽃 날개 · 가시 목깃 · 불타는 삼지창
   //   천상의 가수: 무지개 빛줄기 · 별 티아라 · 헤드셋 마이크 · 황금 하프 · 무지개 음표
   function drawJob3(job, w, h, now, back, noRays) {
+    const HD = handPos(w, h, wSw);   // ✊ 손 위치 (공격하면 움직임)
     const cx = HX * w, by = HY * h, u = w / 80, sw = Math.sin(now * 3);
     ctx.save(); ctx.lineCap = "round";
     if (back && !noRays) rays(w, h, now, job === "bard" ? "rainbow" : ACOL[job], 14, 1.05);
@@ -2943,8 +2961,7 @@ button.sec-h { cursor: pointer; }
         ctx.fillStyle = "#fbbf24"; ctx.strokeStyle = "#7a5a08"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, 0.18 * w, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.shadowBlur = 0;
         ctx.fillStyle = "#fff7d6"; ctx.beginPath(); ctx.arc(0, 0, 0.13 * w, 0, Math.PI * 2); ctx.fill();
         ctx.rotate(now); star(0, 0, 0.11 * w, "#f59e0b"); ctx.restore();
-        fSword(0.44 * w, -0.14 * h, 0.28 + wSw, 0.88 * h, "#fffbe6", "#ffd66b", now, "#38bdf8");
-        komiHand(0.13 * w, -0.32 * h, ...grip(0.44 * w, -0.14 * h, 0.28 + wSw, 0, 0.12 * 0.88 * h), u);   // ✊
+        { const A = 0.28 + wSw, o = holdAt(HD[0], HD[1], A, 0, 0.14 * 0.88 * h); komiArm(0, 0, w, h, HD[0], HD[1], 1); fSword(o[0], o[1], A, 0.88 * h, "#fffbe6", "#ffd66b", now, "#38bdf8"); komiFist(HD[0], HD[1], A, u); }
         sparkles(w, h, now, "rgba(255,240,180,A)", 6);
       }
     } else if (job === "bow") {
@@ -2958,8 +2975,8 @@ button.sec-h { cursor: pointer; }
           ctx.fillStyle = i % 2 ? "#fbbf24" : "#fde047"; ctx.strokeStyle = "#7a5a08"; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(x, y, 0.075 * w, 0.03 * h, a + Math.PI / 2, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
         gem(cx, by - 0.21 * h, 0.06 * w, "#34d399");
         for (let i = 0; i < 3; i++) { const ph = now * 3 + i * 2; ctx.strokeStyle = "rgba(209,250,229,.85)"; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(0, -0.15 * h - i * 0.28 * h, 0.62 * w - i * 0.08 * w, 0.09 * h, 0, ph % 1, Math.PI + ph % 1); ctx.stroke(); }
-        komiHand(0.13 * w, -0.32 * h, ...grip(0.40 * w, -0.42 * h, wSw * 0.4, 0.25 * h, 0), u);   // ✊ 활 가운데를 잡기
-        fBow(0.40 * w, -0.42 * h, wSw * 0.4, 0.5 * h, "#10b981", "#ecfdf5", "#6ee7b7", "#ffffff");
+        { const A = wSw * 0.4, gy = HD[1] - 0.06 * h, o = holdAt(HD[0], gy, A, 0.25 * h, 0);
+          komiArm(0, 0, w, h, HD[0], gy, 1); fBow(o[0], o[1], A, 0.5 * h, "#10b981", "#ecfdf5", "#6ee7b7", "#ffffff"); komiFist(HD[0], gy, A, u); }
         sparkles(w, h, now, "rgba(209,250,229,A)", 6);
       }
     } else if (job === "magic") {
@@ -2982,12 +2999,12 @@ button.sec-h { cursor: pointer; }
         ctx.fillStyle = "#fef3c7"; ctx.fillRect(-0.22 * w, -0.11 * w, 0.21 * w, 0.24 * w); ctx.fillRect(0.01 * w, -0.11 * w, 0.21 * w, 0.24 * w);
         ctx.strokeStyle = "#8b5cf6"; ctx.lineWidth = 1.2; for (let i = 0; i < 4; i++) { seg(-0.19 * w, -0.06 * w + i * 0.05 * w, -0.04 * w, -0.06 * w + i * 0.05 * w); seg(0.04 * w, -0.06 * w + i * 0.05 * w, 0.19 * w, -0.06 * w + i * 0.05 * w); }
         ctx.restore();
-        ctx.save(); ctx.translate(0.42 * w, -0.02 * h); ctx.rotate(0.1 + wSw * 0.6);   // 수정 지팡이
+        komiArm(0, 0, w, h, HD[0], HD[1], 1); ctx.save(); { const o = holdAt(HD[0], HD[1], 0.1 + wSw * 0.6, 0, -0.28 * h); ctx.translate(o[0], o[1]); } ctx.rotate(0.1 + wSw * 0.6);   // 수정 지팡이
         ctx.strokeStyle = "#7c4a1e"; ctx.lineWidth = 4 * u; seg(0, 0, 0, -0.78 * h);
         ctx.strokeStyle = "#fbbf24"; ctx.lineWidth = 2 * u; ctx.beginPath(); ctx.arc(0, -0.86 * h, 0.1 * w, 0.3, Math.PI - 0.3, true); ctx.stroke();
         glowDot(0, -0.88 * h, 0.2 * w + sw * 0.02 * w, "167,139,250", 1); gem(0, -0.88 * h, 0.06 * w, "#c4b5fd");
         ctx.restore();
-        komiHand(0.13 * w, -0.32 * h, ...grip(0.42 * w, -0.02 * h, 0.1 + wSw * 0.6, 0, -0.4 * h), u);   // ✊ 지팡이
+        komiFist(HD[0], HD[1], 0.1 + wSw * 0.6, u);   // ✊ 지팡이
         for (const [i, c] of [[0, "56,189,248"], [1, "244,114,182"], [2, "250,204,21"]]) { const a = now * 1.6 + i * 2.09; glowDot(Math.cos(a) * 0.62 * w, -0.5 * h + Math.sin(a) * 0.38 * h, 0.09 * w, c, 0.95); }
       }
     } else if (job === "tamer") {
@@ -3003,12 +3020,12 @@ button.sec-h { cursor: pointer; }
         ctx.fillStyle = "#111"; for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.ellipse((-0.22 + i * 0.1) * w, -0.43 * h + (i % 2 ? 0.015 : -0.01) * h, 0.012 * w, 0.02 * h, 0, 0, Math.PI * 2); ctx.fill(); }
         ctx.fillStyle = "#fbbf24"; ctx.strokeStyle = "#7a5a08"; ctx.beginPath(); ctx.arc(-0.02 * w, -0.3 * h, 0.07 * w, 0, Math.PI * 2); ctx.fill(); ctx.stroke();   // 바나나 훈장
         emoji("🍌", -0.02 * w, -0.3 * h, 0.09 * w, 0);
-        ctx.save(); ctx.translate(0.44 * w, 0.0 * h); ctx.rotate(0.12 + wSw * 0.6);   // 바나나 왕홀
+        komiArm(0, 0, w, h, HD[0], HD[1], 1); ctx.save(); { const o = holdAt(HD[0], HD[1], 0.12 + wSw * 0.6, 0, -0.26 * h); ctx.translate(o[0], o[1]); } ctx.rotate(0.12 + wSw * 0.6);   // 바나나 왕홀
         ctx.strokeStyle = "#fbbf24"; ctx.lineWidth = 4 * u; seg(0, 0, 0, -0.72 * h);
         ctx.fillStyle = "#fbbf24"; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(0, -0.2 * h - i * 0.2 * h, 0.035 * w, 0, Math.PI * 2); ctx.fill(); }
         glowDot(0, -0.82 * h, 0.2 * w + sw * 0.02 * w, "250,204,21", 0.9); emoji("🍌", 0, -0.8 * h, 0.22 * w, 0.5);
         ctx.restore();
-        komiHand(0.13 * w, -0.32 * h, ...grip(0.44 * w, 0, 0.12 + wSw * 0.6, 0, -0.36 * h), u);   // ✊ 왕홀
+        komiFist(HD[0], HD[1], 0.12 + wSw * 0.6, u);   // ✊ 왕홀
         sparkles(w, h, now, "rgba(255,236,150,A)", 6);
       }
     } else if (job === "ninja") {
@@ -3023,8 +3040,7 @@ button.sec-h { cursor: pointer; }
         ninjaMask(w, h, "#09090f", "#000000"); neckScarf(w, h, "#b91c1c", "#450a0a");
         const gl = (Math.sin(now * 3) + 1) / 2;
         for (const ex of [-0.17, 0.13]) star(cx + ex * w + 0.08 * w, -0.70 * h, 0.03 * w + gl * 0.04 * w, "rgba(255,40,80," + (0.5 + gl * 0.5).toFixed(2) + ")");
-        fSword(0.44 * w, -0.12 * h, 0.4 + wSw, 0.78 * h, "#1f1f2e", "#a855f7", now, "#ff2050");
-        komiHand(0.13 * w, -0.32 * h, ...grip(0.44 * w, -0.12 * h, 0.4 + wSw, 0, 0.12 * 0.78 * h), u);   // ✊
+        { const A = 0.4 + wSw, o = holdAt(HD[0], HD[1], A, 0, 0.14 * 0.78 * h); komiArm(0, 0, w, h, HD[0], HD[1], 1); fSword(o[0], o[1], A, 0.78 * h, "#1f1f2e", "#a855f7", now, "#ff2050"); komiFist(HD[0], HD[1], A, u); }
         for (let i = 0; i < 4; i++) { const p = (now * 0.9 + i / 4) % 1; ctx.globalAlpha = 1 - p; glowDot((i - 1.5) * 0.3 * w, -0.1 * h - p * 0.6 * h, 0.07 * w, "147,51,234", 0.9); ctx.globalAlpha = 1; }
       }
     } else if (job === "demon") {
@@ -3042,12 +3058,12 @@ button.sec-h { cursor: pointer; }
         ctx.fillStyle = "#18181b"; ctx.strokeStyle = "#ef4444"; ctx.lineWidth = 1.5;   // 가시 목깃
         ctx.beginPath(); ctx.roundRect(-0.3 * w, -0.46 * h, 0.56 * w, 0.06 * h, 3); ctx.fill(); ctx.stroke();
         for (let i = 0; i < 6; i++) { const x = (-0.27 + i * 0.1) * w; ctx.fillStyle = "#fbbf24"; ctx.beginPath(); ctx.moveTo(x - 0.03 * w, -0.46 * h); ctx.lineTo(x, -0.52 * h); ctx.lineTo(x + 0.03 * w, -0.46 * h); ctx.fill(); }
-        ctx.save(); ctx.translate(0.46 * w, 0.02 * h); ctx.rotate(0.12 + wSw); ctx.shadowColor = "#ff2050"; ctx.shadowBlur = 14 + sw * 4;   // 불타는 삼지창
+        komiArm(0, 0, w, h, HD[0], HD[1], 1); ctx.save(); { const o = holdAt(HD[0], HD[1], 0.12 + wSw, 0, -0.28 * h); ctx.translate(o[0], o[1]); } ctx.rotate(0.12 + wSw); ctx.shadowColor = "#ff2050"; ctx.shadowBlur = 14 + sw * 4;   // 불타는 삼지창
         ctx.strokeStyle = "#fbbf24"; ctx.lineWidth = 3.5 * u; seg(0, 0, 0, -0.82 * h);
         ctx.lineWidth = 3 * u; ctx.beginPath(); ctx.moveTo(-0.16 * w, -0.95 * h); ctx.quadraticCurveTo(-0.16 * w, -0.8 * h, 0, -0.8 * h); ctx.quadraticCurveTo(0.16 * w, -0.8 * h, 0.16 * w, -0.95 * h); ctx.stroke(); seg(0, -0.8 * h, 0, -1.0 * h);
         ctx.fillStyle = "#ef4444"; for (const x of [-0.16, 0, 0.16]) { ctx.beginPath(); ctx.moveTo(x * w - 0.04 * w, (x ? -0.95 : -1.0) * h); ctx.lineTo(x * w, (x ? -1.02 : -1.08) * h); ctx.lineTo(x * w + 0.04 * w, (x ? -0.95 : -1.0) * h); ctx.fill(); }
         ctx.restore();
-        komiHand(0.13 * w, -0.32 * h, ...grip(0.46 * w, 0.02 * h, 0.12 + wSw, 0, -0.42 * h), u);   // ✊ 삼지창
+        komiFist(HD[0], HD[1], 0.12 + wSw, u);   // ✊ 삼지창
         for (let i = 0; i < 4; i++) { const p = (now * 1.1 + i / 4) % 1; ctx.globalAlpha = 1 - p; glowDot((i - 1.5) * 0.35 * w, -0.15 * h - p * 0.7 * h, 0.08 * w, i % 2 ? "255,90,30" : "239,68,68", 0.95); ctx.globalAlpha = 1; }
       }
     } else if (job === "bard") {
@@ -3064,8 +3080,7 @@ button.sec-h { cursor: pointer; }
         ctx.strokeStyle = "#1f1f2e"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0.3 * w, -0.66 * h); ctx.quadraticCurveTo(0.26 * w, -0.5 * h, 0.1 * w, -0.5 * h); ctx.stroke();   // 헤드셋 마이크
         ctx.fillStyle = "#1f1f2e"; ctx.beginPath(); ctx.arc(0.09 * w, -0.5 * h, 0.03 * w, 0, Math.PI * 2); ctx.fill();
         ctx.fillStyle = "#ec4899"; ctx.beginPath(); ctx.arc(0.3 * w, -0.66 * h, 0.045 * w, 0, Math.PI * 2); ctx.fill();
-        emoji("🎸", 0.42 * w, -0.3 * h, 0.5 * w, -0.4 + wSw);   // 손에 든 기타
-        komiHand(0.13 * w, -0.32 * h, ...grip(0.42 * w, -0.3 * h, -0.4 + wSw, -0.1 * w, 0.11 * w), u);   // ✊
+        { const A = -0.4 + wSw, o = holdAt(HD[0], HD[1], A, 0.02 * w, -0.02 * w); komiArm(0, 0, w, h, HD[0], HD[1], 1); emoji("🎸", o[0], o[1], 0.5 * w, A); komiFist(HD[0], HD[1], A + 0.8, u); }   // ✊ 손에 든 기타
         for (let i = 0; i < 6; i++) { const a = now * 1.6 + i * Math.PI / 3; note(Math.cos(a) * 0.68 * w, -0.52 * h + Math.sin(a) * 0.38 * h, 0.19 * w, "hsl(" + ((i * 60 + now * 90) % 360) + ",95%,70%)", i % 2); }
         sparkles(w, h, now, "rgba(255,240,250,A)", 6);
       }
@@ -3116,10 +3131,20 @@ button.sec-h { cursor: pointer; }
     if (J() && (!F() || MIXK[fk]) && !(S.adv >= 3)) {   // 3차는 옷에 전용 무기가 있음
       const big = S.adv >= 2 ? 1.3 : 1, mx = fk && MIXK[fk];
       if (S.adv >= 2) { ctx.fillStyle = "rgba(127,216,255,.25)"; ctx.beginPath(); ctx.arc(x + 36, y - h * 0.45, 24 + Math.sin(now * 5) * 3, 0, Math.PI * 2); ctx.fill(); }
-      const r1 = -0.4 + wsw + Math.sin(now * 2) * .08, r2 = 0.4 - wsw * 0.6 + Math.sin(now * 2 + 1) * .08;
-      wpDraw(mx ? mx[0] : S.job, x + 36, y - h * 0.32, 30 * big, r1, now);
-      if (S.adv >= 2) armTo(x, y, w, h, 1, x + 36, y - h * 0.32, 30 * big, r1, mx ? mx[0] : S.job);   // ✊ 오른손으로 잡기
-      if (mx) { wpDraw(mx[1], x - 34, y - h * 0.28, 26 * big, r2, now); if (S.adv >= 2) armTo(x, y, w, h, -1, x - 34, y - h * 0.28, 26 * big, r2, mx[1]); }   // 합성: 새 직업 무기는 반대 손에
+      const r1 = -0.4 + wsw + Math.sin(now * 2) * .08, r2 = 0.4 - wsw * 0.6 + Math.sin(now * 2 + 1) * .08, id1 = mx ? mx[0] : S.job;
+      if (S.adv >= 2) {   // ✊ 2차부터: 팔을 뻗어 손으로 쥐고 휘두름
+        const H = handPos(w, h, wsw), hx = x + H[0], hy = y + H[1], j1 = JOBS[id1], o1 = HOFF[j1.wp || j1.ic] || [0, 0.3], s1 = 30 * big;
+        const c1 = holdAt(hx, hy, j1.wp === "shuri" ? 0 : r1, o1[0] * s1, o1[1] * s1);
+        komiArm(x, y, w, h, hx, hy, 1); wpDraw(id1, c1[0], c1[1], s1, r1, now); komiFist(hx, hy, j1.wp === "shuri" ? 0 : r1 + 0.8, w / 80);
+        if (mx) {   // 합성: 왼손에 둘째 무기
+          const lx = x - 0.34 * w, ly = y - 0.24 * h, j2 = JOBS[mx[1]], o2 = HOFF[j2.wp || j2.ic] || [0, 0.3], s2 = 26 * big;
+          const c2 = holdAt(lx, ly, j2.wp === "shuri" ? 0 : r2, o2[0] * s2, o2[1] * s2);
+          komiArm(x, y, w, h, lx, ly, -1); wpDraw(mx[1], c2[0], c2[1], s2, r2, now); komiFist(lx, ly, j2.wp === "shuri" ? 0 : r2 + 0.8, w / 80);
+        }
+      } else {
+        wpDraw(id1, x + 36, y - h * 0.32, 30 * big, r1, now);
+        if (mx) wpDraw(mx[1], x - 34, y - h * 0.28, 26 * big, r2, now);   // 합성: 새 직업 무기는 반대 손에
+      }   // 합성: 새 직업 무기는 반대 손에
     }
     if (swing > 0 && sp > 0.3 && sp < 0.8 && (!S.job || S.job === "sword" || S.job === "demon" || (S.job === "ninja" && S.adv >= 3))) {   // ⚔️ 하얀 베기 자국
       const q = (sp - 0.3) / 0.5, a0 = -1.3, a1 = a0 + Math.min(1, q * 1.6) * 2.2;
