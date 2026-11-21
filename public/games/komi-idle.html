@@ -41,20 +41,10 @@ body {
   padding-bottom: max(16px, env(safe-area-inset-bottom, 0px)); margin: 0 -4px; padding-inline: 4px; }
 .tabp { display: flex; flex-direction: column; gap: 10px; }
 .tabp[hidden] { display: none; }
-.tabs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; background: var(--card); border-radius: 14px; padding: 4px; }
+.tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; background: var(--card); border-radius: 14px; padding: 4px; }
 .tabs button { position: relative; border: 0; background: transparent; color: var(--dim); font-family: var(--display); font-size: 1rem; padding: 9px 2px; border-radius: 10px; cursor: pointer; white-space: nowrap; }
 .tabs button[aria-selected="true"] { background: var(--sekai); color: #fff; }
-@media (max-width: 480px) { .tabs button { font-size: .8rem; letter-spacing: -.04em; padding: 9px 0; } .tabs button.dot::after { right: 4px; top: 4px; } }
-.skins { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
-.skin { display: flex; gap: 8px; align-items: center; text-align: left; border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.04); color: var(--ink); border-radius: 12px; padding: 8px; cursor: pointer; font-family: var(--body); min-width: 0; }
-.skin .ic { font-size: 1.7rem; flex: none; width: 2.1rem; text-align: center; }
-.skin b { display: block; font-family: var(--display); font-weight: 400; font-size: .95rem; }
-.skin small { display: block; font-size: .7rem; color: var(--dim); line-height: 1.3; }
-.skin.lock { cursor: default; }
-.skin.lock .ic { filter: grayscale(1) brightness(.6); }
-.skin.on { border-color: var(--gold); background: rgba(255,207,92,.14); box-shadow: 0 0 0 1px var(--gold) inset; }
-.skin .sb { display: block; height: 4px; margin-top: 3px; border-radius: 9px; background: rgba(255,255,255,.12); overflow: hidden; }
-.skin .sb i { display: block; height: 100%; background: var(--sekai); }
+@media (max-width: 480px) { .tabs button { font-size: .9rem; letter-spacing: -.02em; } }
 #chEmpty[hidden] { display: none; }
 .tabs button:focus-visible { outline: 3px solid var(--gold); outline-offset: 1px; }
 .tabs button.dot::after { content: ""; position: absolute; top: 6px; right: 10px; width: 8px; height: 8px; border-radius: 50%; background: var(--alarm); }
@@ -346,7 +336,6 @@ button.sec-h { cursor: pointer; }
 
   <nav class="tabs" role="tablist" aria-label="메뉴">
     <button type="button" role="tab" id="tb-up" data-tab="up" aria-selected="true">⚔️ 강화</button>
-    <button type="button" role="tab" id="tb-skin" data-tab="skin" aria-selected="false">👕 스킨</button>
     <button type="button" role="tab" id="tb-gear" data-tab="gear" aria-selected="false">🎁 장비</button>
     <button type="button" role="tab" id="tb-mis" data-tab="mis" aria-selected="false">📜 미션</button>
     <button type="button" role="tab" id="tb-ch" data-tab="ch" aria-selected="false">🏆 도전</button>
@@ -379,13 +368,6 @@ button.sec-h { cursor: pointer; }
     <button class="btn ghost" id="reset" type="button">처음부터 다시</button>
     <div class="cloud" id="cloudMsg" hidden></div>
   </div>
-    </div>
-    <div class="tabp" id="tab-skin" role="tabpanel" hidden>
-  <section class="box" aria-label="스킨">
-    <div class="sec-h"><b>👕 스킨</b><small id="skinSum"></small></div>
-    <div class="skins" id="skins"></div>
-    <div class="boxmsg">가진 스킨은 누르면 입기 (한 번 더 누르면 벗기) · 🔒 스킨은 누르면 5초 미리보기</div>
-  </section>
     </div>
     <div class="tabp" id="tab-gear" role="tabpanel" hidden>
   <section class="box" aria-label="장비 상자">
@@ -492,7 +474,7 @@ button.sec-h { cursor: pointer; }
   { const m = META(); for (const k in m) if (!S[k] || typeof S[k] !== "object") S[k] = m[k]; S.gear = Object.assign(m.gear, S.gear); S.st = Object.assign(m.st, S.st); }
   // 🎖️ 훈장: 스테이지 40·60·80 보스를 잡을 때마다 하나 (최고 기록으로 셈 → 처음부터 다시 해도 유지) · 하나에 스킬 위력 +20%
   const MEDAL = [40, 60, 80], medals = () => MEDAL.filter((m) => (S.top || 1) > m).length, medalMul = () => 1 + 0.2 * medals();
-  const keepMeta = () => ({ stone: S.stone || 0, gear: S.gear, st: S.st, jtop: S.jtop, mis: S.mis, ev: S.ev, evHat: S.evHat, skin: S.skin });
+  const keepMeta = () => ({ stone: S.stone || 0, gear: S.gear, st: S.st, jtop: S.jtop, mis: S.mis, ev: S.ev, evHat: S.evHat });
   // 장비: 무기(공격력) · 모자(체력) · 반지(바나나), 등급 4개, 같은 등급이 또 나오면 ★ (최대 5, ★마다 +20%)
   const RAR = [["일반", 56, 5], ["희귀", 28, 12], ["영웅", 10, 25], ["신화", 4, 35], ["전설", 2, 50]];   // 이름, 확률%, 기본 보너스% (신화 = 영웅과 전설 사이)
   const SLOTS = { weapon: ["🗡️", "무기", "공격력"], hat: ["🎩", "모자", "체력"], ring: ["💍", "반지", "바나나"] };
@@ -1774,17 +1756,6 @@ button.sec-h { cursor: pointer; }
     const me = mon; setTimeout(() => { if (btIn === r && mon === me) btSpawn(); }, 800);
     renderGear(); renderUps(); renderWB(); save();
   }
-  $("skins").addEventListener("click", (e) => {   // 👕 스킨 입기 / 벗기
-    const b = e.target.closest("[data-skin]"); if (!b) return;
-    const K = skinS(), id = b.dataset.skin; wake();
-    if (!K.got.includes(id)) {   // 👀 아직 없는 스킨: 5초 미리보기
-      skinPrev = { id }; clearTimeout(skinPrev.tm); beep(740, 0.06, "triangle", 0.04);
-      const me = skinPrev; me.tm = setTimeout(() => { if (skinPrev === me) { skinPrev = null; renderSkins(); } }, 5000);
-      renderSkins(); return;
-    }
-    skinPrev = null; K.on = K.on === id ? "" : id; beep(K.on ? 880 : 520, 0.06, "triangle", 0.04); renderSkins(); save();
-  });
-  setTimeout(skinCheck, 0); setInterval(skinCheck, 2000);
   $("btBtn-gold").addEventListener("click", () => startBT("gold"));
   $("btBtn-stone").addEventListener("click", () => startBT("stone"));
   setTimeout(renderWB, 0); setInterval(renderWB, 1000);   // 처음 그리기는 다른 준비(미션 등)가 다 끝난 뒤에
@@ -1985,7 +1956,7 @@ button.sec-h { cursor: pointer; }
   const tabBtns = [...document.querySelectorAll(".tabs button")];
   tabBtns.forEach((tb) => tb.addEventListener("click", () => {
     tabBtns.forEach((x) => { const on = x === tb; x.setAttribute("aria-selected", String(on)); $("tab-" + x.dataset.tab).hidden = !on; });
-    $("panel").scrollTop = 0; beep(700, .04, "triangle", .03); if (tb.dataset.tab === "mis") renderMis(); if (tb.dataset.tab === "skin") renderSkins();
+    $("panel").scrollTop = 0; beep(700, .04, "triangle", .03); if (tb.dataset.tab === "mis") renderMis();
   }));
 
   // ---- 창을 닫아둔 동안 번 바나나 ----
@@ -3030,82 +3001,6 @@ button.sec-h { cursor: pointer; }
     }
     ctx.restore();
   }
-  // ---- 👕 스킨 ----
-  function readCnt() { try { const l = JSON.parse(localStorage.getItem("komi-reads") || "[]"); return Array.isArray(l) ? l.length : 0; } catch (e) { return 0; } }
-  const SKINS = [   // id, 아이콘, 이름, 얻는 법 (null = 아직 미정 → 나중에 재화 정하면 여기에)
-    ["sakura", "🌸", "벚꽃 꼬미", () => true],
-    ["shades", "🕶️", "선글라스 꼬미", null],
-    ["ribbon", "🎀", "리본 꼬미", null],
-    ["angel", "😇", "천사 꼬미", null],
-    ["devil", "😈", "악마 꼬미", null],
-    ["fire", "🔥", "불꽃 꼬미", null],
-    ["snow", "❄️", "겨울 꼬미", null],
-    ["gold", "✨", "황금 꼬미", null],
-    ["santa", "🎅", "산타 꼬미", null],
-    ["rainbow", "🌈", "무지개 꼬미", null],
-  ];
-  var skinPrev = null;   // 👀 미리보기 { id, t: 남은 초 }
-  function skinS() { if (!S.skin || !Array.isArray(S.skin.got)) S.skin = { on: "sakura", got: ["sakura"], seen: 1 }; return S.skin; }
-  function skinCheck() {   // 조건을 채운 스킨 → 새로 얻기
-    if (!S.seen) return;
-    const K = skinS(); let neu = 0;
-    for (const sk of SKINS) {
-      if (K.got.includes(sk[0])) continue;
-      if (!sk[3] || !sk[3]()) continue;
-      K.got.push(sk[0]); neu++;
-      pops.push({ t: -0.2 - neu * 0.4, x: W / 2, y: 110, text: "👕 새 스킨! " + sk[1] + " " + sk[2], c: "#f9a8d4", big: true, huge: true });
-    }
-    if (neu) { [659, 880, 1175].forEach((f, k) => setTimeout(() => beep(f, 0.1, "triangle", 0.05), k * 80)); save(); }
-    $("tb-skin").classList.toggle("dot", K.got.length > (K.seen || 0));
-    if (!$("tab-skin").hidden) renderSkins();
-  }
-  function renderSkins() {
-    const K = skinS(); K.seen = K.got.length; $("tb-skin").classList.remove("dot");
-    $("skinSum").textContent = "모음 " + K.got.length + "/" + SKINS.length;
-    $("skins").innerHTML = SKINS.map((sk) => {
-      const has = K.got.includes(sk[0]), on = K.on === sk[0], pv = skinPrev && skinPrev.id === sk[0];
-      return `<button type="button" class="skin${has ? "" : " lock"}${on || pv ? " on" : ""}" data-skin="${sk[0]}"><span class="ic">${sk[1]}</span><span style="min-width:0"><b>${sk[2]}</b><small>${on ? "✅ 입는 중" : has ? "누르면 입기" : pv ? "👀 미리보는 중…" : "🔒 얻는 방법 준비 중<br>누르면 미리보기"}</small></span></button>`;
-    }).join("");
-  }
-  function drawSkin(w, h, now, back) {   // 꼬미 발밑(0,0) 기준, 위로 -h 까지
-    const K = S.skin, id = skinPrev ? skinPrev.id : K && K.on; if (!id) return;
-    const glow = (c, a, r) => { const gr = ctx.createRadialGradient(0, -h * 0.5, 6, 0, -h * 0.5, r); gr.addColorStop(0, "rgba(" + c + "," + a + ")"); gr.addColorStop(1, "rgba(" + c + ",0)"); ctx.fillStyle = gr; ctx.fillRect(-r, -h * 0.5 - r, r * 2, r * 2); };
-    if (back) {
-      if (id === "sakura") glow("249,168,212", 0.3, h * 0.75);
-      if (id === "angel") {   // 하얀 날개
-        glow("255,255,255", 0.22, h * 0.8);
-        for (const sd of [-1, 1]) {
-          ctx.save(); ctx.translate(sd * w * 0.3, -h * 0.55); ctx.rotate(sd * (0.5 + Math.sin(now * 6) * 0.15));
-          ctx.fillStyle = "#ffffff"; ctx.strokeStyle = "#cbd5e1"; ctx.lineWidth = 2;
-          for (let f = 0; f < 3; f++) { ctx.beginPath(); ctx.ellipse(sd * (16 + f * 7), f * 9 - 6, 22 - f * 4, 9, sd * 0.3, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
-          ctx.restore();
-        }
-      }
-      if (id === "devil") glow("255,60,90", 0.32, h * 0.75);
-      if (id === "fire") { glow("255,138,61", 0.38, h * 0.8); for (let i = 0; i < 5; i++) { const ph = (now * 1.4 + i / 5) % 1; ctx.globalAlpha = 1 - ph; emoji("🔥", (i - 2) * w * 0.28, -ph * h * 0.95, 20 + (1 - ph) * 10); ctx.globalAlpha = 1; } }
-      if (id === "snow") glow("125,211,252", 0.3, h * 0.75);
-      if (id === "gold") glow("255,214,107", 0.5 + Math.sin(now * 4) * 0.1, h * 0.85);
-      if (id === "rainbow") { const hu = (now * 80) % 360; const gr = ctx.createRadialGradient(0, -h * 0.5, 6, 0, -h * 0.5, h * 0.8); gr.addColorStop(0, "hsla(" + hu + ",90%,65%,.45)"); gr.addColorStop(0.6, "hsla(" + ((hu + 120) % 360) + ",90%,65%,.2)"); gr.addColorStop(1, "hsla(" + ((hu + 240) % 360) + ",90%,65%,0)"); ctx.fillStyle = gr; ctx.fillRect(-h, -h * 1.3, h * 2, h * 1.6);
-        emoji("🌈", 0, -h * 0.82, w * 1.2); }
-      return;
-    }
-    if (id === "sakura") for (let i = 0; i < 4; i++) { const ph = (now * 0.35 + i / 4) % 1, a = now * 1.5 + i * 1.6; emoji("🌸", Math.cos(a) * w * 0.62, -h * 1.05 + ph * h * 1.05, 13, a); }
-    if (id === "fire") for (let i = 0; i < 2; i++) { const ph = (now * 1.8 + i / 2) % 1; ctx.globalAlpha = 1 - ph; emoji("🔥", (i ? 1 : -1) * w * 0.42, -h * 0.1 - ph * h * 0.5, 18); ctx.globalAlpha = 1; }
-    if (id === "shades") emoji("🕶️", 2, -h * 0.5, w * 0.46);
-    if (id === "ribbon") emoji("🎀", -w * 0.26, -h * 0.8, w * 0.36, -0.35);
-    if (id === "angel") { ctx.strokeStyle = "#ffe066"; ctx.lineWidth = 4; ctx.shadowColor = "#ffe066"; ctx.shadowBlur = 10; ctx.beginPath(); ctx.ellipse(0, -h * 1.02 + Math.sin(now * 3) * 2, w * 0.28, w * 0.08, 0, 0, Math.PI * 2); ctx.stroke(); ctx.shadowBlur = 0; }
-    if (id === "devil") { ctx.fillStyle = "#e11d48"; ctx.strokeStyle = "#4c0519"; ctx.lineWidth = 2;
-      for (const sd of [-1, 1]) { ctx.beginPath(); ctx.moveTo(sd * w * 0.12, -h * 0.9); ctx.quadraticCurveTo(sd * w * 0.3, -h * 1.02, sd * w * 0.3, -h * 1.12); ctx.lineTo(sd * w * 0.24, -h * 0.88); ctx.closePath(); ctx.fill(); ctx.stroke(); } }
-    if (id === "snow") { emoji("🧣", w * 0.04, -h * 0.2, w * 0.36, 0.15); for (let i = 0; i < 5; i++) { const ph = (now * 0.4 + i / 5) % 1; emoji("❄️", (i - 2) * w * 0.3 + Math.sin(now + i) * 6, -h * 1.1 + ph * h * 1.1, 11); } }
-    if (id === "gold") for (let i = 0; i < 4; i++) { const a = now * 2 + i * 1.57; ctx.globalAlpha = 0.6 + 0.4 * Math.sin(now * 6 + i); emoji("✨", Math.cos(a) * w * 0.6, -h * 0.5 + Math.sin(a) * h * 0.45, 15); ctx.globalAlpha = 1; }
-    if (id === "santa") {   // 빨간 산타 모자
-      ctx.save(); ctx.translate(-w * 0.02, -h * 0.86); ctx.rotate(-0.25);
-      ctx.fillStyle = "#dc2626"; ctx.beginPath(); ctx.moveTo(-w * 0.3, 0); ctx.quadraticCurveTo(w * 0.05, -h * 0.42, w * 0.34, -h * 0.2); ctx.lineTo(w * 0.3, 0); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.roundRect(-w * 0.34, -6, w * 0.68, 12, 6); ctx.fill();
-      ctx.beginPath(); ctx.arc(w * 0.35, -h * 0.2, 7, 0, Math.PI * 2); ctx.fill(); ctx.restore();
-    }
-    if (id === "rainbow") for (let i = 0; i < 3; i++) { const a = now * 2.2 + i * 2.09; emoji("⭐", Math.cos(a) * w * 0.65, -h * 0.55 + Math.sin(a) * h * 0.4, 13); }
-  }
   function drawKomi(now) {
     const t = tier();
     const w = 78 + t * 6, h = w * 398 / 331;
@@ -3118,7 +3013,7 @@ button.sec-h { cursor: pointer; }
     // 직업 옷: 1차 = 기본 / 2차 = 1차가 진화한 화려한 모습 (drawOutfit 참고)
     const lv = S.job ? (S.adv >= 3 ? 3 : S.adv >= 2 ? 2 : 1) : 0, fk = F() ? fuseKey(S.job, S.fuse) : null;
     if (fk) { const c = FAURA[fk] || "255,255,255", a = ctx.createRadialGradient(x, y - h / 2, 8, x, y - h / 2, h * 0.75); a.addColorStop(0, "rgba(" + c + "," + (0.38 + Math.sin(now * 3) * 0.08).toFixed(2) + ")"); a.addColorStop(1, "rgba(" + c + ",0)"); ctx.fillStyle = a; ctx.fillRect(x - h, y - h * 1.4, h * 2, h * 1.6); }
-    if (k.complete) { ctx.save(); ctx.translate(x - (komiHit > 0 ? 8 : 0), y); ctx.rotate(faint > 0 ? -1.2 : lunge * 0.004); if (komiHit > 0) ctx.filter = "sepia(1) saturate(4) hue-rotate(-30deg)"; ctx.scale(1 - breathe, 1 + breathe); drawSkin(w, h, now, true); const awk = S.adv >= 3 && fk; if (awk) drawAwakeMix(S.job, S.fuse, w, h, now, true); else if (fk) drawFused(fk, w, h, now, true, lunge); else if (lv) drawOutfit(S.job, lv, w, h, now, true); ctx.drawImage(k, -w / 2, -h, w, h); if (awk) drawAwakeMix(S.job, S.fuse, w, h, now, false); else if (fk) drawFused(fk, w, h, now, false, lunge); else if (lv) drawOutfit(S.job, lv, w, h, now, false); drawSkin(w, h, now, false); ctx.restore(); }
+    if (k.complete) { ctx.save(); ctx.translate(x - (komiHit > 0 ? 8 : 0), y); ctx.rotate(faint > 0 ? -1.2 : lunge * 0.004); if (komiHit > 0) ctx.filter = "sepia(1) saturate(4) hue-rotate(-30deg)"; ctx.scale(1 - breathe, 1 + breathe); const awk = S.adv >= 3 && fk; if (awk) drawAwakeMix(S.job, S.fuse, w, h, now, true); else if (fk) drawFused(fk, w, h, now, true, lunge); else if (lv) drawOutfit(S.job, lv, w, h, now, true); ctx.drawImage(k, -w / 2, -h, w, h); if (awk) drawAwakeMix(S.job, S.fuse, w, h, now, false); else if (fk) drawFused(fk, w, h, now, false, lunge); else if (lv) drawOutfit(S.job, lv, w, h, now, false); ctx.restore(); }
     if (songT > 0) for (let i = 0; i < 3; i++) { const a = now * 2.5 + i * 2.09; note(x + Math.cos(a) * w * 0.7, y - h * 0.5 + Math.sin(a) * h * 0.4, 16, ["#ffd66b", "#f9a8d4", "#7fd8ff"][i], i % 2); }   // 🎵 노래 버프 중
     if (S.evHat) emoji("🎃", x + w * 0.32, y - h * 0.84 + Math.sin(now * 3) * 1.5, 20, 0.3);   // 할로윈 한정 호박 장식
     const gear = TIERS[t][2];
