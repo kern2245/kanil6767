@@ -826,6 +826,7 @@ button.sec-h { cursor: pointer; }
   });   // 💰 현상수배 보스: 나오는 스테이지, 제한 시간
   function newMon() {
     if (btIn) return;   // 🍌🔨 보스 방 안에서는 방 보스만
+    if (evOn && !bossGo) { bossGo = true; ev().kill = PER_STAGE; }   // 🎃 할로윈 이벤트: 졸개 없이 보스만
     const isBoss = bossGo;
     bossGo = false;
     if (isBoss) { bossFail = false; komiHp = maxHp(); }   // 보스전 시작: 체력 가득
@@ -1685,7 +1686,7 @@ button.sec-h { cursor: pointer; }
     const E = ev(), days = 31 - new Date().getDate();
     $("evBtn").textContent = evOn ? "↩ 원래 스테이지로" : "🎃 할로윈 이벤트 입장";
     $("evTxt").textContent = evOn
-      ? "🎃 " + (E.st <= 10 ? E.st + "/10단계" : E.st + "단계 (무한)") + " · 바나나 2배" + (E.st <= 10 ? " · 단계마다 장비 상자" : "") + ""
+      ? "🎃 " + (E.st <= 10 ? E.st + "/10단계" : E.st + "단계 (무한)") + " · 보스만 나와요 · 바나나 2배" + (E.st <= 10 ? " · 단계마다 장비 상자" : "") + ""
       : days + "일 남음 · 바나나 2배 · 장비 상자" + (S.evHat ? " · 🎃 장식 ✔" : " · 🎃 한정 장식") + (S.evSkin ? " · 🧙 스킨 ✔" : " · 30단계 🧙 스킨 (지금 " + (E.st - 1) + "단계)");
   }
   // ---- 👕 옷장: 가진 스킨 골라 입기 ----
