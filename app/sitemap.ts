@@ -3,13 +3,14 @@ import { siteConfig } from "@/site.config";
 import { getEpisodes, getWebtoons } from "@/lib/data";
 
 /* sitemap.xml — 검색 로봇에게 주는 "우리 사이트 페이지 목록" (지도)
-   첫 화면 + 약관 + 모든 웹툰 + 모든 회차. 1시간마다 새로 만듭니다. */
+   첫 화면 + 게임 + 약관 + 모든 웹툰 + 모든 회차. 1시간마다 새로 만듭니다. */
 export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = siteConfig.url;
   const pages: MetadataRoute.Sitemap = [
     { url: base, changeFrequency: "daily", priority: 1 },
+    { url: `${base}/game`, changeFrequency: "weekly", priority: 0.7 },   // 🐵 꼬미 키우기
     { url: `${base}/terms`, changeFrequency: "yearly", priority: 0.2 },
     { url: `${base}/privacy`, changeFrequency: "yearly", priority: 0.2 },
   ];

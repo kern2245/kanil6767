@@ -2,10 +2,9 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, ChevronRight, List } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 
 import { getEpisode, getEpisodes, getWebtoon } from "@/lib/data";
-import { Button } from "@/components/ui/button";
 import { EpisodeComments } from "@/components/sections/episode-comments";
 import { EpisodeReactions } from "@/components/sections/episode-reactions";
 import { EpisodeViewCounter } from "@/components/sections/episode-view-counter";
@@ -14,63 +13,13 @@ import { getCurrentArtist } from "@/lib/admin-auth";
 import { ReportButton } from "@/components/sections/report-button";
 import { KomiReadReward } from "@/components/sections/komi-read-reward";
 import { getT } from "@/lib/lang";
-import type { Dict, Lang } from "@/lib/i18n";
+import type { Lang } from "@/lib/i18n";
 
 /* 웹툰 뷰어 (주소: /webtoon/웹툰번호/회차번호)
    - 만화 그림을 위에서 아래로 이어 붙여 보여줌 (세로 스크롤)
-   - 위·아래에 이전화 / 목록 / 다음화 버튼
    - 화면 아래에 떠 있는 바 + 💬 누르면 올라오는 댓글 창 (components/sections/episode-comments.tsx) */
 
 export const revalidate = 60;
-
-function EpisodeNav({
-  webtoonId,
-  prev,
-  next,
-  t,
-}: {
-  t: Dict["viewer"];
-  webtoonId: string;
-  prev?: number;
-  next?: number;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-2">
-      <Button asChild={prev !== undefined} variant="outline" size="sm" disabled={prev === undefined}>
-        {prev !== undefined ? (
-          <Link href={`/webtoon/${webtoonId}/${prev}`}>
-            <ChevronLeft />
-            {t.prev}
-          </Link>
-        ) : (
-          <span>
-            <ChevronLeft />
-            {t.prev}
-          </span>
-        )}
-      </Button>
-      <Button asChild variant="ghost" size="sm">
-        <Link href={`/webtoon/${webtoonId}`}>
-          <List />
-          {t.list}
-        </Link>
-      </Button>
-      <Button asChild={next !== undefined} variant="outline" size="sm" disabled={next === undefined}>
-        {next !== undefined ? (
-          <Link href={`/webtoon/${webtoonId}/${next}`}>
-            {t.next}
-            <ChevronRight />
-          </Link>
-        ) : (
-          <span>
-            {t.next}
-            <ChevronRight />
-          </span>
-        )}
-      </Button>
-    </div>
-  );
-}
 
 /* 탭 제목·카톡 공유 미리보기: "3화 제목 - 웹툰 제목" + 회차 썸네일(없으면 표지) */
 export async function generateMetadata(props: PageProps<"/webtoon/[id]/[no]">): Promise<Metadata> {
@@ -177,9 +126,7 @@ export default async function EpisodeViewerPage(props: PageProps<"/webtoon/[id]/
         {/* 📖 끝까지 보면 꼬미 키우기 보상 기록 + 안내 */}
         <KomiReadReward episodeId={episode.id} lang={lang} />
         <EpisodeReactions episodeId={episode.id} path={`/webtoon/${id}/${number}`} t={tv} />
-        <div className="mt-8">
-          <EpisodeNav webtoonId={id} prev={prev} next={next} t={tv} />
-        </div>
+        {/* 이전화 / 목록 / 다음화 는 화면 아래 고정 바에만 (두 번 나오지 않게) */}
       </div>
 
       {/* 화면 아래에 떠 있는 바 + 💬 누르면 올라오는 댓글 창 */}

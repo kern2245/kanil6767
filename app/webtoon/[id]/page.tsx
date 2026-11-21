@@ -149,11 +149,16 @@ export default async function WebtoonPage(props: PageProps<"/webtoon/[id]">) {
                         </div>
                       )}
                     </div>
-                    <span className="w-12 shrink-0 text-sm text-muted-foreground">{tw.ep(ep.number)}</span>
-                    <span className="min-w-0 flex-1 truncate font-medium">{ep.title}</span>
-                    <span className="shrink-0 text-xs text-muted-foreground">
-                      {tw.views(formatViews(viewCounts.get(ep.id) ?? 0))} ·{" "}
-                      {new Date(ep.publish_at ?? ep.created_at).toLocaleDateString(tw.dateLocale, { timeZone: tw.timeZone })}
+                    {/* 회차 번호·제목 (휴대폰에서도 보이게 두 줄까지) + 그 아래 조회수·날짜 */}
+                    <span className="min-w-0 flex-1">
+                      <span className="line-clamp-2 break-keep font-medium">
+                        <span className="mr-1.5 text-sm font-normal text-muted-foreground">{tw.ep(ep.number)}</span>
+                        {ep.title}
+                      </span>
+                      <span className="mt-0.5 block text-xs text-muted-foreground">
+                        {tw.views(formatViews(viewCounts.get(ep.id) ?? 0))} ·{" "}
+                        {new Date(ep.publish_at ?? ep.created_at).toLocaleDateString(tw.dateLocale, { timeZone: tw.timeZone })}
+                      </span>
                     </span>
                     <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
                   </Link>

@@ -9,8 +9,9 @@ import type { Webtoon, Weekday } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { getDict, type Lang } from "@/lib/i18n";
 
-/** 요일 탭 한 개 (mon~sun) */
-export type BoardTab = { key: Weekday; label: string; items: Webtoon[] };
+/** 요일 탭 한 개 (mon~sun, 맨 앞 "all" = 전체) */
+type TabKey = Weekday | "all";
+export type BoardTab = { key: TabKey; label: string; items: Webtoon[] };
 
 /** 웹툰 카드 한 개: 표지 + (UP / 완결) 제목
     UP 표시: 완전 자동 — 새 회차가 공개된 그날(한국 날짜)에만 붙고, 다음 날이면 사라집니다. (계산은 lib/data.ts 의 is_new)
@@ -36,7 +37,7 @@ export function WebtoonCard({ webtoon, lang = "ko" }: { webtoon: Webtoon; lang?:
           </div>
         )}
       </div>
-      <h3 className="mt-2 flex items-center gap-1 text-sm font-medium leading-snug">
+      <h3 className="mt-2 flex items-start gap-1 text-sm font-medium leading-snug">
         {showUp ? (
           <span className="shrink-0 rounded-full border border-up px-1.5 text-[10px] font-bold leading-4 text-up">
             {t.up}
@@ -47,7 +48,8 @@ export function WebtoonCard({ webtoon, lang = "ko" }: { webtoon: Webtoon; lang?:
             {t.done}
           </span>
         ) : null}
-        <span className="truncate">{webtoon.title}</span>
+        {/* 휴대폰에서도 제목이 보이게 두 줄까지 */}
+        <span className="line-clamp-2 min-w-0 break-keep">{webtoon.title}</span>
       </h3>
     </article>
   );
@@ -107,13 +109,21 @@ export function WebtoonBoard({
   // "오늘" = 보는 사람 나라의 요일 (미국 독자는 미국 날짜 기준).
   // 서버에서 그릴 땐 한국 시간 요일, 화면이 뜨면 내 기기 시간 요일로 맞춰짐
   const localToday = useSyncExternalStore(noSubscribe, deviceWeekday, () => today);
-  // 요일 탭을 직접 누르기 전까지는 "오늘"이 골라져 있음
-  const [picked, setPicked] = useState<Weekday | null>(null);
-  const selected = picked ?? localToday;
-  const choose = (day: Weekday) => setPicked(day);
+  // 맨 앞 "전체" 탭: 모든 요일 웹툰을 한 번에 (여러 요일에 연재하는 웹툰은 한 번만)
+  const allTab: BoardTab = {
+    key: "all",
+    label: t.all,
+    items: columns.flatMap((c) => c.items).filter((w, i, arr) => arr.findIndex((x) => x.id === w.id) === i),
+  };
+  const tabs = [allTab, ...columns];
+  // 요일 탭을 직접 누르기 전까지는 "오늘"이 골라져 있음 (오늘 웹툰이 없으면 "전체")
+  const [picked, setPicked] = useState<TabKey | null>(null);
+  const todayHas = (columns.find((c) => c.key === localToday)?.items.length ?? 0) > 0;
+  const selected: TabKey = picked ?? (todayHas ? localToday : "all");
+  const choose = (day: TabKey) => setPicked(day);
   // 정렬: 기본순(회장이 정한 순서) / 인기순(조회수 + 좋아요×3)
   const [sort, setSort] = useState<"default" | "popular">("default");
-  const current = columns.find((c) => c.key === selected) ?? columns[0];
+  const current = tabs.find((c) => c.key === selected) ?? allTab;
   // 인기순이면 인기 점수 높은 순으로 (같으면 원래 순서)
   const sorted = (items: Webtoon[]) =>
     sort === "popular" ? [...items].sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0)) : items;
@@ -181,7 +191,7 @@ export function WebtoonBoard({
         )
       ) : (
         <WeekdayTabs
-          columns={columns}
+          columns={tabs}
           current={{ ...current, items: sorted(current.items) }}
           selected={selected}
           onSelect={choose}
@@ -205,16 +215,16 @@ function WeekdayTabs({
   lang: Lang;
   columns: BoardTab[];
   current: BoardTab;
-  selected: Weekday;
-  onSelect: (day: Weekday) => void;
+  selected: TabKey;
+  onSelect: (day: TabKey) => void;
   today: Weekday;
 }) {
   const setSelected = onSelect;
   const t = getDict(lang).board;
   return (
     <div className="mt-8">
-      {/* 요일 탭 */}
-      <div className="grid grid-cols-7 gap-1.5 sm:gap-2" role="tablist" aria-label={t.dayLabel}>
+      {/* 요일 탭 (맨 앞: 전체) */}
+      <div className="grid grid-cols-8 gap-1 sm:gap-2" role="tablist" aria-label={t.dayLabel}>
         {columns.map((col) => (
           <button
             key={col.key}
@@ -229,8 +239,8 @@ function WeekdayTabs({
                 : "bg-muted text-muted-foreground hover:text-foreground",
             )}
           >
-            {lang === "ko" ? col.label : t.days[col.key]}
-            {t.daySuffix ? <span className="hidden md:inline">{t.daySuffix}</span> : null}
+            {col.key === "all" ? t.all : lang === "ko" ? col.label : t.days[col.key]}
+            {t.daySuffix && col.key !== "all" ? <span className="hidden md:inline">{t.daySuffix}</span> : null}
             {col.key === today ? (
               <span className="ml-0.5 text-[10px] font-normal">
                 •<span className="hidden md:inline">{t.today}</span>
@@ -242,7 +252,18 @@ function WeekdayTabs({
 
       {/* 고른 요일의 웹툰만 */}
       {current.items.length === 0 ? (
-        <p className="py-16 text-center text-sm text-muted-foreground">{t.empty}</p>
+        <div className="py-16 text-center text-sm text-muted-foreground">
+          <p>{t.empty}</p>
+          {current.key !== "all" && columns[0]?.items.length ? (
+            <button
+              type="button"
+              onClick={() => setSelected("all")}
+              className="mt-3 font-semibold text-primary hover:underline"
+            >
+              {t.seeAll}
+            </button>
+          ) : null}
+        </div>
       ) : (
         <WebtoonGrid items={current.items} lang={lang} />
       )}
