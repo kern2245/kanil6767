@@ -229,6 +229,16 @@ button.sec-h { cursor: pointer; }
 .achs li.ready { box-shadow: inset 0 0 0 2px var(--gold); }
 /* 소리 켜기/끄기 */
 .hright { display: flex; align-items: center; gap: 10px; }
+.snd { position: relative; }
+.snd.dot::after { content: ""; position: absolute; top: 1px; right: 1px; width: 9px; height: 9px; border-radius: 50%; background: var(--alarm); }
+.closet { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; width: 100%; max-width: 340px; }
+.cl { display: flex; flex-direction: column; align-items: center; gap: 4px; border: 2px solid rgba(255,255,255,.12); background: rgba(255,255,255,.05); color: var(--ink); border-radius: 14px; padding: 12px 8px; cursor: pointer; font-family: var(--body); }
+.cl .ic { font-size: 2.4rem; line-height: 1; }
+.cl b { font-family: var(--display); font-weight: 400; font-size: 1rem; }
+.cl small { font-size: .72rem; color: var(--dim); line-height: 1.35; text-align: center; }
+.cl.on { border-color: var(--gold); background: rgba(255,207,92,.14); }
+.cl.lock { cursor: default; }
+.cl.lock .ic { filter: grayscale(1) brightness(.55); }
 .snd { border: 0; background: var(--card); color: var(--ink); font-size: 1.05rem; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; }
 .snd:focus-visible { outline: 3px solid var(--gold); outline-offset: 1px; }
 .foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -240,7 +250,7 @@ button.sec-h { cursor: pointer; }
 <div class="wrap">
   <header>
     <h1>꼬미 <span>키우기</span></h1>
-    <div class="hright"><button type="button" class="snd" id="sndBtn" aria-label="소리 끄기">🔊</button><div class="brand">SEKAI</div></div>
+    <div class="hright"><button type="button" class="snd" id="closetBtn" aria-label="꼬미 옷장">👕</button><button type="button" class="snd" id="sndBtn" aria-label="소리 끄기">🔊</button><div class="brand">SEKAI</div></div>
   </header>
 
   <div class="hud" aria-live="polite">
@@ -290,6 +300,13 @@ button.sec-h { cursor: pointer; }
       <div class="slots" id="fuseList"></div>
       <p id="slotMsg" aria-live="polite" style="color:var(--gold)"></p>
       <button class="btn ghost" id="slotClose" type="button">닫기</button>
+    </div>
+
+    <div class="overlay" id="closet" hidden role="dialog" aria-modal="true" aria-labelledby="closetTitle">
+      <h2 id="closetTitle">👕 꼬미 옷장</h2>
+      <p>입고 싶은 스킨을 눌러요</p>
+      <div class="closet" id="closetList"></div>
+      <button class="btn ghost" id="closetClose" type="button">닫기</button>
     </div>
 
     <div class="overlay" id="saveBox" hidden role="dialog" aria-modal="true" aria-labelledby="saveTitle">
@@ -404,10 +421,6 @@ button.sec-h { cursor: pointer; }
     <button class="btn" id="btBtn-stone" type="button">🔨 강화석 방</button>
     <small id="btTxt-stone"></small>
   </div>
-    <div class="evbar hsbar" id="hsBar" hidden>
-      <button class="btn" id="hsBtn" type="button">🧙 입기</button>
-      <small><b>🧙 할로윈 스킨</b> · 할로윈 이벤트 30단계 클리어 보상 (마녀 모자 + 박쥐)</small>
-    </div>
     <div class="boxmsg" id="chEmpty">스테이지 10부터 🍌 바나나 방 · 🔨 강화석 방에 도전할 수 있어요!</div>
   </section>
     </div>
@@ -480,7 +493,7 @@ button.sec-h { cursor: pointer; }
   { const m = META(); for (const k in m) if (!S[k] || typeof S[k] !== "object") S[k] = m[k]; S.gear = Object.assign(m.gear, S.gear); S.st = Object.assign(m.st, S.st); }
   // 🎖️ 훈장: 스테이지 40·60·80 보스를 잡을 때마다 하나 (최고 기록으로 셈 → 처음부터 다시 해도 유지) · 하나에 스킬 위력 +20%
   const MEDAL = [40, 60, 80], medals = () => MEDAL.filter((m) => (S.top || 1) > m).length, medalMul = () => 1 + 0.2 * medals();
-  const keepMeta = () => ({ stone: S.stone || 0, gear: S.gear, st: S.st, jtop: S.jtop, mis: S.mis, ev: S.ev, evHat: S.evHat, evSkin: S.evSkin, evSkinOn: S.evSkinOn });
+  const keepMeta = () => ({ stone: S.stone || 0, gear: S.gear, st: S.st, jtop: S.jtop, mis: S.mis, ev: S.ev, evHat: S.evHat, evSkin: S.evSkin, evSkinOn: S.evSkinOn, closetSeen: S.closetSeen });
   // 장비: 무기(공격력) · 모자(체력) · 반지(바나나), 등급 4개, 같은 등급이 또 나오면 ★ (최대 5, ★마다 +20%)
   const RAR = [["일반", 56, 5], ["희귀", 28, 12], ["영웅", 10, 25], ["신화", 4, 35], ["전설", 2, 50]];   // 이름, 확률%, 기본 보너스% (신화 = 영웅과 전설 사이)
   const SLOTS = { weapon: ["🗡️", "무기", "공격력"], hat: ["🎩", "모자", "체력"], ring: ["💍", "반지", "바나나"] };
@@ -915,6 +928,7 @@ button.sec-h { cursor: pointer; }
         if (E.st >= 31 && !S.evSkin) {   // 🧙 30단계 클리어 → 할로윈 스킨 (바로 입혀 줌)
           S.evSkin = true; S.evSkinOn = true; shake = 12; renderHs();
           pops.push({ t: -1.4, x: W / 2, y: 120, text: "🧙 할로윈 스킨 획득!!", c: "#c084fc", big: true, huge: true });
+          pops.push({ t: -1.7, x: W / 2, y: 150, text: "맨 위 👕 옷장에서 갈아입어요", c: "#f4eefe", big: true });
           [392, 523, 659, 784, 1046, 1318].forEach((f, k) => setTimeout(() => beep(f, 0.14, "triangle", 0.05), 1400 + k * 90));
         }
         if (E.st === 11 && !S.evHat) { S.evHat = true; pops.push({ t: -0.9, x: W / 2, y: 150, text: "🎃 한정 호박 장식 획득!", c: "#ffb347", big: true, huge: true }); }
@@ -1672,11 +1686,27 @@ button.sec-h { cursor: pointer; }
       ? "🎃 " + (E.st <= 10 ? E.st + "/10단계" : E.st + "단계 (무한)") + " · 바나나 2배" + (E.st <= 10 ? " · 단계마다 장비 상자" : "") + ""
       : days + "일 남음 · 바나나 2배 · 장비 상자" + (S.evHat ? " · 🎃 장식 ✔" : " · 🎃 한정 장식") + (S.evSkin ? " · 🧙 스킨 ✔" : " · 30단계 🧙 스킨 (지금 " + (E.st - 1) + "단계)");
   }
-  function renderHs() {   // 🧙 할로윈 스킨 줄
-    $("hsBar").hidden = !S.evSkin;
-    $("hsBtn").textContent = S.evSkinOn ? "🧙 벗기" : "🧙 입기";
+  // ---- 👕 옷장: 가진 스킨 골라 입기 ----
+  const CLOSET = [   // id, 아이콘, 이름, 가졌나, 얻는 법
+    ["none", "🐵", "기본 꼬미", () => true, "처음부터"],
+    ["hallo", "🧙", "할로윈 꼬미", () => !!S.evSkin, "할로윈 이벤트 30단계 클리어"],
+  ];
+  const wearing = () => (S.evSkin && S.evSkinOn ? "hallo" : "none");
+  function renderHs() {   // 옷장 그리기 + 👕 버튼 빨간 점
+    $("closetBtn").classList.toggle("dot", !!S.evSkin && !S.closetSeen);
+    if ($("closet").hidden) return;
+    $("closetList").innerHTML = CLOSET.map((c) => {
+      const has = c[3](), on = wearing() === c[0];
+      return `<button type="button" class="cl${has ? "" : " lock"}${on ? " on" : ""}" data-cl="${c[0]}"><span class="ic">${c[1]}</span><b>${c[2]}</b><small>${on ? "✅ 입는 중" : has ? "누르면 입기" : "🔒 " + c[4]}</small></button>`;
+    }).join("");
   }
-  $("hsBtn").addEventListener("click", () => { wake(); S.evSkinOn = !S.evSkinOn; beep(S.evSkinOn ? 880 : 520, 0.06, "triangle", 0.04); renderHs(); save(); });
+  $("closetBtn").addEventListener("click", () => { wake(); S.closetSeen = true; $("closet").hidden = false; renderHs(); save(); $("closetClose").focus(); });
+  $("closetClose").addEventListener("click", () => { $("closet").hidden = true; $("closetBtn").focus(); });
+  $("closetList").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-cl]"); if (!b) return;
+    const c = CLOSET.find((x) => x[0] === b.dataset.cl); if (!c || !c[3]()) return;
+    S.evSkinOn = c[0] === "hallo"; beep(880, 0.06, "triangle", 0.04); renderHs(); save();
+  });
   function chUpd() {   // 🏆 도전 탭: 아무것도 없으면 안내
     $("chEmpty").hidden = !($("btBar-gold").hidden && !evOn);   // 보스 방이 아직 안 열렸으면 안내
   }
