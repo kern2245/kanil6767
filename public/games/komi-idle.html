@@ -68,6 +68,11 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 360 / 270; }
 /* 🎃 기간 한정 이벤트 줄 (게임 화면 바로 아래) */
 .evbar { display: flex; gap: 10px; align-items: center; margin-top: 8px; padding: 8px 10px; border-radius: 12px; background: linear-gradient(90deg, rgba(255,140,26,.28), rgba(124,58,237,.28)); border: 1px solid rgba(255,160,60,.45); }
 .evbar[hidden] { display: none; }
+.wbbar { background: linear-gradient(90deg, rgba(255,207,92,.22), rgba(124,58,237,.28)); border-color: rgba(255,207,92,.5); }
+.wbbar .btn { background: linear-gradient(135deg, #ffcf5c, #ff8a3d); color: #2a1206; }
+.wbbar .btn:disabled { opacity: .5; cursor: default; }
+.wbbar .wbm { display: block; height: 6px; margin-top: 4px; border-radius: 99px; background: rgba(255,255,255,.12); overflow: hidden; }
+.wbbar .wbm i { display: block; height: 100%; background: linear-gradient(90deg, #cd7f32, #e5e7eb, #ffcf5c, #7dd3fc); }
 .evbar .btn { flex: none; background: #ff8c1a; color: #1a0b00; }
 .evbar small { font-size: .78rem; line-height: 1.35; color: var(--ink); }
 .evbar { padding: 6px 8px; }
@@ -328,6 +333,11 @@ button.sec-h { cursor: pointer; }
   <div class="evbar" id="evBar" hidden>
     <button class="btn" id="evBtn" type="button">🎃 이벤트 입장</button>
     <small id="evTxt"></small>
+  </div>
+
+  <div class="evbar wbbar" id="wbBar" hidden>
+    <button class="btn" id="wbBtn" type="button">👑 주간 보스</button>
+    <small id="wbTxt"></small>
   </div>
 
   <nav class="tabs" role="tablist" aria-label="메뉴">
@@ -809,7 +819,7 @@ button.sec-h { cursor: pointer; }
     const crit = canCrit && Math.random() < critP();
     if (mon.dodge > 0 && from !== "burn" && Math.random() < 0.5) { pops.push({ t: 0, x: 262 + (Math.random() - .5) * 40, y: 110, text: "빗나감!", c: "#c4b5fd" }); return; }   // 👻 보스 회피
     const d = Math.floor(base * (crit ? critX() : 1) * songMul() * (mon.shield > 0 ? 0.2 : 1) * (from === "skill" ? medalMul() : 1) * (1 + (mon.boss || mon.wanted ? optV("boss") : 0) + (from === "skill" ? optV("skill") : 0)));   // 🎖️ 훈장 = 스킬 위력↑   // 🛡️ 보스 방어막 = 피해 80% 줄임
-    mon.hp -= d; mon.hit = 0.15; if (crit) shake = 6;
+    mon.hp -= d; mon.hit = 0.15; if (crit) shake = 6; if (mon.world) wbTry += d;
     pops.push({ t: 0, x: 262 + (Math.random() - .5) * 40, y: 110, text: (crit ? "치명타! " : "") + fmt(d), c: crit ? "#ff4d6a" : from === "skill" ? "#7fd8ff" : from === "tap" ? "#ffffff" : from === "help" ? "#5fe3a1" : from === "burn" ? "#ff8a3d" : from === "curse" ? "#c084fc" : "#ffd66b", big: crit || from === "skill" });
     for (let i = 0; i < (crit ? 10 : 4); i++) parts.push({ x: 262, y: 160, vx: (Math.random() - .5) * 300, vy: -Math.random() * 260, t: 0, life: .4, c: crit ? "#ff4d6a" : "#ffd66b" });
     beep(crit ? 220 : from === "tap" ? 660 : 440, 0.05, "square", crit ? 0.05 : 0.025, -120);
@@ -821,6 +831,7 @@ button.sec-h { cursor: pointer; }
     if (mon.hp <= 0) kill();
   }
   function kill() {
+    if (mon.world) { endWB(); return; }   // 👑 주간 보스 처치 = 💎 다이아
     mon.dead = 0.001; laughT = 0.6;
     if (!mon.boss) S.st.kills++;
     if (mon.minion) {   // 👥 보스가 부른 부하: 바나나 조금 받고 → 다음 부하 / 보스에게
@@ -1608,10 +1619,68 @@ button.sec-h { cursor: pointer; }
     evOn = on; bossGo = false; bossFail = false; $("bossBtn").hidden = true; pack = []; fx = null; faint = 0; komiHp = maxHp(); monAtkT = 0;
     if (on) { const E = ev(); if (E.kill >= PER_STAGE) bossGo = true; pops.push({ t: 0, x: W / 2, y: 60, text: "🎃 할로윈 이벤트 입장!", c: "#ff9f1c", big: true, huge: true }); }
     else { if (S.kill >= PER_STAGE) bossGo = true; pops.push({ t: 0, x: W / 2, y: 60, text: "스테이지 " + S.stage + "(으)로 돌아왔어요", c: "#a855f7", big: true }); }
-    newMon(); renderEv(); save();
+    newMon(); renderEv(); if (typeof renderWB === "function") renderWB(); save();
   }
   $("evBtn").addEventListener("click", () => { wake(); setEv(!evOn); });
   renderEv(); setInterval(renderEv, 60000);
+
+  // ---- 👑 주간 월드 보스 ----
+  const WB_FROM = 30, WB_TRIES = 3, WB_SEC = 30;
+  const WB_TIER = [["🥉 브론즈", 0.1, 10, 1], ["🥈 실버", 0.3, 20, 2], ["🥇 골드", 0.6, 40, 3], ["💎 다이아", 1, 80, 5]];   // 이름, 피해 비율, 강화석, 장비 상자
+  const WB_BOSS = [["🐉", "마감 드래곤"], ["🦑", "원고 크라켄"], ["🗿", "슬럼프 골렘"], ["👾", "버그 대마왕"]];
+  const wbWeek = () => Math.floor((Date.now() - new Date(1970, 0, 5).getTime()) / 604800000);   // 월요일마다 바뀜
+  const wbDay = () => { const d = new Date(); return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate(); };
+  let wbT = 0, wbTry = 0;
+  function wb() {   // 이번 주 기록 (주가 바뀌면 새 보스, 날이 바뀌면 도전 횟수 다시)
+    const wk = wbWeek();
+    if (!S.wb || S.wb.wk !== wk) {
+      const hp = Math.floor(Math.max(dps(), monHp(WB_FROM)) * WB_SEC * 18);   // 내 초당 공격력으로 30초씩 약 18번 때려야 처치 (주 초에 정해짐)
+      S.wb = { wk, hp, max: hp, dmg: 0, got: 0, day: "", tries: 0 };
+    }
+    if (S.wb.day !== wbDay()) { S.wb.day = wbDay(); S.wb.tries = 0; }
+    return S.wb;
+  }
+  function renderWB() {
+    const on = !evOn && Math.max(S.top || 1, S.stage) >= WB_FROM;
+    $("wbBar").hidden = !on; if (!on) return;
+    const B = wb(), boss = WB_BOSS[B.wk % WB_BOSS.length], pct = Math.min(1, B.dmg / B.max);
+    const next = WB_TIER[B.got], left = WB_TRIES - B.tries, fighting = !!(mon && mon.world && !mon.dead);
+    $("wbBtn").disabled = fighting || left <= 0 || B.got >= WB_TIER.length || !!(mon && (mon.boss || mon.wanted > 0) && !mon.dead);
+    $("wbBtn").textContent = fighting ? "👑 싸우는 중!" : B.got >= WB_TIER.length ? "💎 처치 완료!" : left > 0 ? "👑 주간 보스 (" + left + "/" + WB_TRIES + ")" : "👑 내일 다시";
+    $("wbTxt").innerHTML = boss[0] + " " + boss[1] + " · 피해 " + Math.floor(pct * 100) + "%" + (B.got ? " · " + WB_TIER[B.got - 1][0] : "")
+      + (next ? " · 다음 " + next[0] + " " + Math.round(next[1] * 100) + "%" : "") + '<span class="wbm"><i style="width:' + (pct * 100).toFixed(1) + '%"></i></span>';
+  }
+  function startWB() {
+    const B = wb(); if (B.tries >= WB_TRIES || B.got >= WB_TIER.length || evOn || (mon && mon.world && !mon.dead)) return;
+    if (mon && (mon.boss || mon.wanted > 0) && !mon.dead) return;   // 보스전 중에는 못 들어감
+    wake(); B.tries++; wbT = WB_SEC; wbTry = 0; pack = []; bossGo = false; bossFail = false; $("bossBtn").hidden = true; faint = 0; komiHp = maxHp();
+    const boss = WB_BOSS[B.wk % WB_BOSS.length], hp = Math.max(1, B.hp);
+    mon = { e: boss[0], name: "👑 " + boss[1], hp, max: B.max, boss: false, world: true, x: W + 60, hit: 0, dead: 0 };
+    pops.push({ t: 0, x: W / 2, y: 60, text: "👑 " + boss[1] + " 등장! " + WB_SEC + "초!", c: "#ffd66b", big: true, huge: true });
+    [392, 523, 659, 784].forEach((f, k) => setTimeout(() => beep(f, 0.14, "sawtooth", 0.04), k * 120));
+    renderWB(); save();
+  }
+  function endWB() {
+    if (!mon || !mon.world || mon.dead) return;
+    const B = wb(); mon.dead = 0.001; wbT = 0;
+    B.dmg = Math.min(B.max, B.dmg + wbTry); B.hp = Math.max(0, B.max - B.dmg);
+    pops.push({ t: 0, x: W / 2, y: 60, text: B.hp <= 0 ? "💎 주간 보스 처치!!!" : "👑 이번 도전 피해 " + fmt(wbTry), c: "#ffd66b", big: true, huge: true });
+    let gs = 0, gb = 0;
+    while (B.got < WB_TIER.length && B.dmg >= B.max * WB_TIER[B.got][1] - 0.5) {   // 새로 닿은 등급 보상
+      const T = WB_TIER[B.got]; B.got++; gs += T[2]; gb += T[3];
+      pops.push({ t: -0.5 - B.got * 0.3, x: W / 2, y: 150, text: T[0] + " 달성! 🔨+" + T[2] + " 🎁×" + T[3], c: "#ffe39a", big: true, huge: true });
+    }
+    if (gs) {
+      S.stone = (S.stone || 0) + gs; shake = 10;
+      for (let i = 0; i < gb; i++) setTimeout(() => { openGearBox(true); renderGear(); save(); }, 900 + i * 350);
+      [523, 659, 784, 1046, 1318].forEach((f, k) => setTimeout(() => beep(f, 0.13, "triangle", 0.05), k * 90));
+      for (let i = 0; i < 30; i++) { const a = Math.random() * Math.PI * 2, v = 100 + Math.random() * 220; parts.push({ x: 262, y: 140, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 80, t: 0, life: .9, c: i % 2 ? "#ffd66b" : "#ffffff" }); }
+    } else beep(523, 0.2, "triangle", 0.04);
+    const me = mon; setTimeout(() => { if (mon === me) newMon(); }, 900);   // 원래 싸움으로
+    renderGear(); renderUps(); renderWB(); save();
+  }
+  $("wbBtn").addEventListener("click", startWB);
+  renderWB(); setInterval(renderWB, 1000);
   $("bossBtn").addEventListener("click", () => { wake(); bossFail = false; bossGo = true; komiHp = maxHp(); if (evOn) ev().kill = PER_STAGE; else S.kill = PER_STAGE; $("bossBtn").hidden = true; newMon(); });
   let resetArm = 0;
   $("reset").addEventListener("click", () => {
@@ -2886,7 +2955,7 @@ button.sec-h { cursor: pointer; }
       ctx.fillStyle = "#5fe3a1"; ctx.beginPath(); ctx.roundRect(m.x - 20, GROUND - s - 14, 40, 6, 3); ctx.fill();
     }
     if (!mon) return;
-    const size = mon.final ? 150 : mon.big ? 124 : mon.boss ? 104 : mon.wanted != null ? 96 : 74;
+    const size = mon.final || mon.world ? 150 : mon.big ? 124 : mon.boss ? 104 : mon.wanted != null ? 96 : 74;
     const sh = (mon.hit > 0 ? (Math.random() - .5) * 8 : 0) - (mon.lunge > 0 ? Math.sin(mon.lunge * Math.PI) * 40 : 0);
     const dy = Math.sin(now * 4) * 4;
     let a = 1, sc = 1;
@@ -2960,8 +3029,11 @@ button.sec-h { cursor: pointer; }
           const me = mon; setTimeout(() => { if (mon === me) newMon(); }, 450);   // 다음 악당
         }
       }
-      // 악당의 반격!
-      if (mon && !mon.dead) {
+      if (mon && mon.world && !mon.dead) {   // 👑 주간 보스 시간
+        wbT -= dt; if (wbT <= 0) endWB();
+      }
+      // 악당의 반격! (👑 주간 보스는 반격하지 않음)
+      if (mon && !mon.dead && !mon.world) {
         monAtkT += dt;
         if (monAtkT >= (mon.boss ? (mon.rage ? 0.6 : 0.9) : 1.2)) {
           monAtkT = 0; mon.lunge = 1;
@@ -3047,7 +3119,10 @@ button.sec-h { cursor: pointer; }
       ctx.font = "12px 'Gowun Dodum', sans-serif"; ctx.textAlign = "left"; ctx.lineWidth = 3; ctx.strokeStyle = "rgba(10,5,25,.7)"; ctx.fillStyle = "rgba(255,255,255,.92)";
       ctx.strokeText(zl, 12, 46); ctx.fillText(zl, 12, 46); }
     let hudX = 0;
-    if (mon && mon.boss && !mon.dead) {
+    if (mon && mon.world && !mon.dead) {
+      ctx.fillStyle = wbT < 8 ? "#ff4d6a" : "#ffd66b"; ctx.font = "18px 'Black Han Sans', sans-serif"; ctx.textAlign = "left";
+      const wt = "⏳ " + Math.ceil(wbT) + "초 · 👑 " + fmt(wbTry); ctx.fillText(wt, 12, 28); hudX = 12 + ctx.measureText(wt).width;
+    } else if (mon && mon.boss && !mon.dead) {
       ctx.fillStyle = bossTime < 8 ? "#ff4d6a" : "#f4eefe"; ctx.font = "18px 'Black Han Sans', sans-serif"; ctx.textAlign = "left";
       ctx.fillText("⏳ " + Math.ceil(bossTime) + "초", 12, 28); hudX = 12 + ctx.measureText("⏳ " + Math.ceil(bossTime) + "초").width;
     } else if (curKill() < PER_STAGE) {
