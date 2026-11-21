@@ -492,13 +492,13 @@ button.sec-h { cursor: pointer; }
   const fixOpt = (g) => {   // 옵션 3칸 + 잠금 칸 만들기 (예전 1칸 옵션은 첫 줄로)
     if (!g || g.r < 3) return g;
     if (!Array.isArray(g.os)) g.os = OPT[g.o] ? [g.o] : [];
-    g.os = g.os.filter((k, i) => OPT[k] && g.os.indexOf(k) === i).slice(0, 3);
-    while (g.os.length < 3) g.os.push(rndOpt(g.os));
+    g.os = g.os.filter((k) => OPT[k]).slice(0, 3);   // 같은 옵션 여러 줄 OK
+    while (g.os.length < 3) g.os.push(rndOpt());
     if (!Array.isArray(g.lk)) g.lk = [false, false, false];
     delete g.o; return g;
   };
   const optOf = (g, k) => (g && g.r >= 3 && OPT[k] ? OPT[k][1][g.r - 3] : 0);
-  const optV = (k) => { let v = 0; for (const s of ["weapon", "hat", "ring"]) { const g = S.gear && S.gear[s]; if (g && g.r >= 3 && Array.isArray(g.os) && g.os.includes(k)) v += optOf(g, k); } return v; };
+  const optV = (k) => { let v = 0; for (const s of ["weapon", "hat", "ring"]) { const g = S.gear && S.gear[s]; if (g && g.r >= 3 && Array.isArray(g.os) && g.os.includes(k)) v += optOf(g, k) * g.os.filter((o) => o === k).length; } return v; };
   const optTxt = (g, i) => { const k = g.os[i]; return OPT[k][0] + " " + OPT[k][2] + Math.round(optOf(g, k) * 100) + "%"; };
   const gearB = (slot) => { const g = S.gear[slot]; return g ? RAR[g.r][2] * (1 + 0.2 * g.s) / 100 : 0; };
 
@@ -1857,11 +1857,11 @@ button.sec-h { cursor: pointer; }
       renderGear(); save(); return;
     }
     const ro = e.target.closest("[data-reopt]");
-    if (ro) {   // 🎲 옵션 다시 뽑기: 잠그지 않은 줄만 (지금과 다르고, 다른 줄과 겹치지 않게)
+    if (ro) {   // 🎲 옵션 다시 뽑기: 잠그지 않은 줄만 (그 줄의 지금 옵션과는 다르게, 다른 줄과는 같아도 OK)
       const g = fixOpt(S.gear[ro.dataset.reopt]); if (!g || g.r < 3 || !g.lk.includes(false)) return;
       const c = OPT_RE[g.r - 3]; if ((S.stone || 0) < c) return;
       S.stone -= c; const nw = [];
-      g.os.forEach((o, i) => { if (g.lk[i]) return; g.os[i] = rndOpt(g.os); nw.push(i); });
+      g.os.forEach((o, i) => { if (g.lk[i]) return; g.os[i] = rndOpt([g.os[i]]); nw.push(i); });
       $("boxMsg").innerHTML = `🎲 새 옵션: <b class="r${g.r}">` + nw.map((i) => "✨ " + optTxt(g, i)).join(" · ") + `</b>`;
       [523, 784, 1046].forEach((f, i) => setTimeout(() => beep(f, .08, "square", .04), i * 60));
       renderGear(); renderUps(); renderJob(); save(); return;
