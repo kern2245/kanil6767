@@ -705,6 +705,34 @@ button.sec-h { cursor: pointer; }
   const WANT_A = 100, WANT_B = 200, WANT_T = 20;
   // 🎈 풍선 · 🔥 피버 (var: 다른 곳에서 먼저 불려도 괜찮게)
   var balloons = [], balloonT = 10, fever = 0, feverT = 0, tapLast = 0;
+  // 👆 연타 콤보 · ✨ 황금 바나나
+  var combo = 0, comboLast = 0, goldBan = null, goldBanT = 25;
+  const comboMul = () => 1 + Math.min(combo, 30) * 0.05;   // 30콤보면 ×2.5
+  function tapHit(x, y) {
+    const t = performance.now();
+    combo = t - comboLast < 700 ? combo + 1 : 1; comboLast = t;
+    hit(Math.max(1, Math.ceil(atk() * 0.15 * comboMul())), "tap", true);
+    if (combo % 10 === 0) {
+      shake = Math.max(shake, 7); addFever(6);
+      pops.push({ t: -0.1, x: W / 2, y: 96, text: "🔥 " + combo + " 콤보!", c: "#ff8a3d", big: true, huge: true });
+      [523, 659, 784].forEach((f, k) => setTimeout(() => beep(f + combo * 4, 0.07, "square", 0.035), k * 45));
+    }
+  }
+  function catchGoldBan() {
+    const b = goldBan; if (!b || b.dead) return;
+    b.hp--; b.hit = 0.15; beep(990 + (6 - b.hp) * 120, 0.05, "triangle", 0.05);
+    const by = GROUND - 18 - Math.abs(Math.sin(b.t * 9)) * 22;
+    for (let i = 0; i < 6; i++) parts.push({ x: b.x, y: by, vx: (Math.random() - .5) * 220, vy: -Math.random() * 220, t: 0, life: .4, c: "#ffe066" });
+    if (b.hp > 0) { pops.push({ t: 0, x: b.x, y: by - 24, text: "앞으로 " + b.hp + "번!", c: "#fff3b0" }); return; }
+    b.dead = 0.001; shake = 12; S.st.goldBan = (S.st.goldBan || 0) + 1;
+    const g = Math.ceil(mGold(curLv()) * 25 * (1 + gearB("ring") + misB()) * GOLD_MUL * goldJ()); S.gold += g;
+    const n = 3 + Math.floor(curLv() / 30); S.stone = (S.stone || 0) + n;
+    for (let i = 0; i < 30; i++) coins.push({ x: b.x, y: by, vx: (Math.random() - .5) * 360, vy: -220 - Math.random() * 260, t: 0 });
+    pops.push({ t: -0.2, x: W / 2, y: 112, text: "✨ 황금 바나나 잡았다!", c: "#ffe066", big: true, huge: true });
+    pops.push({ t: -0.2, x: W / 2, y: 142, text: "+🍌 " + fmt(g) + "  🔨 +" + n, c: "#ffd66b", big: true });
+    [784, 988, 1175, 1568].forEach((f, k) => setTimeout(() => beep(f, 0.12, "triangle", 0.05), k * 80));
+    renderGear(); renderUps(); save();
+  }
   const FEVER_T = 10;
   function addFever(n) {
     if (feverT > 0) return;
@@ -3060,6 +3088,22 @@ button.sec-h { cursor: pointer; }
         balloons.push({ k: r < 0.5 ? "gold" : r < 0.75 ? "bomb" : r < 0.9 ? "stone" : "box", x: W + 24, y: 46 + Math.random() * 56, t: 0, pop: 0 });
       }
       for (const b of balloons) { if (b.pop) b.pop += dt; else { b.t += dt; b.x -= 34 * dt; } }
+      goldBanT -= dt;
+      if (goldBanT <= 0 && !goldBan && S.seen && mon && !mon.world) {   // ✨ 35~60초마다 황금 바나나
+        goldBanT = 35 + Math.random() * 25;
+        goldBan = { x: -24, t: 0, hp: 6, hit: 0, dead: 0 };
+        pops.push({ t: -0.2, x: W / 2, y: 112, text: "✨ 황금 바나나 등장! 빨리 눌러요!", c: "#ffe066", big: true });
+        [659, 880, 1046].forEach((f, k) => setTimeout(() => beep(f, 0.09, "triangle", 0.04), k * 70));
+      }
+      if (goldBan) {
+        const b = goldBan;
+        if (b.dead) { b.dead += dt; if (b.dead > 0.5) goldBan = null; }
+        else {
+          b.t += dt; b.x += 66 * dt; b.hit = Math.max(0, b.hit - dt);
+          if (Math.random() < dt * 14) parts.push({ x: b.x - 10, y: GROUND - 14 - Math.random() * 20, vx: -40, vy: -30, t: 0, life: .5, c: "#ffe066" });
+          if (b.x > W + 30) { goldBan = null; pops.push({ t: 0, x: W / 2, y: 120, text: "황금 바나나가 도망갔어요...", c: "#c4b5fd" }); }
+        }
+      }
       balloons = balloons.filter((b) => b.x > -30 && !(b.pop > 0.35));
       if (feverT > 0) { feverT -= dt; if (feverT <= 0) { feverT = 0; pops.push({ t: 0, x: W / 2, y: 120, text: "피버 끝!", c: "#ffb347" }); } }
     }
@@ -3077,6 +3121,29 @@ button.sec-h { cursor: pointer; }
       emoji("🎈", b.x, by + 10, b.pop ? 30 + b.pop * 60 : 30, Math.sin(b.t * 2) * 0.15);
       emoji(b.k === "bomb" ? "💣" : b.k === "box" ? "🎁" : b.k === "stone" ? "🔨" : "🍌", b.x + 1, by + 40, 18);
       ctx.globalAlpha = 1;
+    }
+    if (goldBan) {   // ✨ 황금 바나나 (깡충깡충 달리기)
+      const b = goldBan, by = GROUND - 18 - Math.abs(Math.sin(b.t * 9)) * 22, a = b.dead ? Math.max(0, 1 - b.dead / 0.5) : 1;
+      ctx.globalAlpha = a;
+      const gl = ctx.createRadialGradient(b.x, by, 2, b.x, by, 36); gl.addColorStop(0, "rgba(255,230,102,.75)"); gl.addColorStop(1, "rgba(255,230,102,0)");
+      ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(b.x, by, 36, 0, Math.PI * 2); ctx.fill();
+      emoji("🍌", b.x, by + 12, (b.dead ? 34 + b.dead * 80 : 34) * (b.hit > 0 ? 1.2 : 1), Math.sin(b.t * 9) * 0.3);
+      if (!b.dead) for (let k = 0; k < 6; k++) { ctx.fillStyle = k < b.hp ? "#ffe066" : "rgba(255,255,255,.25)"; ctx.beginPath(); ctx.arc(b.x - 15 + k * 6, by - 26, 2.4, 0, Math.PI * 2); ctx.fill(); }
+      ctx.globalAlpha = 1;
+    }
+    {   // 👆 연타 콤보 글자
+      const since = performance.now() - comboLast;
+      if (combo >= 3 && since < 900) {
+        ctx.globalAlpha = Math.min(1, (900 - since) / 300); ctx.textAlign = "center";
+        const sz = 20 + Math.min(combo, 30) * 0.4 + (since < 120 ? 4 : 0);
+        ctx.font = sz + "px 'Black Han Sans', sans-serif"; ctx.lineWidth = 5; ctx.strokeStyle = "rgba(20,10,40,.9)";
+        ctx.fillStyle = combo >= 20 ? "#ff4d6a" : combo >= 10 ? "#ff8a3d" : "#ffffff";
+        ctx.strokeText(combo + " COMBO", 262, 46); ctx.fillText(combo + " COMBO", 262, 46);
+        ctx.font = "13px 'Black Han Sans', sans-serif"; ctx.fillStyle = "#ffd66b";
+        const m = "×" + comboMul().toFixed(2).replace(/0$/, "");
+        ctx.strokeText(m, 262, 62); ctx.fillText(m, 262, 62);
+        ctx.globalAlpha = 1;
+      }
     }
     {   // 🔥 피버 게이지 (오른쪽 아래)
       const gx = W - 112, gy = H - 16, gw = 96, p = feverT > 0 ? feverT / FEVER_T : fever / 100;
@@ -3149,8 +3216,10 @@ button.sec-h { cursor: pointer; }
   cv.addEventListener("pointerdown", (e) => {   // 🎈 풍선 누르기 · 🔥 화면 연타로 피버 게이지
     const r = cv.getBoundingClientRect(), x = (e.clientX - r.left) * W / r.width, y = (e.clientY - r.top) * H / r.height;
     for (const b of balloons) { if (b.pop) continue; const by = b.y + Math.sin(b.t * 3) * 6; if (Math.hypot(x - b.x, y - (by + 18)) < 30) { popBalloon(b); return; } }
+    if (goldBan && !goldBan.dead) { const gb = goldBan, gy = GROUND - 18 - Math.abs(Math.sin(gb.t * 9)) * 22; if (Math.hypot(x - gb.x, y - gy) < 40) { catchGoldBan(); return; } }
     const t = performance.now(); if (t - tapLast < 90) return; tapLast = t;
-    if (mon && !mon.dead && feverT <= 0) { addFever(1.5); for (let i = 0; i < 4; i++) parts.push({ x, y, vx: (Math.random() - .5) * 160, vy: -Math.random() * 160, t: 0, life: .3, c: "#ffb347" }); }
+    if (mon && !mon.dead) { tapHit(x, y); for (let i = 0; i < 4; i++) parts.push({ x, y, vx: (Math.random() - .5) * 160, vy: -Math.random() * 160, t: 0, life: .3, c: "#ffb347" }); }
+    if (mon && !mon.dead && feverT <= 0) addFever(1.5);
   });
 
   // 세카이 사이트 안에서 처음 누르면 전체 화면 요청 (페이지를 열 때마다 1번)
