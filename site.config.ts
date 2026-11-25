@@ -97,6 +97,23 @@ export const siteConfig = {
     },
   },
 
+  /* 꼬미의 무인도 30일 게임 (주소: /island) — 게임 페이지 제목과 설명 */
+  island: {
+    href: "/island",
+    ko: {
+      eyebrow: "미니 게임",
+      title: "꼬미의 무인도 30일",
+      text: "무인도에 떨어진 꼬미! 뗏목을 만들거나 구조 신호를 보내서 30일 안에 섬을 탈출하세요.",
+      cta: "게임 하러 가기",
+    },
+    en: {
+      eyebrow: "Mini game",
+      title: "Komi's 30 Days on an Island",
+      text: "Komi is stranded on a desert island! Build a raft or send a rescue signal and escape within 30 days. (Game text is in Korean.)",
+      cta: "Play now",
+    },
+  },
+
   /* 연락처 섹션 */
   contact: {
     eyebrow: "tea time",

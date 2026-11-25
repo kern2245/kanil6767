@@ -1,0 +1,1312 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#27a9cf">
+<title>꼬미의 무인도 30일</title>
+<style>
+:root{
+  --ink:#3b2810;--ink2:#8a6a42;--cream:#fff8ec;--paper:#fffdf8;--line:#efdcb8;--shadow:#e3c99b;
+  --accent:#ff8a3d;--accent2:#ff6a2b;--good:#2fae66;--bad:#ef4b57;--food:#ffa41b;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{font-family:system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;color:var(--ink);
+  background:#1c9fc5 radial-gradient(120% 80% at 50% 0%,#8fe3f5 0%,#27a9cf 45%,#0b6c90 100%);overflow:hidden;
+  -webkit-user-select:none;user-select:none;touch-action:manipulation}
+button{font-family:inherit;color:inherit}
+#app{position:relative;max-width:480px;height:100vh;height:100dvh;margin:0 auto;display:flex;flex-direction:column;
+  background:var(--cream);box-shadow:0 0 50px rgba(0,40,60,.35);overflow-x:hidden;overflow-y:auto}
+
+/* 위쪽: 날짜·날씨·배부름·체력 */
+#top{flex:none;padding:9px 12px 8px;background:linear-gradient(#fff3dc,#ffe8c2);border-bottom:2px solid var(--line)}
+.r1{display:flex;align-items:center;gap:7px}
+#day{font-weight:900;font-size:18px;letter-spacing:-.4px;white-space:nowrap}
+#dday{font-size:11.5px;font-weight:900;color:#fff;background:var(--accent2);padding:2px 8px;border-radius:99px;white-space:nowrap}
+#dday.hot{background:var(--bad);animation:pulse 1s infinite}
+#slot{margin-left:auto;font-size:13px;font-weight:900;display:flex;align-items:center;gap:5px;white-space:nowrap}
+.dots{display:inline-flex;gap:3px}
+.dots i{width:9px;height:9px;border-radius:50%;background:var(--accent);display:block;box-shadow:inset 0 -1px 0 rgba(0,0,0,.15)}
+.dots i.used{background:#e3d0ab;box-shadow:none}
+#helpBtn{flex:none;width:28px;height:28px;border-radius:50%;border:1.5px solid var(--line);background:#fff;font-size:14px;font-weight:900;color:var(--ink2);cursor:pointer;padding:0}
+.r2{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;color:var(--ink2);font-weight:800;margin:5px 0 6px;white-space:nowrap}
+#wxTom.warn{color:var(--bad);animation:pulse 1s infinite}
+.bars{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.bar{display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:900;white-space:nowrap}
+.track{flex:1;height:12px;border-radius:99px;background:#f0dfbd;overflow:hidden;box-shadow:inset 0 1px 2px rgba(0,0,0,.1)}
+.fill{height:100%;width:0;border-radius:99px;transition:width .45s ease}
+#hgFill{background:linear-gradient(90deg,#ffc94d,#ff9a1c)}
+#hpFill{background:linear-gradient(90deg,#ff8ea3,#ff4766)}
+.bar b{min-width:22px;text-align:right;font-size:12.5px}
+.bar.low{color:var(--bad)}
+.bar.low .track{animation:pulse .8s infinite}
+
+/* 가운데: 섬 그림 */
+#sceneWrap{position:relative;flex:1 1 auto;min-height:200px;background:#2bb5d8;overflow:hidden}
+#scene{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:pointer}
+#toast{position:absolute;left:50%;top:10px;transform:translate(-50%,-8px);max-width:92%;width:max-content;text-align:center;
+  background:rgba(40,25,5,.85);color:#fff;font-size:13.5px;font-weight:800;line-height:1.35;padding:7px 14px;border-radius:16px;
+  opacity:0;transition:opacity .25s,transform .25s;pointer-events:none}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+
+/* 아래: 힌트·가방·행동 버튼 */
+#panel{flex:none;padding:8px 10px calc(10px + env(safe-area-inset-bottom));border-top:2px solid var(--line);background:var(--cream)}
+#hint{font-size:12.5px;font-weight:800;line-height:1.35;background:var(--paper);border:1.5px dashed #f0c27e;border-radius:12px;
+  padding:6px 10px;margin-bottom:7px;min-height:32px;display:flex;align-items:center}
+#hint.warn{border:1.5px solid #ff9d9d;background:#fff1f1;color:#b4232f}
+.goal{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:900;margin-bottom:7px;white-space:nowrap}
+.goal .track{height:10px}
+#raftFill{background:linear-gradient(90deg,#d59552,#8a5523)}
+#goalX{color:var(--ink2)}
+#inv{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+.chip{border:1.5px solid var(--line);background:#fff;border-radius:99px;padding:3px 9px;font-size:13.5px;font-weight:900;
+  display:inline-flex;align-items:center;gap:3px;cursor:pointer}
+.chip.food{border-color:#ffc56b;background:#fff7e3}
+.chip.food::after{content:"먹기";font-size:9.5px;font-weight:900;color:#fff;background:var(--food);border-radius:99px;padding:1px 5px;margin-left:2px}
+.chip.zero{opacity:.45}
+.chip.zero::after{display:none}
+.chip.gold{border-color:#ffd54a;background:#fff6c9}
+#acts{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+#acts.wait .act{opacity:.55}
+.act{position:relative;border:none;border-radius:13px;background:#fff;box-shadow:0 3px 0 var(--shadow),inset 0 0 0 1.5px var(--line);
+  padding:6px 3px 5px;display:flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer;transition:transform .08s}
+.act:active{transform:translateY(2px);box-shadow:0 1px 0 var(--shadow),inset 0 0 0 1.5px var(--line)}
+.act .nm{font-size:13.5px;font-weight:900;letter-spacing:-.4px;white-space:nowrap}
+.act .ic{font-size:17px;margin-right:3px}
+.act .sb{font-size:10.5px;font-weight:800;color:var(--ink2);white-space:nowrap}
+.act.new::before{content:"NEW";position:absolute;top:-6px;right:-2px;background:var(--bad);color:#fff;font-size:9px;font-weight:900;padding:1px 5px;border-radius:99px}
+.act.hero{grid-column:1/-1;flex-direction:row;justify-content:center;gap:10px;padding:9px;background:linear-gradient(135deg,#ffb347,#ff6a2b);
+  color:#fff;box-shadow:0 3px 0 #d0541c;animation:glow 1.4s infinite}
+.act.hero .sb{color:#fff3e0}
+
+/* 팝업 카드 */
+#modal{position:fixed;inset:0;background:rgba(20,12,0,.5);display:flex;align-items:center;justify-content:center;padding:14px;z-index:50}
+#modal[hidden]{display:none}
+.card{width:100%;max-width:390px;max-height:94vh;max-height:94dvh;overflow:auto;background:var(--paper);border-radius:22px;
+  padding:18px 16px 14px;box-shadow:0 18px 50px rgba(0,0,0,.35);text-align:center;animation:pop .28s cubic-bezier(.2,1.4,.4,1)}
+.c-face{width:92px;height:auto;display:block;margin:0 auto 6px}
+.c-icon{font-size:50px;line-height:1.15;margin-bottom:4px}
+.c-title{font-size:20px;font-weight:900;letter-spacing:-.5px;margin-bottom:6px}
+.c-text{font-size:14.5px;line-height:1.55;white-space:pre-line;color:#5a4224;margin-bottom:12px}
+.c-lines{list-style:none;padding:0;margin:0 0 12px;text-align:left;display:flex;flex-direction:column;gap:6px}
+.c-lines li{background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:8px 10px;font-size:13.5px;font-weight:800;line-height:1.4}
+.c-lines li.good{border-color:#bfe8cd;background:#f2fff5}
+.c-lines li.bad{border-color:#ffc9c9;background:#fff3f3}
+.c-btns{display:flex;flex-direction:column;gap:8px}
+.btn{border:none;border-radius:14px;padding:12px 14px;font-size:15px;font-weight:900;cursor:pointer;background:#f3e6cc;box-shadow:0 3px 0 #dcc59a}
+.btn.pri{background:linear-gradient(135deg,#ffb347,#ff6a2b);color:#fff;box-shadow:0 3px 0 #d0541c}
+.btn:active{transform:translateY(2px);box-shadow:none}
+
+/* 만들기 목록 */
+.b-list{display:flex;flex-direction:column;gap:7px;margin:4px 0 10px;text-align:left}
+.b-row{display:flex;align-items:center;gap:9px;background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:8px 9px}
+.b-row.done{background:#f2fff5;border-color:#bfe8cd}
+.b-row.locked{background:#f6efe2;opacity:.8}
+.b-ic{font-size:28px;width:36px;text-align:center;flex:none}
+.b-main{flex:1;min-width:0}
+.b-nm{font-weight:900;font-size:15px}
+.b-nm small{font-size:12px;color:var(--ink2);font-weight:900}
+.b-ds{font-size:12px;color:#6d5434;line-height:1.35;margin:2px 0 4px;font-weight:700}
+.b-cost{display:flex;gap:5px;flex-wrap:wrap}
+.cc{font-size:12px;font-weight:900;background:#f5ecd9;border-radius:99px;padding:2px 7px}
+.cc.miss{background:#ffe1e1;color:#d12f3c}
+.b-go{flex:none;border:none;border-radius:12px;padding:9px 11px;font-weight:900;font-size:13.5px;cursor:pointer;
+  background:linear-gradient(135deg,#ffb347,#ff6a2b);color:#fff;box-shadow:0 2px 0 #d0541c}
+.b-go:disabled{background:#e9dcc3;color:#a08a66;box-shadow:none;cursor:default}
+.b-done,.b-lock{font-size:22px;flex:none;padding:0 4px}
+.b-note{font-size:12px;color:var(--ink2);font-weight:800;margin-bottom:10px}
+
+/* 첫 화면·엔딩 */
+.t-sub{font-size:12px;font-weight:900;color:var(--accent2);letter-spacing:1px}
+.t-title{font-size:30px;font-weight:900;line-height:1.12;letter-spacing:-1px;margin:3px 0 8px;color:#1f6f8b}
+.howto{background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:9px 12px;text-align:left;font-size:13.5px;font-weight:700;line-height:1.75;margin-bottom:10px}
+.et-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:6px}
+.et{background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:6px 4px;display:flex;flex-direction:column;align-items:center;gap:1px}
+.et span{font-size:22px;line-height:1.2}
+.et small{font-size:10.5px;font-weight:800;color:var(--ink2);line-height:1.25}
+.et.lock{background:#f3eadb}
+.et.lock span{filter:grayscale(1);opacity:.55;font-size:18px}
+.endrow{display:flex;justify-content:center;gap:5px;margin-bottom:4px}
+.endrow span{width:38px;height:38px;border-radius:11px;background:#fff;border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:21px}
+.endrow span.lock{background:#efe4cf;font-size:15px;filter:grayscale(1);opacity:.6}
+.endcap{font-size:12px;font-weight:800;color:var(--ink2);margin-bottom:12px}
+.end-tag{display:inline-block;font-size:12px;font-weight:900;letter-spacing:1px;color:#fff;background:#3b2810;border-radius:99px;padding:3px 11px;margin-bottom:8px}
+.end-tag.new{background:linear-gradient(135deg,#ff5fa2,#ffb347)}
+.grade{display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 10px;font-weight:900;font-size:15px;text-align:left}
+.grade b{font-size:32px;width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#fff;
+  background:linear-gradient(135deg,#ffcf3f,#ff8a00);flex:none}
+.grade b.g-A{background:linear-gradient(135deg,#7fd36b,#2fae66)}
+.grade b.g-B{background:linear-gradient(135deg,#6cc7ff,#2a86d6)}
+.grade b.g-C{background:linear-gradient(135deg,#c4b2a0,#8f7a66)}
+.grade em{font-style:normal;color:var(--accent2)}
+.stats{font-size:12.5px;font-weight:800;color:var(--ink2);background:#fff;border-radius:12px;border:1.5px solid var(--line);padding:7px 8px;margin-bottom:10px;line-height:1.6}
+
+@keyframes pop{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes pulse{50%{opacity:.55}}
+@keyframes glow{50%{box-shadow:0 3px 0 #d0541c,0 0 0 5px rgba(255,138,61,.28)}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="top">
+    <div class="r1">
+      <span id="day">🏝️ 1일째</span>
+      <span id="slot"></span>
+      <button id="helpBtn" aria-label="도움말">?</button>
+    </div>
+    <div class="r2"><span><span id="wxNow"></span> · <span id="wxTom"></span></span><span id="dday">D-29</span></div>
+    <div class="bars">
+      <div class="bar" id="hgBar"><span>🍖 배부름</span><div class="track"><div class="fill" id="hgFill"></div></div><b id="hgNum">0</b></div>
+      <div class="bar" id="hpBar"><span>❤️ 체력</span><div class="track"><div class="fill" id="hpFill"></div></div><b id="hpNum">0</b></div>
+    </div>
+  </header>
+  <div id="sceneWrap"><canvas id="scene"></canvas><div id="toast"></div></div>
+  <section id="panel">
+    <div id="hint"></div>
+    <div class="goal"><span>🛶 뗏목</span><div class="track"><div class="fill" id="raftFill"></div></div><b id="raftNum">0/5</b><span id="goalX"></span></div>
+    <div id="inv"></div>
+    <div id="acts"></div>
+  </section>
+</div>
+<div id="modal" hidden><div class="card" id="card"></div></div>
+<script>
+(() => {
+"use strict";
+// ===== 기본 도구 =====
+const mkImg = b => { const i = new Image(); i.src = "data:image/png;base64," + b; return i; };
+const FACE = { laugh: mkImg("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"), smirk: mkImg("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"), caught: mkImg("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") };
+
+const $ = id => document.getElementById(id);
+const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const chance = p => Math.random() < p;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const hash = i => { const s = Math.sin(i * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const hasBatchim = w => { const c = w.charCodeAt(w.length - 1) - 0xAC00; return c >= 0 && c <= 11171 && c % 28 > 0; };
+const iga = w => w + (hasBatchim(w) ? "이" : "가");
+
+const KEY = "komi-island-save-v1", META = "komi-island-meta-v1";
+const store = {
+  get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+  del(k) { try { localStorage.removeItem(k); } catch (e) {} },
+};
+
+// ===== 게임 데이터 =====
+const ICON = { fish: "🐟", coco: "🥥", banana: "🍌", can: "🥫", wood: "🪵", vine: "🌿" };
+const FOOD = {
+  fish: { name: "물고기", val: 20 }, coco: { name: "코코넛", val: 15 },
+  banana: { name: "바나나", val: 25 }, can: { name: "통조림", val: 45 },
+};
+const MAT = {
+  wood: { name: "나무", use: "🔥모닥불 · 🛖오두막 · 🛶뗏목을 만드는 재료예요" },
+  vine: { name: "덩굴", use: "밧줄 대신 써요! 🎣낚싯대 · 🛖오두막 · 🛶뗏목 재료" },
+};
+const SLOT = [{ ic: "🌅", nm: "아침" }, { ic: "☀️", nm: "낮" }, { ic: "🌇", nm: "저녁" }];
+const WX = { clear: { ic: "☀️", nm: "맑음" }, rain: { ic: "🌧️", nm: "비" }, storm: { ic: "🌪️", nm: "태풍" } };
+const HIDDEN = ["hill", "cave", "banana", "wreck"];
+
+// 섬 위 장소 (섬 가운데 = 0,0 / 섬 끝 = 1)
+const PL = {
+  camp:   { name: "캠프",     x:  0.04, y:  0.14 },
+  beach:  { name: "해변",     x:  0.42, y:  0.74 },
+  jungle: { name: "정글",     x: -0.62, y:  0.08 },
+  forest: { name: "숲",       x: -0.30, y: -0.48 },
+  hill:   { name: "언덕",     x:  0.22, y: -0.58 },
+  cave:   { name: "동굴",     x:  0.66, y: -0.10 },
+  banana: { name: "바나나 숲", x: -0.44, y:  0.60 },
+  wreck:  { name: "난파선",   x:  0.96, y: -0.70 },
+  raft:   { name: "뗏목",     x:  0.84, y:  0.58 },
+  x:      { name: "보물",     x: -0.06, y:  0.80 },
+};
+const DISCOVER = {
+  hill:   { icon: "⛰️", title: "언덕을 발견했어요!", text: "바다가 한눈에 보여요.\n여기에 🆘 봉화를 만들면\n지나가는 배에 구조 신호를 보낼 수 있어요!" },
+  cave:   { icon: "🕳️", title: "동굴을 발견했어요!", text: "어둡고 으스스해요...\n안쪽에 뭔가 숨겨져 있을 것 같아요.\n(🔦 동굴 탐사가 생겼어요)" },
+  banana: { icon: "🍌", title: "바나나 숲을 발견했어요!", text: "바나나가 주렁주렁!\n이제 먹을 걱정이 줄었어요.\n(🍌 바나나 따기가 생겼어요)" },
+  wreck:  { icon: "🚢", title: "난파선을 발견했어요!", text: "꼬미가 타고 왔던 배예요!\n쓸만한 물건이 남아 있을지도?\n(🚢 난파선 뒤지기가 생겼어요)" },
+};
+const ENDS = {
+  raft:     { ic: "🛶", nm: "뗏목 탈출", hint: "뗏목을 완성하면?", esc: true },
+  ship:     { ic: "🚢", nm: "구조 성공", hint: "높은 곳에서 신호를?", esc: true },
+  treasure: { ic: "💰", nm: "보물 부자", hint: "지도 조각 3개를 모으면?", esc: true },
+  turtle:   { ic: "🐢", nm: "거북이 택시", hint: "바다 친구를 도우면?", esc: true },
+  island:   { ic: "🏝️", nm: "섬의 주인", hint: "30일을 버티면?", esc: false },
+  faint:    { ic: "😵", nm: "꼬미 기절", hint: "체력이 0이 되면?", esc: false },
+};
+const STORY = {
+  raft: d => `꼬미가 만든 뗏목이 파도를 가르며 나아가요.\n${d}일 만에 드디어 육지가 보여요!\n"집에 가면 밀린 웹툰부터 정주행해야지~"`,
+  ship: d => `봉화 연기를 본 배가 뱃고동을 울리며 다가와요.\n"거기 원숭이 맞죠?!"\n꼬미는 ${d}일 만에 구조됐어요!`,
+  treasure: () => `보물상자를 꼭 끌어안고 섬을 탈출했어요!\n반짝이는 금화가 한가득...\n꼬미는 하루아침에 부자 원숭이가 됐어요 💰`,
+  turtle: () => `은혜 갚은 거북이 친구들이 꼬미를 등에 태우고\n육지까지 데려다줬어요.\n착하게 살면 복이 와요! 🐢${S.treasure ? "\n(보물상자도 함께 챙겼어요 💰)" : ""}`,
+  island: () => `30일이 지나 태풍 시즌이 시작됐어요.\n탈출은 못 했지만... 꼬미는 끝까지 살아남았어요!\n이제 이 섬은 꼬미의 집 🏝️\n(다음엔 꼭 탈출해 봐요)`,
+  faint: (d, why) => `${why === "hunger" ? "너무 배가 고파서 쓰러졌어요..." : why === "storm" ? "태풍을 맨몸으로 버티다 쓰러졌어요..." : "너무 무리해서 쓰러졌어요..."}\n지나가던 돌고래가 꼬미를 구해줬지만\n모든 게 처음부터예요!\n🍖배부름과 ❤️체력을 잘 챙기세요.`,
+};
+const TIPS = [
+  "\"높은 언덕에서 불을 피우면 배가 와요\"",
+  "\"바다 친구를 도우면 언젠가 은혜를 갚는대요\"",
+  "\"비 오는 날엔 물고기가 잘 잡혀요\"",
+  "\"섬 어딘가에 보물이 묻혀 있다는 소문이...\"",
+  "\"원숭이는 과일을 나눠주면 친구가 돼요\"",
+];
+
+// ===== 진행 상태 =====
+function newState() {
+  return {
+    v: 1, day: 1, slot: 0, hunger: 70, hp: 100,
+    inv: { fish: 0, coco: 2, banana: 0, can: 0, wood: 0, vine: 0 },
+    built: { fire: false, hut: false, rod: false, axe: false, signal: false },
+    raft: 0, found: { hill: false, cave: false, banana: false, wreck: false },
+    weather: "clear", tomorrow: "clear", stormSeen: false,
+    pieces: 0, pf: { wreck: false, cave: false, bottle: false }, dug: false, treasure: false,
+    wreck: 0, cave: 0, toolbox: false, friend: false, monkeyNo: 0, turtleDay: 0, turtleAsk: 0,
+    newActs: {}, st: { fish: 0, built: 0 }, over: false,
+  };
+}
+function load() { const s = store.get(KEY); return s && s.v === 1 && !s.over ? s : null; }
+function save() { if (S && !S.over) store.set(KEY, S); }
+let S = load() || newState();
+let M = store.get(META) || { endings: {}, best: 0, plays: 0 };
+if (!M.endings) M.endings = {};
+let busy = false;
+
+const foodVal = k => (k === "fish" && S.built.fire ? 35 : FOOD[k].val);
+const foodName = k => (k === "fish" && S.built.fire ? "구운 생선" : FOOD[k].name);
+const foodCount = () => S.inv.fish + S.inv.coco + S.inv.banana + S.inv.can;
+
+// ===== 그림판(캔버스) 기본 =====
+const cv = $("scene"), ctx = cv.getContext("2d");
+let W = 300, H = 300, DPR = 1;
+const G = { cx: 150, cy: 150, rx: 100, ry: 100, u: 30 };
+const V = { night: 0, tint: [255, 255, 255, 0], flash: 0, nextBolt: 0, voy: null, signalLit: false, jump: null, nextJump: 0 };
+const fogA = {};
+const komi = { x: 0, y: 0, spot: "camp", walk: null, hop: 0, flip: false, face: "smirk", faceUntil: 0, act: null, hide: false, faint: false };
+const fr = { x: 0, y: 0, init: false };
+const parts = [], floats = [], tweens = [];
+
+function pos(n) { const p = PL[n]; return { x: G.cx + p.x * G.rx, y: G.cy + p.y * G.ry }; }
+function standPos(n) {
+  const p = pos(n), u = G.u;
+  if (n === "wreck") return { x: p.x - u * 1.25, y: p.y + u * 1.55 };
+  if (n === "raft") return { x: p.x - u * 1.55, y: p.y + u * 0.35 };
+  if (n === "hill") return { x: p.x - u * 1.1, y: p.y + u * 0.8 };
+  if (n === "beach") return { x: p.x - u * 0.95, y: p.y + u * 0.5 };
+  return { x: p.x + u * 0.95, y: p.y + u * 0.6 };
+}
+function resize() {
+  const r = $("sceneWrap").getBoundingClientRect();
+  W = Math.max(50, r.width); H = Math.max(50, r.height);
+  DPR = Math.min(2.5, window.devicePixelRatio || 1);
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  G.cx = W / 2; G.cy = H * 0.52; G.rx = Math.min(W * 0.39, H * 0.62); G.ry = H * 0.36;
+  G.u = clamp(Math.min(W * 0.088, H * 0.085), 20, 44);
+  if (!komi.walk) { const p = standPos(komi.spot); komi.x = p.x; komi.y = p.y; }
+}
+
+// 이모지는 한 번만 그려 두고 크기만 바꿔서 씀 (빠르게)
+const EC = {};
+function emojiCanvas(ch) {
+  if (EC[ch]) return EC[ch];
+  const s = 160, c = document.createElement("canvas"); c.width = c.height = s;
+  const x = c.getContext("2d");
+  x.font = `${s * 0.78}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
+  x.textAlign = "center"; x.textBaseline = "middle"; x.fillStyle = "#000";
+  x.fillText(ch, s / 2, s / 2 + s * 0.04);
+  return (EC[ch] = c);
+}
+function emo(ch, x, y, size, rot, alpha) {
+  const c = emojiCanvas(ch), d = size * 1.28;
+  ctx.save();
+  if (alpha != null) ctx.globalAlpha = clamp(alpha, 0, 1);
+  ctx.translate(x, y); if (rot) ctx.rotate(rot);
+  ctx.drawImage(c, -d / 2, -d / 2, d, d);
+  ctx.restore();
+}
+function rr(x, y, w, h, r) {
+  ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+function ell(x, y, a, b) { ctx.beginPath(); ctx.ellipse(x, y, Math.max(0.1, a), Math.max(0.1, b), 0, 0, Math.PI * 2); }
+function tween(obj, key, to, ms) { return new Promise(res => tweens.push({ obj, key, from: obj[key], to, t0: performance.now(), ms, res })); }
+function setFace(f, ms) { komi.face = f; komi.faceUntil = performance.now() + (ms || 1200); }
+function curFace() {
+  if (performance.now() < komi.faceUntil) return komi.face;
+  return S.hp < 30 || S.hunger < 25 ? "caught" : "smirk";
+}
+function burst(x, y, e, n) {
+  for (let i = 0; i < n; i++) parts.push({ x, y, vx: (Math.random() - 0.5) * 150, vy: -170 - Math.random() * 100, e, t0: performance.now(), life: 850 + Math.random() * 250 });
+}
+function floatText(x, y, text, color) { floats.push({ x, y, text, color: color || "#3b2810", t0: performance.now() }); }
+function walkTo(n) {
+  const to = standPos(n), d = Math.hypot(to.x - komi.x, to.y - komi.y);
+  if (d < 3) { komi.spot = n; return Promise.resolve(); }
+  komi.flip = to.x < komi.x - 1;
+  const ms = clamp(d * 3.4, 380, 1100);
+  return new Promise(res => { komi.walk = { fx: komi.x, fy: komi.y, n, t0: performance.now(), ms, res }; });
+}
+async function doing(icon, ms) { komi.act = icon; await sleep(ms); komi.act = null; }
+
+// ===== 섬 그리기 =====
+function islandF(t, ph) { return 1 + 0.06 * Math.sin(3 * t + 0.5 + ph) + 0.04 * Math.sin(5 * t + 1.3 + ph * 0.7) + 0.03 * Math.cos(7 * t + ph * 0.3); }
+function blob(scale, ph) {
+  ctx.beginPath();
+  for (let i = 0; i <= 80; i++) {
+    const t = i / 80 * Math.PI * 2, f = islandF(t, ph) * scale;
+    const x = G.cx + Math.cos(t) * G.rx * f, y = G.cy + Math.sin(t) * G.ry * f;
+    if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y);
+  }
+  ctx.closePath();
+}
+function drawSea(t) {
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, "#46cbe9"); g.addColorStop(1, "#1795c4");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = "rgba(255,255,255,.3)"; ctx.lineWidth = 2; ctx.lineCap = "round";
+  ctx.beginPath();
+  const rows = Math.ceil(H / 32);
+  for (let j = 0; j < rows; j++) {
+    const y = j * 32 + 14, dir = j % 2 ? 1 : -1;
+    for (let k = 0; k < 5; k++) {
+      let x = (hash(j * 7 + k) * (W + 60) + t * 13 * dir) % (W + 60); if (x < 0) x += W + 60; x -= 30;
+      ctx.moveTo(x, y); ctx.quadraticCurveTo(x + 7, y - 5, x + 14, y); ctx.quadraticCurveTo(x + 21, y + 5, x + 28, y);
+    }
+  }
+  ctx.stroke();
+}
+function drawIsland(t) {
+  ctx.fillStyle = "rgba(150,235,245,.45)"; blob(1.2, 0); ctx.fill();
+  ctx.fillStyle = "rgba(195,246,248,.6)"; blob(1.09, 0); ctx.fill();
+  ctx.strokeStyle = "rgba(255,255,255,.9)"; ctx.lineWidth = 3; blob(1.025 + 0.012 * Math.sin(t * 1.7), 0); ctx.stroke();
+  ctx.fillStyle = "#f7db97"; blob(1, 0); ctx.fill();
+  ctx.fillStyle = "#f0cd80"; blob(0.9, 0.4); ctx.fill();
+  ctx.fillStyle = "#6cc35b"; blob(0.8, 0.9); ctx.fill();
+  ctx.strokeStyle = "rgba(50,120,45,.35)"; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = "#5fb650"; blob(0.56, 2.1); ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,.07)"; blob(0.3, 3.3); ctx.fill();
+}
+// 해변을 걸어다니는 꽃게 (장식)
+function drawCrab(t) {
+  const s = Math.sin(t * 0.35), th = Math.PI / 2 + 0.15 + s * 0.28, f = islandF(th, 0) * 0.94;
+  const x = G.cx + Math.cos(th) * G.rx * f, y = G.cy + Math.sin(th) * G.ry * f;
+  emo("🦀", x, y, G.u * 0.5, Math.sin(t * 9) * 0.12);
+}
+// 가끔 바다에서 물고기가 폴짝
+function drawJumper(now) {
+  if (!V.jump && now > V.nextJump) {
+    for (let k = 0; k < 6; k++) {
+      const x = 20 + Math.random() * (W - 40), y = 20 + Math.random() * (H - 40);
+      const nx = (x - G.cx) / G.rx, ny = (y - G.cy) / G.ry;
+      if (nx * nx + ny * ny > 1.6) { V.jump = { x, y, t0: now, dir: chance(0.5) ? 1 : -1 }; break; }
+    }
+    V.nextJump = now + 3500 + Math.random() * 4000;
+  }
+  const j = V.jump; if (!j) return;
+  const p = (now - j.t0) / 900;
+  if (p >= 1.3) { V.jump = null; return; }
+  ctx.strokeStyle = "rgba(255,255,255,.7)"; ctx.lineWidth = 1.5;
+  if (p < 0.3) { ell(j.x, j.y, 6 + p * 30, 3 + p * 12); ctx.stroke(); }
+  if (p > 0.9) { const q = p - 0.9; ell(j.x + j.dir * 34, j.y, 6 + q * 30, 3 + q * 12); ctx.stroke(); }
+  if (p < 1) emo("🐟", j.x + j.dir * 34 * p, j.y - Math.sin(p * Math.PI) * 26, G.u * 0.5, j.dir * (p - 0.5) * 2.2);
+}
+
+// ===== 장소 그리기 =====
+const sway = () => (S.weather === "storm" ? 0.2 : S.weather === "rain" ? 0.08 : 0.04);
+function drawForest(p, t) {
+  const u = G.u, s = sway();
+  emo("🌲", p.x + u * 0.05, p.y - u * 0.42, u * 1.4, Math.sin(t * 1.1 + 1) * s);
+  emo("🌲", p.x - u * 0.6, p.y + u * 0.02, u * 1.2, Math.sin(t * 1.3) * s);
+  emo("🌳", p.x + u * 0.62, p.y + u * 0.08, u * 1.15, Math.sin(t * 1.2 + 2) * s);
+}
+function drawJungle(p, t) {
+  const u = G.u, s = sway();
+  emo("🌴", p.x - u * 0.38, p.y - u * 0.18, u * 1.4, Math.sin(t * 1.4) * s);
+  emo("🌴", p.x + u * 0.48, p.y + u * 0.02, u * 1.15, Math.sin(t * 1.2 + 1.5) * s);
+  emo("🌿", p.x + u * 0.05, p.y + u * 0.42, u * 0.7);
+}
+function drawCamp(p, t) {
+  const u = G.u;
+  ctx.fillStyle = "rgba(190,140,80,.33)"; ell(p.x, p.y + u * 0.3, u * 1.25, u * 0.6); ctx.fill();
+  if (S.built.hut) emo("🛖", p.x - u * 0.85, p.y - u * 0.3, u * 1.5);
+  emo("🪵", p.x - u * 0.45, p.y + u * 0.6, u * 0.55);
+  if (S.built.fire) {
+    const wet = S.weather !== "clear" && !S.built.hut;
+    emo(wet ? "💨" : "🔥", p.x + u * 0.12, p.y + u * 0.12, u * (wet ? 0.7 : 0.85 + 0.07 * Math.sin(t * 13) + 0.04 * Math.sin(t * 21)));
+  } else {
+    ctx.fillStyle = "#a7a39b";
+    for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; ell(p.x + u * 0.12 + Math.cos(a) * u * 0.32, p.y + u * 0.3 + Math.sin(a) * u * 0.16, u * 0.1, u * 0.07); ctx.fill(); }
+  }
+}
+function drawBeach(p) {
+  const u = G.u;
+  emo("🐚", p.x - u * 0.35, p.y + u * 0.3, u * 0.5, -0.3);
+  if (S.built.rod) emo("🎣", p.x + u * 0.25, p.y - u * 0.05, u * 0.8);
+  else emo("🐚", p.x + u * 0.25, p.y + u * 0.05, u * 0.42, 0.4);
+}
+function drawRaftAt(x, y, n, sail, s) {
+  const w = s * 1.9, lh = s * 0.3, top = y - lh * 2.5;
+  if (n <= 0) {
+    ctx.setLineDash([5, 4]); ctx.strokeStyle = "rgba(110,70,25,.6)"; ctx.lineWidth = 2;
+    rr(x - w / 2, top, w, lh * 5, 6); ctx.stroke(); ctx.setLineDash([]);
+    return;
+  }
+  ctx.fillStyle = "rgba(0,0,0,.12)"; ell(x, y + lh * 0.2, w * 0.55, lh * 0.8); ctx.fill();
+  for (let i = 0; i < n; i++) {
+    const ly = top + i * lh;
+    ctx.fillStyle = i % 2 ? "#a8692f" : "#bd7b3c"; rr(x - w / 2, ly, w, lh - 1, lh / 2); ctx.fill();
+    ctx.fillStyle = "#e0b27a"; ell(x - w / 2 + lh * 0.45, ly + lh / 2 - 0.5, lh * 0.25, lh * 0.33); ctx.fill();
+  }
+  if (n >= 2) {
+    ctx.strokeStyle = "#4f8a35"; ctx.lineWidth = 2.5; ctx.beginPath();
+    for (const fx of [-0.28, 0.28]) { ctx.moveTo(x + w * fx, top); ctx.lineTo(x + w * fx, top + n * lh - 1); }
+    ctx.stroke();
+  }
+  if (sail) {
+    ctx.strokeStyle = "#6b4219"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x, top + lh); ctx.lineTo(x, top - s * 1.5); ctx.stroke();
+    ctx.fillStyle = "#fffdf5"; ctx.strokeStyle = "rgba(0,0,0,.15)"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x + 2, top - s * 1.45); ctx.quadraticCurveTo(x + s * 1.1, top - s * 0.7, x + 2, top - s * 0.05); ctx.closePath(); ctx.fill(); ctx.stroke();
+  }
+}
+function drawHill(p, t) {
+  const u = G.u;
+  emo("⛰️", p.x, p.y, u * 1.9);
+  if (S.built.signal || V.signalLit) {
+    emo("🪵", p.x + u * 0.95, p.y + u * 0.5, u * 0.6);
+    if (V.signalLit) {
+      emo("🔥", p.x + u * 0.95, p.y + u * 0.05, u * (1.2 + 0.1 * Math.sin(t * 12)));
+      for (let i = 0; i < 4; i++) {
+        const q = (t * 0.6 + i / 4) % 1;
+        ctx.fillStyle = `rgba(120,120,130,${0.5 * (1 - q)})`; ell(p.x + u * (0.95 + q * 0.6), p.y - u * (0.5 + q * 2.2), u * (0.25 + q * 0.4), u * (0.2 + q * 0.3)); ctx.fill();
+      }
+    } else emo("🆘", p.x + u * 0.95, p.y - u * 0.05, u * 0.62);
+  }
+}
+function drawCave(p) {
+  const u = G.u * 1.05, x = p.x, y = p.y;
+  ctx.fillStyle = "#8f8f99"; ell(x, y + u * 0.1, u * 0.9, u * 0.62); ctx.fill();
+  ctx.fillStyle = "#adadb6"; ell(x - u * 0.25, y - u * 0.15, u * 0.45, u * 0.28); ctx.fill();
+  ctx.fillStyle = "#2b2633"; ctx.beginPath();
+  ctx.moveTo(x - u * 0.34, y + u * 0.55); ctx.quadraticCurveTo(x - u * 0.34, y - u * 0.18, x, y - u * 0.18);
+  ctx.quadraticCurveTo(x + u * 0.34, y - u * 0.18, x + u * 0.34, y + u * 0.55); ctx.closePath(); ctx.fill();
+}
+function drawBananaGrove(p, t) {
+  const u = G.u, s = sway();
+  emo("🌴", p.x, p.y - u * 0.15, u * 1.3, Math.sin(t * 1.3 + 3) * s);
+  emo("🍌", p.x + u * 0.42, p.y + u * 0.25, u * 0.62, 0.2);
+  emo("🍌", p.x - u * 0.38, p.y + u * 0.32, u * 0.5, -0.5);
+}
+function drawWreck(p, t) {
+  const u = G.u, bob = Math.sin(t * 1.5) * 2, wl = p.y + u * 0.28;
+  ctx.save(); ctx.beginPath(); ctx.moveTo(p.x - u * 1.4, p.y - u * 1.6);
+  ctx.lineTo(p.x + u * 1.4, p.y - u * 1.6); ctx.lineTo(p.x + u * 1.4, wl);
+  for (let i = 8; i >= 0; i--) ctx.lineTo(p.x - u * 1.4 + i * u * 0.35, wl + Math.sin(t * 3 + i) * 2);
+  ctx.closePath(); ctx.clip();
+  emo("🚢", p.x, p.y + bob, u * 1.7, -0.38);
+  ctx.restore();
+  ctx.strokeStyle = "rgba(255,255,255,.85)"; ctx.lineWidth = 2; ctx.beginPath();
+  for (let i = 0; i <= 6; i++) { const x = p.x - u * 0.95 + i * u * 0.32, y = wl + Math.sin(t * 3 + i) * 2; if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y); }
+  ctx.stroke();
+}
+function drawX(p, t) {
+  const u = G.u;
+  if (S.dug) { ctx.fillStyle = "#b98a4e"; ell(p.x, p.y + u * 0.1, u * 0.5, u * 0.26); ctx.fill(); ctx.fillStyle = "#7a5428"; ell(p.x, p.y + u * 0.1, u * 0.32, u * 0.15); ctx.fill(); }
+  else emo("❌", p.x, p.y, u * (0.7 + 0.07 * Math.sin(t * 6)));
+}
+function drawFog(p, a, t) {
+  if (a <= 0.01) return;
+  const s = G.u * 1.05;
+  ctx.save(); ctx.globalAlpha = a; ctx.fillStyle = "rgba(255,255,255,.94)";
+  for (const [dx, dy, r] of [[-0.55, 0.1, 0.5], [0, -0.22, 0.62], [0.55, 0.05, 0.5], [-0.2, 0.28, 0.5], [0.28, 0.3, 0.48]]) {
+    ctx.beginPath(); ctx.arc(p.x + dx * s + Math.sin(t * 0.8 + dx * 3) * s * 0.06, p.y + dy * s, r * s, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+  emo("❓", p.x, p.y + s * 0.05, s * 0.72, 0, a);
+}
+function label(text, x, y, warm) {
+  const fs = Math.round(clamp(G.u * 0.36, 10, 14));
+  ctx.font = `900 ${fs}px system-ui,"Malgun Gothic","Apple SD Gothic Neo",sans-serif`;
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  const w = ctx.measureText(text).width + 12, h = fs + 7;
+  ctx.fillStyle = warm ? "rgba(255,232,170,.95)" : "rgba(255,250,238,.9)"; rr(x - w / 2, y - h / 2, w, h, h / 2); ctx.fill();
+  ctx.fillStyle = "#5a3b14"; ctx.fillText(text, x, y + 0.5);
+}
+
+// ===== 꼬미 그리기 =====
+function drawKomiAt(x, y, scale, face, flip, extraRot) {
+  const img = FACE[face];
+  if (!img.complete || !img.naturalWidth) return;
+  const h = G.u * 2.1 * scale, w = h * img.naturalWidth / img.naturalHeight;
+  ctx.save(); ctx.translate(x, y); if (flip) ctx.scale(-1, 1); if (extraRot) ctx.rotate(extraRot);
+  ctx.drawImage(img, -w / 2, -h, w, h); ctx.restore();
+}
+function drawKomi(now, t) {
+  if (komi.hide) return;
+  const u = G.u, x = komi.x, y = komi.y;
+  ctx.fillStyle = "rgba(0,0,0,.18)"; ell(x, y, u * 0.62, u * 0.15); ctx.fill();
+  if (komi.faint) {
+    drawKomiAt(x + u * 0.9, y - u * 0.2, 1, "caught", false, -Math.PI / 2);
+    emo("💫", x, y - u * 1.1, u * 0.7, t * 2);
+    return;
+  }
+  const sq = komi.walk ? 0 : Math.sin(t * 3) * 0.025;
+  ctx.save(); ctx.translate(x, y - komi.hop);
+  if (komi.act) ctx.rotate(Math.sin(t * 14) * 0.07);
+  ctx.scale(1 + sq, 1 - sq);
+  drawKomiAt(0, 0, 1, curFace(), komi.flip);
+  ctx.restore();
+  const d = komi.flip ? -1 : 1;
+  if (S.friend) { // 친구 원숭이 끼끼는 꼬미 머리 위에 올라타요
+    fr.x = x - d * u * 0.42; fr.y = y - komi.hop - u * 1.95;
+    emo("🐒", fr.x, fr.y - Math.abs(Math.sin(t * 4 + 1)) * u * 0.12, u * 0.8, -d * 0.12);
+  }
+  if (komi.act) {
+    if (komi.act === "🎣") { // 낚싯줄
+      ctx.strokeStyle = "rgba(60,40,20,.8)"; ctx.lineWidth = 1.5; ctx.beginPath();
+      ctx.moveTo(x + d * u * 0.6, y - u * 1.3); ctx.quadraticCurveTo(x + d * u * 1.6, y - u * 1.1, x + d * u * 1.9, y + u * 0.45 + Math.sin(t * 6) * 3); ctx.stroke();
+      ctx.fillStyle = "#ff4d4d"; ell(x + d * u * 1.9, y + u * 0.45 + Math.sin(t * 6) * 3, 4, 4); ctx.fill();
+    }
+    emo(komi.act, x + d * u * 0.75, y - u * 2.25 - Math.abs(Math.sin(t * 8)) * u * 0.25, u * 0.85);
+  }
+}
+
+// ===== 장면 전체 =====
+function drawWorld(now, t) {
+  const list = [];
+  const add = (n, fn) => { const p = pos(n); list.push({ y: p.y + G.u * 0.4, f: () => fn(p, t) }); };
+  add("forest", drawForest); add("jungle", drawJungle); add("camp", drawCamp); add("beach", drawBeach);
+  if (!(V.voy && V.voy.kind === "raft")) add("raft", p => drawRaftAt(p.x, p.y, S.raft, S.raft >= 5, G.u));
+  if (S.pieces >= 3) add("x", drawX);
+  const HD = { hill: drawHill, cave: drawCave, banana: drawBananaGrove, wreck: drawWreck };
+  for (const k of HIDDEN) {
+    const p = pos(k), a = fogA[k] == null ? (S.found[k] ? 0 : 1) : fogA[k];
+    list.push({ y: p.y + G.u * 0.4, f: () => { if (a < 1) { ctx.save(); ctx.globalAlpha = 1 - a; HD[k](p, t); ctx.restore(); } drawFog(p, a, t); } });
+  }
+  list.push({ y: komi.y, f: () => drawKomi(now, t) });
+  list.sort((a, b) => a.y - b.y);
+  for (const it of list) it.f();
+}
+function drawLabels() {
+  const u = G.u;
+  for (const n of ["camp", "beach", "jungle", "forest", "hill", "cave", "banana", "wreck"]) {
+    const p = pos(n), hid = HIDDEN.includes(n) && !S.found[n];
+    const dy = n === "hill" ? u * 1.05 : n === "wreck" ? u * 1.15 : u * 0.95;
+    label(hid ? "???" : PL[n].name + (n === "beach" ? " 🎣" : ""), p.x, p.y + dy, false);
+  }
+  const r = pos("raft");
+  if (!(V.voy && V.voy.kind === "raft")) label(S.raft >= 5 ? "⛵ 출항 준비!" : `뗏목 ${S.raft}/5`, r.x, r.y + u * 0.75, S.raft >= 5);
+}
+function drawVoyage(now, t) {
+  const v = V.voy; if (!v) return;
+  const u = G.u, p = clamp((now - v.t0) / v.ms, 0, 1);
+  if (v.kind === "raft") {
+    const a = pos("raft"), e = p * p;
+    const x = a.x + e * (W + u * 4 - a.x), y = a.y + e * u * 2 + Math.sin(t * 3) * 3;
+    drawRaftAt(x, y, 5, true, u);
+    drawKomiAt(x - u * 0.2, y - u * 0.6, 0.75, "laugh", false);
+    if (S.friend) emo("🐒", x - u * 0.75, y - u * 0.95, u * 0.75);
+  } else if (v.kind === "turtle") {
+    const a = pos("beach"), e = p * p;
+    const x = a.x + e * u * 2, y = a.y + u * 0.8 + e * (H + u * 3 - a.y);
+    emo("🐢", x - u * 1.1, y + u * 0.3, u * 1.0, 0.2); emo("🐢", x + u * 1.1, y + u * 0.35, u * 1.0, 0.2);
+    emo("🐢", x, y, u * 1.5, 0.15);
+    drawKomiAt(x, y - u * 0.2, 0.7, "laugh", false);
+  } else if (v.kind === "ship") {
+    const w = pos("wreck"), sx = W + u * 3, stop = Math.min(W - u * 1.6, w.x + u * 0.2), y = w.y + u * 2.2;
+    const x = p < 0.45 ? sx + (stop - sx) * (1 - Math.pow(1 - p / 0.45, 2)) : p < 0.6 ? stop : stop + (sx - stop) * Math.pow((p - 0.6) / 0.4, 2);
+    if (p > 0.5) komi.hide = true;
+    emo("🚢", x, y + Math.sin(t * 2) * 2, u * 2.6);
+  }
+}
+function drawParts(now, dt) {
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const p = parts[i], age = now - p.t0;
+    if (age > p.life) { parts.splice(i, 1); continue; }
+    p.vy += 480 * dt; p.x += p.vx * dt; p.y += p.vy * dt;
+    emo(p.e, p.x, p.y, G.u * 0.6, 0, 1 - Math.max(0, (age - p.life * 0.6) / (p.life * 0.4)));
+  }
+}
+function drawRain(t, heavy) {
+  const n = heavy ? 95 : 55, ang = heavy ? 0.38 : 0.15, len = heavy ? 18 : 13, sp = heavy ? 900 : 620;
+  ctx.strokeStyle = "rgba(225,238,255,.55)"; ctx.lineWidth = 1.2; ctx.beginPath();
+  for (let i = 0; i < n; i++) {
+    const y = ((hash(i) * (H + 40) + t * sp) % (H + 40)) - 20;
+    const x = ((hash(i + 500) * (W + 80) + t * sp * ang) % (W + 80)) - 40;
+    ctx.moveTo(x, y); ctx.lineTo(x - len * ang, y - len);
+  }
+  ctx.stroke();
+}
+function drawAtmos(now, t) {
+  const tgt = [[255, 185, 110, 0.12], [255, 255, 255, 0], [255, 115, 55, 0.2]][Math.min(S.slot, 2)];
+  for (let i = 0; i < 4; i++) V.tint[i] += (tgt[i] - V.tint[i]) * 0.04;
+  if (V.tint[3] > 0.004) { ctx.fillStyle = `rgba(${V.tint[0] | 0},${V.tint[1] | 0},${V.tint[2] | 0},${V.tint[3]})`; ctx.fillRect(0, 0, W, H); }
+  if (S.weather !== "clear" && !S.over) {
+    const storm = S.weather === "storm";
+    ctx.fillStyle = storm ? "rgba(40,50,78,.34)" : "rgba(70,85,112,.2)"; ctx.fillRect(0, 0, W, H);
+    drawRain(t, storm);
+    if (storm) {
+      if (now > V.nextBolt) { V.flash = 1; V.nextBolt = now + 3000 + Math.random() * 5000; }
+      if (V.flash > 0.02) { ctx.fillStyle = `rgba(255,255,255,${V.flash * 0.55})`; ctx.fillRect(0, 0, W, H); V.flash *= 0.88; }
+    }
+  }
+  const u = G.u;
+  if (V.night > 0.01) {
+    ctx.fillStyle = `rgba(12,18,52,${0.6 * V.night})`; ctx.fillRect(0, 0, W, H);
+    if (S.weather === "clear") for (let i = 0; i < 28; i++) {
+      ctx.fillStyle = `rgba(255,255,230,${V.night * (0.35 + 0.65 * Math.abs(Math.sin(t * 1.5 + i * 2.1)))})`;
+      ell(hash(i + 50) * W, hash(i + 90) * H * 0.95, 1.4, 1.4); ctx.fill();
+    }
+    if (S.built.fire && !(S.weather !== "clear" && !S.built.hut)) {
+      const c = pos("camp"), g = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, u * 3);
+      g.addColorStop(0, `rgba(255,170,60,${0.42 * V.night})`); g.addColorStop(1, "rgba(255,170,60,0)");
+      ctx.fillStyle = g; ctx.fillRect(c.x - u * 3, c.y - u * 3, u * 6, u * 6);
+    }
+    if (!komi.hide && !komi.faint) emo("💤", komi.x + u * 0.8, komi.y - u * 2.2 - Math.sin(t * 2) * 5, u * 0.7, 0, V.night);
+  }
+}
+function drawFloats(now) {
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.font = `900 ${Math.round(clamp(G.u * 0.5, 13, 19))}px system-ui,"Malgun Gothic",sans-serif`;
+  ctx.lineJoin = "round";
+  for (let i = floats.length - 1; i >= 0; i--) {
+    const f = floats[i], p = (now - f.t0) / 1500;
+    if (p >= 1) { floats.splice(i, 1); continue; }
+    const y = f.y - p * 38;
+    ctx.globalAlpha = p < 0.75 ? 1 : 1 - (p - 0.75) / 0.25;
+    ctx.lineWidth = 4; ctx.strokeStyle = "rgba(255,255,255,.95)"; ctx.strokeText(f.text, f.x, y);
+    ctx.fillStyle = f.color; ctx.fillText(f.text, f.x, y);
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ===== 매 프레임 =====
+let lastT = performance.now();
+function frame(now) {
+  requestAnimationFrame(frame);
+  const dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
+  const t = now / 1000;
+  for (let i = tweens.length - 1; i >= 0; i--) {
+    const w = tweens[i], p = Math.min(1, (now - w.t0) / w.ms), e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+    w.obj[w.key] = w.from + (w.to - w.from) * e;
+    if (p >= 1) { tweens.splice(i, 1); w.res(); }
+  }
+  const wk = komi.walk;
+  if (wk) {
+    const p = Math.min(1, (now - wk.t0) / wk.ms), to = standPos(wk.n), e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+    komi.x = wk.fx + (to.x - wk.fx) * e; komi.y = wk.fy + (to.y - wk.fy) * e;
+    komi.hop = Math.abs(Math.sin(p * Math.PI * Math.max(2, Math.round(wk.ms / 230)))) * G.u * 0.28;
+    if (p >= 1) { komi.walk = null; komi.hop = 0; komi.spot = wk.n; wk.res(); }
+  }
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  drawSea(t); drawJumper(now); drawIsland(t); drawCrab(t);
+  drawWorld(now, t); drawVoyage(now, t); drawLabels(); drawParts(now, dt);
+  drawAtmos(now, t); drawFloats(now);
+}
+
+// 섬의 장소를 직접 눌러도 행동
+cv.addEventListener("click", e => {
+  if (!S || S.over || busy || !$("modal").hidden) return;
+  const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top, u = G.u;
+  if (!komi.hide && Math.hypot(x - komi.x, y - (komi.y - u * 1.05)) < u * 0.9) {
+    setFace("laugh", 900);
+    floatText(komi.x, komi.y - u * 2.4, pick(["끼끼!", "집에 갈래~", "배고파...", "할 수 있어!", "웹툰 보고 싶다..."]));
+    return;
+  }
+  let best = null, bd = u * 1.25;
+  for (const n of ["camp", "beach", "jungle", "forest", "hill", "cave", "banana", "wreck", "raft", "x"]) {
+    if (n === "x" && !(S.pieces >= 3 && !S.dug)) continue;
+    const p = pos(n), d = Math.hypot(x - p.x, y - p.y);
+    if (d < bd) { bd = d; best = n; }
+  }
+  if (!best) return;
+  if (HIDDEN.includes(best) && !S.found[best]) return doAct("explore", best);
+  const map = { camp: "build", beach: "fish", jungle: "jungle", forest: "wood", banana: "banana", cave: "cave", wreck: "wreck", x: "dig", hill: "build", raft: S.raft >= 5 ? "sail" : "build" };
+  if (best === "wreck" && S.wreck >= 3) return toast("🚢 난파선엔 더 이상 쓸만한 게 없어요");
+  doAct(map[best]);
+});
+
+// ===== 알림 · 팝업 =====
+const TQ = []; let toastOn = false;
+function toast(msg, ms) {
+  TQ.push([msg, ms || 2100]);
+  if (TQ.length > 3) TQ.splice(0, TQ.length - 3);
+  if (!toastOn) nextToast();
+}
+function nextToast() {
+  const it = TQ.shift(), el = $("toast");
+  if (!it) { toastOn = false; return; }
+  toastOn = true; el.textContent = it[0]; el.classList.add("on");
+  setTimeout(() => { el.classList.remove("on"); setTimeout(nextToast, 260); }, it[1]);
+}
+function card(o) {
+  return new Promise(res => {
+    let h = o.top || "";
+    if (o.face) h += `<img class="c-face" src="${FACE[o.face].src}" alt="">`;
+    else if (o.icon) h += `<div class="c-icon">${o.icon}</div>`;
+    if (o.title) h += `<div class="c-title">${o.title}</div>`;
+    if (o.text) h += `<div class="c-text">${o.text}</div>`;
+    if (o.lines) h += `<ul class="c-lines">${o.lines.map(l => `<li class="${l.tone || ""}">${l.t}</li>`).join("")}</ul>`;
+    if (o.html) h += o.html;
+    const bs = o.buttons || [{ label: "확인", primary: true }];
+    h += `<div class="c-btns">${bs.map((b, i) => `<button class="btn${b.primary ? " pri" : ""}" data-i="${i}">${b.label}</button>`).join("")}</div>`;
+    const m = $("modal"), c = $("card");
+    c.innerHTML = h; m.hidden = false; c.scrollTop = 0;
+    c.querySelectorAll(".c-btns .btn").forEach(btn => { btn.onclick = () => { m.hidden = true; res(+btn.dataset.i); }; });
+  });
+}
+async function lowHpOk() {
+  const r = await card({ face: "caught", title: "체력이 부족해요! 😵", text: "이대로 하면 체력이 0이 되어\n쓰러질 수 있어요.\n😴 쉬기나 음식을 먼저 챙겨 보세요.", buttons: [{ label: "그만두기", primary: true }, { label: "그래도 할래요" }] });
+  return r === 1;
+}
+
+// ===== 행동 =====
+const ACT = {
+  fish:    { icon: "🎣", name: "낚시",     spot: "beach",  cost: 8,  out: true, sub: () => `🐟${S.built.rod ? "×2" : ""}`, run: runFish },
+  jungle:  { icon: "🌴", name: "정글",     spot: "jungle", cost: 8,  out: true, sub: () => "🥥🌿", run: runJungle },
+  wood:    { icon: "🪓", name: "나무하기", spot: "forest", cost: 12, out: true, sub: () => `🪵${S.built.axe ? "×2" : ""}`, run: runWood },
+  banana:  { icon: "🍌", name: "바나나",   spot: "banana", cost: 6,  out: true, sub: () => "🍌🍌", run: runBanana, avail: () => S.found.banana },
+  cave:    { icon: "🔦", name: "동굴 탐사", spot: "cave",  cost: 10, out: false, sub: () => "???", run: runCave, avail: () => S.found.cave },
+  wreck:   { icon: "🚢", name: "난파선",   spot: "wreck",  cost: 10, out: true, sub: () => `${3 - S.wreck}번 남음`, run: runWreck, avail: () => S.found.wreck && S.wreck < 3 },
+  dig:     { icon: "⛏️", name: "보물 파기", spot: "x",     cost: 15, out: true, sub: () => "💰", run: runDig, avail: () => S.pieces >= 3 && !S.dug },
+  explore: { icon: "🔍", name: "탐험",     spot: null,     cost: 10, out: true, sub: () => (HIDDEN.some(k => !S.found[k]) ? "새 장소❓" : "이것저것"), run: runExplore },
+  build:   { icon: "🔨", name: "만들기",   sub: () => "🔥🛖🛶" },
+  rest:    { icon: "😴", name: "쉬기",     spot: "camp",   cost: 0, hg: 5, sub: () => `❤️+${S.built.hut ? 35 : 25}`, run: runRest },
+  sail:    { icon: "⛵", name: "출항하기!", sub: () => "뗏목 완성! 눌러서 탈출" },
+};
+const ORDER = ["fish", "jungle", "wood", "banana", "cave", "wreck", "dig", "explore", "build", "rest"];
+const costOf = id => (ACT[id].cost || 0) + (S.weather === "storm" && ACT[id].out ? 4 : 0);
+
+async function doAct(id, target) {
+  if (busy || !S || S.over || !$("modal").hidden) return;
+  if (id === "build") return openBuild();
+  if (id === "sail") return openSail();
+  const a = ACT[id];
+  if (!a || (a.avail && !a.avail())) return;
+  const c = costOf(id);
+  if (c > 0 && S.hp - c <= 0 && !(await lowHpOk())) return;
+  busy = true; render();
+  try {
+    const spot = id === "explore" ? exploreTarget(target) : a.spot;
+    if (S.newActs[id]) delete S.newActs[id];
+    await walkTo(spot);
+    if (id === "fish") komi.flip = false;
+    await doing(a.icon, 750);
+    S.hp -= c; S.hunger -= a.hg != null ? a.hg : 7;
+    render();
+    await a.run(spot);
+    await afterWork();
+  } finally { busy = false; render(); }
+}
+async function afterWork() {
+  if (S.over) return;
+  if (S.hunger <= 0) { S.hunger = 0; S.hp -= 10; floatText(komi.x, komi.y - G.u * 2.7, "배고파... ❤️-10", "#e0313f"); }
+  S.hp = Math.min(100, S.hp); S.hunger = clamp(S.hunger, 0, 100);
+  render();
+  if (S.hp <= 0) { S.hp = 0; render(); return finish("faint", S.hunger <= 0 ? "hunger" : "work"); }
+  S.slot++;
+  save(); render();
+  if (S.slot >= 3) await night();
+}
+function gain(spot, list) {
+  const p = pos(spot), bits = [];
+  for (const [k, n] of list) {
+    if (n <= 0) continue;
+    S.inv[k] += n; bits.push(`${ICON[k]}+${n}`);
+    burst(p.x, p.y - G.u * 0.3, ICON[k], Math.min(n, 4));
+  }
+  if (bits.length) floatText(komi.x, komi.y - G.u * 2.5, bits.join(" "));
+}
+const stormCut = n => (S.weather === "storm" ? Math.max(0, Math.floor(n / 2)) : n);
+
+async function runFish() {
+  let n = S.built.rod ? rnd(2, 4) : rnd(1, 2);
+  if (S.weather === "rain") n += 1;
+  n = stormCut(n);
+  S.st.fish += n;
+  if (n > 0) { gain("beach", [["fish", n]]); setFace("laugh", 1200); toast(`🎣 물고기 ${n}마리를 잡았어요!${S.weather === "rain" ? " (비 오는 날 보너스)" : ""}`); }
+  else { setFace("caught", 1200); toast("🌊 파도가 너무 세서 한 마리도 못 잡았어요..."); }
+  await maybeEvent("fish");
+}
+async function runJungle() {
+  const c = stormCut(rnd(1, 2)), v = Math.max(1, stormCut(rnd(1, 2)));
+  gain("jungle", [["coco", c], ["vine", v]]);
+  toast(`🌴 코코넛 ${c}개, 덩굴 ${v}개를 모았어요`);
+  await maybeEvent("jungle");
+}
+async function runWood() {
+  const n = Math.max(1, stormCut(S.built.axe ? rnd(4, 5) : rnd(2, 3)));
+  gain("forest", [["wood", n]]);
+  toast(`🪓 나무 ${n}개를 모았어요${S.built.axe ? " (돌도끼 2배!)" : ""}`);
+  await maybeEvent("wood");
+}
+async function runBanana() {
+  const n = Math.max(1, stormCut(rnd(2, 3)));
+  gain("banana", [["banana", n]]); setFace("laugh", 1000);
+  toast(`🍌 바나나 ${n}개를 땄어요!`);
+  await maybeEvent("banana");
+}
+function exploreTarget(forced) {
+  const left = HIDDEN.filter(k => !S.found[k]);
+  if (forced && left.includes(forced)) return forced;
+  if (left.length) return pick(left);
+  return pick(["forest", "jungle", "beach", "hill", "banana"]);
+}
+async function runExplore(spot) {
+  if (HIDDEN.includes(spot) && !S.found[spot]) {
+    S.found[spot] = true;
+    const na = { banana: "banana", cave: "cave", wreck: "wreck", hill: "build" }[spot];
+    S.newActs[na] = true;
+    fogA[spot] = 1; tween(fogA, spot, 0, 1000);
+    const p = pos(spot); burst(p.x, p.y - G.u * 0.3, "✨", 6);
+    setFace("laugh", 1800); render();
+    const D = DISCOVER[spot];
+    await card({ icon: D.icon, title: D.title, text: D.text, buttons: [{ label: "좋아요!", primary: true }] });
+    return;
+  }
+  const r = Math.random();
+  if (r < 0.35) { gain(spot, [["vine", 2]]); toast("🔍 질긴 덩굴 더미를 찾았어요"); }
+  else if (r < 0.65) { gain(spot, [["wood", 2]]); toast("🔍 떠내려온 나무를 주웠어요"); }
+  else if (r < 0.9) { gain(spot, [["coco", 2]]); toast("🔍 숨겨진 코코넛을 찾았어요"); }
+  else { S.hunger = Math.min(100, S.hunger + 10); setFace("laugh", 1000); toast("🔍 조개를 주워서 바로 먹었어요! 🍖+10"); }
+  await maybeEvent("explore");
+}
+async function gotPiece(text) {
+  S.pieces++; setFace("laugh", 1600); render();
+  const done = S.pieces >= 3;
+  await card({ icon: "🗺️", title: `보물지도 조각 (${S.pieces}/3)`, text: text + (done ? "\n\n조각이 다 모였어요!\n섬에 ❌ 표시가 나타났어요.\n⛏️ 보물 파기를 해보세요!" : "\n\n조각을 다 모으면\n보물이 묻힌 곳을 알 수 있어요."), buttons: [{ label: "좋아요!", primary: true }] });
+  if (done) S.newActs.dig = true;
+}
+async function runCave() {
+  S.cave++;
+  if (!S.pf.cave && (S.cave >= 2 || chance(0.6))) { S.pf.cave = true; await gotPiece("동굴 벽 틈에서\n낡은 종이 조각을 찾았어요!"); return; }
+  const r = Math.random();
+  if (r < 0.4) { S.hp -= 8; setFace("caught", 1500); await card({ icon: "🦇", title: "박쥐떼다!!", text: "끼에에엑!\n박쥐들이 한꺼번에 날아올라\n꼬미가 넘어졌어요. ❤️-8" }); }
+  else if (r < 0.7) { S.hp = Math.min(100, S.hp + 20); setFace("laugh", 1200); floatText(komi.x, komi.y - G.u * 2.5, "❤️+20", "#e0315a"); toast("💧 동굴 속 시원한 샘물을 마셨어요! ❤️+20"); }
+  else { gain("cave", [["vine", 3]]); toast("🌿 동굴 입구에서 질긴 덩굴을 모았어요"); }
+}
+async function runWreck() {
+  S.wreck++;
+  if (S.wreck === 1) { gain("wreck", [["vine", 3]]); S.pf.wreck = true; await gotPiece("선장실 서랍에서\n찢어진 지도 조각과 밧줄(🌿+3)을 찾았어요!"); }
+  else if (S.wreck === 2) { gain("wreck", [["can", 2], ["wood", 3]]); setFace("laugh", 1200); toast("🚢 통조림 2개와 판자 3개를 건졌어요!"); }
+  else { S.toolbox = true; setFace("laugh", 1600); await card({ icon: "🧰", title: "공구상자 발견!", text: "망치랑 못이 들어 있어요!\n이제 🛶 뗏목을 만들 때\n재료가 절반만 들어요. (🪵2 🌿1)" }); }
+}
+async function runDig() {
+  S.dug = true; S.treasure = true;
+  const p = pos("x"); burst(p.x, p.y, "💰", 5); burst(p.x, p.y, "✨", 4); setFace("laugh", 2000); render();
+  await card({ icon: "💰", title: "보물상자다!!!", text: "영차영차... 쿵!\n반짝이는 금화가 한가득이에요!\n이걸 가지고 탈출하면 부자가 될 거예요 ✨" });
+}
+async function runRest() {
+  const v = S.built.hut ? 35 : 25;
+  S.hp = Math.min(100, S.hp + v);
+  floatText(komi.x, komi.y - G.u * 2.5, `❤️+${v}`, "#e0315a");
+  toast(`😴 쿨쿨... 체력 ❤️+${v}`);
+}
+
+// ===== 깜짝 사건 =====
+async function maybeEvent(kind) {
+  const list = [
+    ["turtle", kind === "fish" && !S.turtleDay, 0.1],
+    ["shark", kind === "fish", 0.1],
+    ["box", kind === "fish" || kind === "explore", 0.08],
+    ["monkey", (kind === "jungle" || kind === "banana") && !S.friend && S.monkeyNo < 2, 0.15],
+    ["mush", kind === "jungle", 0.09],
+    ["bonk", kind === "jungle" || kind === "banana", 0.07],
+    ["snake", kind === "wood", 0.1],
+  ];
+  for (const [id, ok, p] of shuffle(list)) if (ok && chance(p)) { await sleep(350); await EV[id](); return; }
+}
+const EV = {
+  async turtle() {
+    setFace("caught", 1500);
+    const r = await card({ icon: "🐢", title: "거북이가 뒤집혔어요!", text: "해변에서 거북이가 뒤집혀서\n버둥버둥거리고 있어요.\n도와줄까요? (❤️-5)", buttons: [{ label: "🤲 도와주기", primary: true }, { label: "그냥 지나가기" }] });
+    if (r === 0) { S.hp -= 5; S.turtleDay = S.day; setFace("laugh", 1500); toast("🐢 거북이가 고맙다는 듯 고개를 끄덕였어요"); }
+    else toast("🐢 거북이가 슬픈 눈으로 쳐다봐요...");
+  },
+  async shark() {
+    setFace("caught", 1500);
+    const r = await card({ icon: "🦈", title: "낚싯줄이 팽팽해요!", text: "엄청 큰 게 걸렸는데...\n저거 상어 지느러미 아니야?!", buttons: [{ label: "💪 힘껏 당긴다!", primary: true }, { label: "✂️ 줄을 끊는다" }] });
+    if (r !== 0) { toast("✂️ 휴, 안전이 최고예요"); return; }
+    if (chance(0.5)) { gain("beach", [["fish", 5]]); S.st.fish += 5; setFace("laugh", 1600); await card({ icon: "🐟", title: "대어 낚시 성공!", text: "상어가 아니라 거대한 물고기 떼였어요!\n🐟 +5" }); }
+    else { S.hp -= 18; await card({ icon: "💦", title: "으아악!", text: "줄이 끊어지면서 꼬미가 바다에 풍덩!\n간신히 헤엄쳐 나왔어요. ❤️-18" }); }
+  },
+  async box() {
+    const r = await card({ icon: "📦", title: "상자가 떠밀려 왔어요!", text: "파도에 나무 상자가 떠밀려 왔어요.\n열어볼까요?", buttons: [{ label: "📦 열어본다", primary: true }, { label: "수상해... 두고 간다" }] });
+    if (r !== 0) return;
+    const x = Math.random();
+    if (x < 0.35) { gain(komi.spot, [["can", 2]]); setFace("laugh", 1400); toast("📦 통조림 2개! 오늘은 포식이에요 🥫"); }
+    else if (x < 0.6) { gain(komi.spot, [["vine", 3], ["wood", 2]]); toast("📦 밧줄과 판자가 들어 있었어요!"); }
+    else if (x < 0.8 && !S.built.rod) { S.built.rod = true; S.st.built++; setFace("laugh", 1400); toast("📦 낚싯대가 들어 있었어요! 🎣 이제 물고기 2배!", 2800); }
+    else { S.hp -= 5; setFace("caught", 1400); toast("📦 텅 빈 상자... 숨어 있던 꽃게가 꼬집었어요! 🦀 ❤️-5", 2600); }
+  },
+  async monkey() {
+    const food = ["banana", "coco"].find(k => S.inv[k] > 0);
+    const r = await card({ icon: "🐒", title: "야생 원숭이를 만났어요", text: "나무 위에서 원숭이가 빤히 쳐다봐요.\n배가 고파 보여요...", buttons: food ? [{ label: `${ICON[food]} 하나 나눠주기`, primary: true }, { label: "모른 척하기" }] : [{ label: "줄 게 없어요... 😢", primary: true }] });
+    if (food && r === 0) {
+      S.inv[food]--; S.friend = true; fr.init = false; setFace("laugh", 2000); render();
+      await card({ icon: "🐒💛", title: "친구가 생겼어요!", text: "원숭이 '끼끼'가 꼬미를 따라다녀요.\n이제 매일 아침 선물을 가져다줄 거예요!" });
+    } else S.monkeyNo++;
+  },
+  async mush() {
+    const r = await card({ icon: "🍄", title: "무지개색 버섯 발견!", text: "알록달록 반짝이는 버섯이에요.\n먹어볼까요...?", buttons: [{ label: "😋 먹어본다", primary: true }, { label: "🙅 안 먹는다" }] });
+    if (r !== 0) return;
+    if (chance(0.5)) { S.hp = Math.min(100, S.hp + 25); S.hunger = Math.min(100, S.hunger + 15); setFace("laugh", 1600); await card({ icon: "✨", title: "힘이 솟아요!", text: "몸이 반짝반짝 빛나요!\n❤️+25 🍖+15" }); }
+    else { S.hp -= 15; setFace("caught", 1600); await card({ icon: "🤢", title: "배탈이 났어요...", text: "꾸르르륵...\n화장실이 급해요! ❤️-15" }); }
+  },
+  async bonk() {
+    S.hp -= 5; gain(komi.spot, [["coco", 1]]); setFace("caught", 1500);
+    toast("🥥 쿵! 코코넛이 머리에 떨어졌어요 ❤️-5 (대신 코코넛 +1)", 2600);
+  },
+  async snake() {
+    setFace("caught", 1500);
+    const r = await card({ icon: "🐍", title: "뱀이다!!", text: "나무 더미 속에 뱀이 똬리를 틀고 있어요!", buttons: [{ label: "🏃 나무 두고 도망!", primary: true }, { label: "🪵 휘둘러서 쫓아낸다" }] });
+    if (r === 0) { const lost = Math.min(S.inv.wood, 2); S.inv.wood -= lost; toast(`🏃 휴... 대신 나무 ${lost}개를 두고 왔어요`); }
+    else if (chance(0.5)) { setFace("laugh", 1400); toast("🐍 뱀이 도망갔어요! 나무도 지켰어요 💪"); }
+    else { S.hp -= 15; toast("🐍 앗 따가워! 물렸어요... ❤️-15"); }
+  },
+};
+
+// ===== 밤 · 아침 =====
+function rollWeather(d) {
+  if (d <= 2) return "clear";
+  if (S.weather === "storm") return chance(0.35) ? "rain" : "clear";
+  if (!S.stormSeen && d >= 6 && (d >= 9 || chance(0.3))) { S.stormSeen = true; return "storm"; }
+  const r = Math.random();
+  if (r < 0.12) { S.stormSeen = true; return "storm"; }
+  return r < 0.36 ? "rain" : "clear";
+}
+function nightEvent(L) {
+  if (!chance(0.55)) return;
+  const o = ["boar", "star", "star", "mosq", "wave"];
+  if (S.inv.fish > 0) o.push("crab", "crab");
+  if (S.pieces >= 1 && !S.pf.bottle) o.push("bottle", "bottle", "bottle"); else o.push("note");
+  switch (pick(o)) {
+    case "crab":
+      if (S.built.fire) L.push({ t: "🦀 꽃게들이 생선을 노렸지만 🔥 불을 보고 도망갔어요", tone: "good" });
+      else { const n = Math.min(S.inv.fish, rnd(1, 2)); S.inv.fish -= n; L.push({ t: `🦀 꽃게들이 물고기 ${n}마리를 훔쳐 갔어요! (🔥 불이 있었다면...)`, tone: "bad" }); }
+      break;
+    case "boar":
+      if (S.built.fire) L.push({ t: "🐗 멧돼지가 왔다가 🔥 불을 보고 도망갔어요", tone: "good" });
+      else { S.hp -= 12; L.push({ t: "🐗 멧돼지가 캠프를 들이받았어요! ❤️-12 (🔥 불이 있었다면...)", tone: "bad" }); }
+      break;
+    case "star": S.hp += 8; L.push({ t: "🌠 별똥별! \"집에 가게 해주세요...\" ❤️+8", tone: "good" }); break;
+    case "mosq":
+      if (S.built.hut) L.push({ t: "🦟 모기떼가 왔지만 🛖 오두막 안이라 괜찮아요", tone: "good" });
+      else { S.hp -= 6; L.push({ t: "🦟 모기한테 잔뜩 물렸어요... 가려워! ❤️-6", tone: "bad" }); }
+      break;
+    case "wave": S.hp += 5; L.push({ t: "🌊 파도 소리를 자장가 삼아 푹 잤어요 ❤️+5", tone: "good" }); break;
+    case "bottle":
+      S.pf.bottle = true; S.pieces++;
+      L.push({ t: `🍾 유리병이 떠밀려 왔어요! 안에 🗺️ 보물지도 조각이! (${S.pieces}/3)`, tone: "good" });
+      if (S.pieces >= 3) { S.newActs.dig = true; L.push({ t: "🗺️ 지도가 완성됐어요! 섬에 ❌ 표시가 나타났어요", tone: "good" }); }
+      break;
+    default: L.push({ t: "🍾 유리병 편지: " + pick(TIPS) });
+  }
+}
+async function night() {
+  await sleep(250);
+  await walkTo("camp");
+  await tween(V, "night", 1, 800);
+  const L = [], ate = [];
+  for (let i = 0; i < 2 && S.hunger < 70; i++) {
+    const k = ["fish", "banana", "coco", "can"].find(q => S.inv[q] > 0);
+    if (!k) break;
+    S.inv[k]--; S.hunger = Math.min(100, S.hunger + foodVal(k)); ate.push(ICON[k] + " " + foodName(k));
+  }
+  if (ate.length) L.push({ t: `🍽️ 저녁밥: ${ate.join(", ")} 냠냠!` });
+  else if (S.hunger < 50) L.push({ t: "🍽️ 먹을 게 없어서 저녁을 굶었어요... 😢", tone: "bad" });
+  S.hunger -= 12;
+  const wet = S.weather !== "clear" && !S.built.hut, why = [];
+  let rec = 8;
+  if (S.built.hut) { rec += 20; why.push("🛖 오두막"); }
+  if (S.built.fire && !wet) { rec += 10; why.push("🔥 모닥불"); }
+  S.hp += rec;
+  L.push({ t: `😴 ${why.length ? why.join(" + ") + " 덕분에 푹 잤어요" : "맨땅에서 웅크리고 잤어요"} ❤️+${rec}`, tone: why.length ? "good" : "" });
+  if (S.built.fire && wet) L.push({ t: "💨 비 때문에 모닥불이 꺼졌어요 (🛖 오두막이 있으면 괜찮아요)", tone: "bad" });
+  if (S.weather === "storm") {
+    if (S.built.hut) L.push({ t: "🌪️ 밤새 태풍이 몰아쳤지만 오두막 안은 안전했어요!", tone: "good" });
+    else { S.hp -= 24; const lost = Math.min(S.inv.wood, 3); S.inv.wood -= lost; L.push({ t: `🌪️ 태풍에 날아갈 뻔했어요! ❤️-24${lost ? ` · 🪵${lost}개 떠내려감` : ""}`, tone: "bad" }); }
+  } else if (S.weather === "rain" && !S.built.hut) { S.hp -= 8; L.push({ t: "🌧️ 밤새 비를 쫄딱 맞았어요... ❤️-8", tone: "bad" }); }
+  if (S.hunger <= 0) { S.hunger = 0; S.hp -= 15; L.push({ t: "🍖 배가 너무 고파서 잠을 설쳤어요 ❤️-15", tone: "bad" }); }
+  nightEvent(L);
+  S.hp = clamp(S.hp, 0, 100); S.hunger = clamp(S.hunger, 0, 100);
+  render();
+  if (S.hp <= 0) {
+    await card({ icon: "🌙", title: `${S.day}일째 밤`, lines: L, buttons: [{ label: "...", primary: true }] });
+    return finish("faint", S.weather === "storm" && !S.built.hut ? "storm" : S.hunger <= 0 ? "hunger" : "work");
+  }
+  if (S.day >= 30) {
+    await card({ icon: "🌙", title: "30일째 밤", lines: L, buttons: [{ label: "🌪️ 태풍 시즌이 왔어요...", primary: true }] });
+    return finish("island");
+  }
+  const tw = WX[S.tomorrow];
+  L.push({ t: `📅 내일 날씨: ${tw.ic} ${tw.nm}${S.tomorrow === "storm" ? " — 오두막이 없으면 위험해요!" : ""}`, tone: S.tomorrow === "storm" ? "bad" : "" });
+  await card({ icon: "🌙", title: `${S.day}일째 밤`, lines: L, buttons: [{ label: `🌅 ${S.day + 1}일째 아침으로`, primary: true }] });
+  S.day++; S.slot = 0; S.weather = S.tomorrow; S.tomorrow = rollWeather(S.day + 1);
+  save(); render();
+  await tween(V, "night", 0, 900);
+  await morning();
+  save(); render();
+}
+async function morning() {
+  if (S.friend) {
+    const g = pick([["coco", 1], ["banana", 1], ["vine", 2], ["fish", 1]]);
+    S.inv[g[0]] += g[1]; burst(fr.x, fr.y - G.u * 0.6, ICON[g[0]], g[1]);
+    floatText(fr.x, fr.y - G.u * 1.6, `${ICON[g[0]]}+${g[1]}`);
+    toast(`🐒 끼끼가 아침 선물을 가져왔어요! ${ICON[g[0]]}+${g[1]}`);
+    render(); await sleep(500);
+  }
+  if (S.day >= 4 && chance(S.built.signal ? 0.24 : S.found.hill ? 0.12 : 0.08)) { await shipEvent(); if (S.over) return; }
+  if (S.turtleDay > 0 && S.day >= S.turtleDay + 3 && chance(0.3)) { await turtleReturn(); if (S.over) return; }
+  if (S.day === 30) toast("⏰ 오늘이 마지막 날! 오늘 밤이 지나면 태풍 시즌이에요", 3000);
+  else if (S.weather === "storm") toast("🌪️ 오늘은 태풍! 밖에서 일하면 체력이 더 들어요", 2800);
+  else if (S.weather === "rain") toast("🌧️ 비가 와요. 물고기가 잘 잡히는 날!", 2400);
+}
+async function shipEvent() {
+  if (S.built.signal) {
+    const r = await card({ icon: "🚢", title: "저 멀리 배가 보여요!!", text: "수평선 너머로 커다란 배가 지나가요!\n지금 봉화를 피우면 구조될 거예요!", buttons: [{ label: "🔥 봉화 피우기!", primary: true }, { label: "아직 할 일이 남았어..." }] });
+    if (r === 0) return finish("ship");
+    toast("🚢 배가 멀어져 갔어요...");
+  } else {
+    setFace("caught", 1800);
+    await card({ icon: "🚢", title: "배가 지나가요...!", text: "꼬미가 손을 흔들었지만\n배는 그냥 지나가 버렸어요 😢\n\n" + (S.found.hill ? "(⛰️ 언덕에 🆘 봉화가 있었다면...!)" : "(섬 어딘가 높은 곳에서 신호를 보낸다면...?)") });
+  }
+}
+async function turtleReturn() {
+  S.turtleAsk++;
+  const r = await card({ icon: "🐢🐢🐢", title: "그때 그 거북이다!", text: "도와줬던 거북이가\n커다란 친구들을 데려왔어요.\n등에 태워서 육지까지 데려다준대요!", buttons: [{ label: "🐢 등에 타고 탈출!", primary: true }, { label: "아직은 괜찮아" }] });
+  if (r === 0) return finish("turtle");
+  toast("🐢 거북이들이 바다로 돌아갔어요");
+  S.turtleDay = S.turtleAsk >= 2 ? -1 : S.day;
+}
+
+// ===== 만들기 =====
+const BUILD = [
+  { id: "fire",   icon: "🔥", name: "모닥불", cost: { wood: 3 }, desc: "생선을 구워 먹으면 배부름 ↑↑ · 밤에 ❤️+10 · 동물이 못 와요", short: "이제 생선을 구워 먹어요" },
+  { id: "hut",    icon: "🛖", name: "오두막", cost: { wood: 6, vine: 3 }, desc: "밤에 ❤️+20 · 비·태풍·모기를 막아줘요", short: "이제 밤이 무섭지 않아요" },
+  { id: "rod",    icon: "🎣", name: "낚싯대", cost: { wood: 1, vine: 2 }, desc: "물고기가 2배로 잡혀요", short: "물고기 2배!" },
+  { id: "axe",    icon: "🪓", name: "돌도끼", cost: { wood: 2, vine: 2 }, desc: "나무가 2배로 모여요", short: "나무 2배!" },
+  { id: "signal", icon: "🆘", name: "봉화",   cost: { wood: 6, vine: 2 }, need: "hill", desc: "지나가는 배에 구조 신호! 아침에 배가 보이면 불을 피워요", short: "이제 배를 기다려요!" },
+  { id: "raft",   icon: "🛶", name: "뗏목",   cost: null, desc: "5단계를 모두 만들면 바다로 탈출!", short: "" },
+];
+const bCost = b => (b.id === "raft" ? (S.toolbox ? { wood: 2, vine: 1 } : { wood: 4, vine: 2 }) : b.cost);
+const afford = c => Object.keys(c).every(k => S.inv[k] >= c[k]);
+const isDone = b => (b.id === "raft" ? S.raft >= 5 : S.built[b.id]);
+function openBuild() {
+  if (busy || S.over || !$("modal").hidden) return;
+  if (S.newActs.build) { delete S.newActs.build; render(); }
+  const c = 8 + (S.weather === "storm" ? 4 : 0);
+  const rows = BUILD.map(b => {
+    const locked = b.need && !S.found[b.need], done = isDone(b), cost = bCost(b);
+    const chips = Object.keys(cost).map(k => `<span class="cc${S.inv[k] < cost[k] ? " miss" : ""}">${ICON[k]} ${S.inv[k]}/${cost[k]}</span>`).join("");
+    const right = done ? `<div class="b-done">✅</div>` : locked ? `<div class="b-lock">🔒</div>` : `<button class="b-go" data-b="${b.id}"${afford(cost) ? "" : " disabled"}>만들기</button>`;
+    const nm = b.name + (b.id === "raft" ? ` <small>${S.raft}/5 단계${S.toolbox ? " · 🧰 재료 절반" : ""}</small>` : "");
+    const ds = locked ? "⛰️ 언덕을 찾으면 만들 수 있어요 (🔍 탐험)" : b.desc;
+    return `<div class="b-row${done ? " done" : ""}${locked ? " locked" : ""}"><div class="b-ic">${b.icon}</div><div class="b-main"><div class="b-nm">${nm}</div><div class="b-ds">${ds}</div>${done || locked ? "" : `<div class="b-cost">${chips}</div>`}</div>${right}</div>`;
+  }).join("");
+  const m = $("modal"), cd = $("card");
+  cd.innerHTML = `<div class="c-title">🔨 무엇을 만들까요?</div><div class="b-list">${rows}</div><div class="b-note">만들기 1번 = 행동 1번 · ❤️-${c} · 빨간 재료가 부족해요</div><div class="c-btns"><button class="btn" data-close>닫기</button></div>`;
+  m.hidden = false; cd.scrollTop = 0;
+  cd.querySelector("[data-close]").onclick = () => { m.hidden = true; };
+  cd.querySelectorAll(".b-go").forEach(btn => { btn.onclick = () => { m.hidden = true; doBuild(btn.dataset.b); }; });
+}
+async function doBuild(id) {
+  if (busy || S.over) return;
+  const b = BUILD.find(x => x.id === id), cost = bCost(b);
+  if (!afford(cost) || isDone(b)) return;
+  const c = 8 + (S.weather === "storm" ? 4 : 0);
+  if (S.hp - c <= 0 && !(await lowHpOk())) return;
+  busy = true; render();
+  try {
+    const spot = id === "raft" ? "raft" : id === "signal" ? "hill" : "camp";
+    await walkTo(spot);
+    await doing("🔨", 950);
+    for (const k in cost) S.inv[k] -= cost[k];
+    S.hp -= c; S.hunger -= 7; S.st.built++;
+    const p = pos(spot);
+    burst(p.x, p.y - G.u * 0.3, "✨", 5); setFace("laugh", 1500);
+    if (id === "raft") {
+      S.raft++;
+      floatText(p.x, p.y - G.u * 1.3, `🛶 ${S.raft}/5`, "#8a5523");
+      render();
+      if (S.raft >= 5) await card({ icon: "🛶✨", title: "뗏목 완성!!", text: "드디어 바다로 나갈 수 있어요!\n\n⛵ 출항 조건\n• 음식 4개 이상 챙기기\n• 태풍이 아닌 날", buttons: [{ label: "좋아요!", primary: true }] });
+      else toast(`🛶 뗏목 ${S.raft}/5 단계 완성! ${5 - S.raft}번 남았어요`);
+    } else {
+      S.built[id] = true;
+      floatText(p.x, p.y - G.u * 1.3, `${b.icon} 완성!`, "#2f8a4c");
+      toast(`${b.icon} ${b.name} 완성! ${b.short}`, 2500);
+    }
+    await afterWork();
+  } finally { busy = false; render(); }
+}
+async function openSail() {
+  if (busy || S.over || !$("modal").hidden) return;
+  const f = foodCount(), okF = f >= 4, okW = S.weather !== "storm";
+  const html = `<ul class="c-lines"><li class="good">✅ 뗏목 완성 (5/5)</li><li class="${okF ? "good" : "bad"}">${okF ? "✅" : "❌"} 음식 4개 이상 (지금 ${f}개)</li><li class="${okW ? "good" : "bad"}">${okW ? "✅" : "❌"} 태풍이 아닌 날</li></ul>${S.treasure ? `<div class="c-text">💰 보물상자도 챙겼어요!</div>` : ""}`;
+  const ok = okF && okW;
+  const r = await card({ icon: "⛵", title: ok ? "출항할까요?" : "아직 출항할 수 없어요", html, buttons: ok ? [{ label: "⛵ 출항!", primary: true }, { label: "조금 더 준비할래요" }] : [{ label: "준비하러 가기", primary: true }] });
+  if (!ok || r !== 0) return;
+  let need = 4;
+  for (const k of ["fish", "coco", "banana", "can"]) { const n = Math.min(need, S.inv[k]); S.inv[k] -= n; need -= n; }
+  finish("raft");
+}
+
+// ===== 엔딩 =====
+const grade = d => (d <= 12 ? "S" : d <= 17 ? "A" : d <= 23 ? "B" : "C");
+const endIcons = () => Object.keys(ENDS).map(k => `<span class="${M.endings[k] ? "" : "lock"}">${M.endings[k] ? ENDS[k].ic : "❓"}</span>`).join("");
+function finish(kind, why) {
+  if (S.over) return;
+  S.over = true; render();
+  endingSeq(kind, why);
+}
+async function endingSeq(kind, why) {
+  await sleep(200);
+  if (kind === "raft") { await walkTo("raft"); komi.hide = true; V.voy = { kind, t0: performance.now(), ms: 3000 }; await sleep(3100); }
+  else if (kind === "ship") { await tween(V, "night", 0, 300); await walkTo("hill"); V.signalLit = true; setFace("laugh", 1e9); await sleep(800); V.voy = { kind, t0: performance.now(), ms: 3600 }; await sleep(3700); }
+  else if (kind === "turtle") { await tween(V, "night", 0, 300); await walkTo("beach"); komi.hide = true; V.voy = { kind, t0: performance.now(), ms: 3000 }; await sleep(3100); }
+  else if (kind === "faint") { komi.faint = true; await sleep(1500); }
+  else { await tween(V, "night", 0, 600); setFace("laugh", 1e9); await sleep(700); }
+  const end = (kind === "raft" || kind === "ship") && S.treasure ? "treasure" : kind;
+  const E = ENDS[end], first = !M.endings[end];
+  M.endings[end] = true; M.plays = (M.plays || 0) + 1;
+  let best = false;
+  if (E.esc && (!M.best || S.day < M.best)) { M.best = S.day; best = true; }
+  store.set(META, M); store.del(KEY);
+  const got = Object.keys(ENDS).filter(k => M.endings[k]).length, gr = E.esc ? grade(S.day) : null;
+  const found = HIDDEN.filter(k => S.found[k]).length;
+  const html = (gr ? `<div class="grade"><b class="g-${gr}">${gr}</b><span>${S.day}일 만에 탈출!${best ? "<br><em>🏆 최고 기록!</em>" : ""}</span></div>` : "")
+    + `<div class="stats">🐟 잡은 물고기 ${S.st.fish} · 🔨 만든 것 ${S.st.built} · 🗺️ 발견한 장소 ${found}/4${S.friend ? " · 🐒 친구 끼끼" : ""}</div>`
+    + `<div class="endrow">${endIcons()}</div><div class="endcap">엔딩 모음 ${got}/6${got < 6 ? " · 다른 엔딩도 찾아보세요!" : " · 전부 모았어요! 🎉"}</div>`;
+  const r = await card({ top: `<div class="end-tag${first ? " new" : ""}">${first ? "✨ 새 엔딩 발견! ✨" : "ENDING"}</div>`, face: end === "faint" ? "caught" : "laugh", title: `${E.ic} ${E.nm}`, text: STORY[end](S.day, why), html, buttons: [{ label: "🔄 다시 하기", primary: true }, { label: "🏠 처음 화면" }] });
+  if (r === 0) startNew(); else { S = newState(); resetVisual(); render(); showTitle(); }
+}
+
+// ===== 시작 화면 =====
+function resetVisual() {
+  for (const k of HIDDEN) fogA[k] = S.found[k] ? 0 : 1;
+  Object.assign(komi, { spot: "camp", walk: null, hop: 0, hide: false, faint: false, face: "smirk", faceUntil: 0, act: null });
+  const p = standPos("camp"); komi.x = p.x; komi.y = p.y;
+  fr.init = false; V.voy = null; V.signalLit = false; V.night = 0; parts.length = 0; floats.length = 0;
+}
+async function showTitle() {
+  const sv = load(), got = Object.keys(ENDS).filter(k => M.endings[k]).length;
+  const tiles = Object.keys(ENDS).map(k => { const E = ENDS[k], on = M.endings[k]; return `<div class="et${on ? "" : " lock"}"><span>${on ? E.ic : "❓"}</span><small>${on ? E.nm : E.hint}</small></div>`; }).join("");
+  const html = `<div class="howto"><div>🗓️ 하루에 <b>3번</b> 행동해요 (아침·낮·저녁)</div><div>🍖❤️ 배부름·체력이 <b>0</b>이 되면 쓰러져요</div><div>🛶 <b>뗏목</b>을 만들거나 🆘 <b>구조 신호</b>로 탈출!</div></div>`
+    + `<div class="et-grid">${tiles}</div><div class="endcap">엔딩 모음 ${got}/6${M.best ? ` · 🏆 최고 기록 ${M.best}일` : ""}</div>`;
+  const r = await card({ top: `<div class="t-sub">세카이 미니게임</div><div class="t-title">꼬미의<br>무인도 30일</div>`, face: "caught", text: "배가 뒤집혀 무인도에 떨어진 꼬미!\n30일 안에 섬을 탈출할 수 있을까?", html, buttons: sv ? [{ label: `▶ 이어하기 (${sv.day}일째)`, primary: true }, { label: "🔄 처음부터 새로 하기" }] : [{ label: "🏝️ 시작하기", primary: true }] });
+  if (sv && r === 0) continueGame(); else startNew();
+}
+async function startNew() {
+  S = newState(); resetVisual(); save(); render();
+  busy = true;
+  await card({ icon: "🌊⛵💥", title: "쿠르릉 쾅!!", text: "폭풍우에 배가 뒤집혀\n꼬미 혼자 낯선 섬에 떠밀려 왔어요...\n\n30일 뒤에는 거대한 태풍 시즌이 와요.\n그 전에 섬을 탈출해야 해요!", buttons: [{ label: "🏝️ 살아남자!", primary: true }] });
+  busy = false; render();
+  toast("💡 먼저 🪓 나무를 모아서 🔥 모닥불을 만들어 보세요!", 3200);
+}
+async function continueGame() {
+  S = load() || newState(); resetVisual(); render();
+  if (S.slot >= 3) { busy = true; render(); try { await night(); } finally { busy = false; render(); } }
+}
+async function showHelp() {
+  if (busy || (S && S.over) || !$("modal").hidden) return;
+  const r = await card({ icon: "📖", title: "이렇게 놀아요", html: `<div class="howto">
+    <div>🗓️ 하루에 <b>3번</b> 행동해요. 밤에는 알아서 저녁을 먹고 자요.</div>
+    <div>🍖 <b>배부름</b>은 행동할 때마다 줄어요. 노란 <b>음식</b>을 누르면 먹어요.</div>
+    <div>❤️ <b>체력</b>이 0이 되면 쓰러져요. 😴쉬기 · 🔥모닥불 · 🛖오두막으로 회복!</div>
+    <div>🛶 <b>뗏목 5단계</b>를 완성하거나, ⛰️언덕에 🆘<b>봉화</b>를 지어 배를 기다려요.</div>
+    <div>🔍 <b>탐험</b>으로 숨겨진 장소를 찾아보세요. 숨겨진 엔딩도 있어요!</div>
+    <div>👆 섬의 장소를 직접 눌러도 돼요.</div></div>`, buttons: [{ label: "알겠어요!", primary: true }, { label: "🏠 처음 화면으로" }] });
+  if (r === 1) showTitle();
+}
+
+// ===== 화면 글자 새로 그리기 =====
+function hintText() {
+  if (S.hp < 30) return ["warn", "😵 체력이 위험해요! 😴 쉬기를 하거나 🛖 오두막을 지으세요"];
+  if (S.hunger < 30) return ["warn", foodCount() ? "🍖 배고파요! 아래 노란 음식을 눌러서 먹으세요" : "🍖 배고파요! 🎣 낚시나 🌴 정글에서 먹을 걸 구하세요"];
+  if (S.weather === "storm" && !S.built.hut) return ["warn", "🌪️ 오늘 밤 태풍! 🛖 오두막(🪵6 🌿3)을 서둘러 지으세요"];
+  if (S.tomorrow === "storm" && !S.built.hut) return ["warn", "🌪️ 내일 태풍이 와요! 🛖 오두막이 없으면 밤에 크게 다쳐요"];
+  if (S.day >= 26) return ["warn", `⏰ 태풍 시즌까지 ${30 - S.day}일! 서둘러 탈출하세요`];
+  if (S.raft >= 5) return ["", `⛵ 뗏목 완성! 음식 4개 이상 챙겨서 출항하세요 (지금 ${foodCount()}개)`];
+  if (S.pieces >= 3 && !S.dug) return ["", "🗺️ 지도가 완성됐어요! ❌ 표시에서 ⛏️ 보물을 파보세요"];
+  if (!S.built.fire) return ["", "💡 🪓 나무 3개로 🔥 모닥불을 만들어 보세요 (생선 구이 + 밤에 안전)"];
+  if (!S.built.hut) return ["", "💡 🛖 오두막이 있으면 밤에 푹 쉬고 비·태풍도 막아줘요"];
+  if (!S.built.rod && S.st.fish > 0) return ["", "💡 🎣 낚싯대(🪵1 🌿2)를 만들면 물고기가 2배!"];
+  if (!S.built.axe) return ["", "💡 🪓 돌도끼(🪵2 🌿2)를 만들면 나무가 2배!"];
+  if (S.found.hill && !S.built.signal) return ["", "💡 ⛰️ 언덕에 🆘 봉화를 지으면 지나가는 배에 구조 요청!"];
+  if (HIDDEN.some(k => !S.found[k])) return ["", "💡 🔍 탐험하면 섬의 숨겨진 장소를 찾을 수 있어요"];
+  return ["", `🛶 뗏목을 완성해서 섬을 탈출하세요! (${S.raft}/5)`];
+}
+function render() {
+  if (!S) return;
+  const left = 30 - S.day;
+  $("day").textContent = `🏝️ ${S.day}일째`;
+  $("dday").textContent = left > 0 ? `탈출까지 D-${left}` : "D-DAY";
+  $("dday").classList.toggle("hot", left <= 5);
+  const sl = SLOT[Math.min(S.slot, 2)];
+  $("slot").innerHTML = `${sl.ic} ${sl.nm} <span class="dots">${[0, 1, 2].map(i => `<i class="${i < S.slot ? "used" : ""}"></i>`).join("")}</span>`;
+  const wn = WX[S.weather], wt = WX[S.tomorrow];
+  $("wxNow").textContent = `오늘 ${wn.ic} ${wn.nm}`;
+  $("wxTom").textContent = `내일 ${wt.ic} ${wt.nm}${S.tomorrow === "storm" ? "!" : ""}`;
+  $("wxTom").classList.toggle("warn", S.tomorrow === "storm");
+  $("hgFill").style.width = S.hunger + "%"; $("hgNum").textContent = Math.round(S.hunger);
+  $("hpFill").style.width = S.hp + "%"; $("hpNum").textContent = Math.round(S.hp);
+  $("hgBar").classList.toggle("low", S.hunger < 30); $("hpBar").classList.toggle("low", S.hp < 30);
+  const [ht, hx] = hintText();
+  $("hint").className = ht; $("hint").textContent = hx;
+  $("raftFill").style.width = S.raft * 20 + "%"; $("raftNum").textContent = `${S.raft}/5`;
+  $("goalX").textContent = (S.pieces && !S.dug ? ` 🗺️${S.pieces}/3` : "") + (S.treasure ? " 💰" : "") + (S.built.signal ? " 🆘봉화✅" : "");
+  const chips = [];
+  for (const k of ["fish", "coco", "banana", "can"]) {
+    if ((k === "banana" && !S.found.banana && !S.inv.banana) || (k === "can" && !S.inv.can)) continue;
+    chips.push(`<button class="chip food${S.inv[k] ? "" : " zero"}" data-k="${k}">${ICON[k]} ${S.inv[k]}</button>`);
+  }
+  for (const k of ["wood", "vine"]) chips.push(`<button class="chip" data-k="${k}">${ICON[k]} ${S.inv[k]}</button>`);
+  if (S.pieces && !S.dug) chips.push(`<button class="chip gold" data-k="map">🗺️ ${S.pieces}/3</button>`);
+  if (S.treasure) chips.push(`<button class="chip gold" data-k="gold">💰 보물</button>`);
+  $("inv").innerHTML = chips.join("");
+  const list = (S.raft >= 5 ? ["sail"] : []).concat(ORDER.filter(id => !ACT[id].avail || ACT[id].avail()));
+  $("acts").innerHTML = list.map(id => {
+    const a = ACT[id], c = a.cost ? costOf(id) : 0;
+    return `<button class="act${id === "sail" ? " hero" : ""}${S.newActs[id] ? " new" : ""}" data-a="${id}"><span class="nm"><span class="ic">${a.icon}</span>${a.name}</span><span class="sb">${a.sub()}${c ? ` · ❤️-${c}` : ""}</span></button>`;
+  }).join("");
+  $("acts").classList.toggle("wait", busy || S.over);
+}
+function eat(k) {
+  if (!S || S.over || busy || !$("modal").hidden) return;
+  if (S.inv[k] <= 0) return toast(`${ICON[k]} ${iga(FOOD[k].name)} 없어요`);
+  if (S.hunger >= 100) return toast("배불러요! 더는 못 먹어요 🍖");
+  S.inv[k]--;
+  const v = foodVal(k);
+  S.hunger = Math.min(100, S.hunger + v);
+  setFace("laugh", 1100);
+  floatText(komi.x, komi.y - G.u * 2.5, `🍖+${v}`, "#d97a00");
+  toast(`${ICON[k]} ${foodName(k)} 냠냠! 배부름 +${v}`);
+  save(); render();
+}
+
+// ===== 버튼 연결 · 시작 =====
+$("acts").addEventListener("click", e => { const b = e.target.closest(".act"); if (b) doAct(b.dataset.a); });
+$("inv").addEventListener("click", e => {
+  const b = e.target.closest(".chip"); if (!b) return;
+  const k = b.dataset.k;
+  if (FOOD[k]) return eat(k);
+  if (MAT[k]) return toast(`${ICON[k]} ${MAT[k].name}: ${MAT[k].use}`, 2600);
+  if (k === "map") return toast("🗺️ 보물지도 조각: 3개를 모으면 보물 위치가 나타나요", 2600);
+  if (k === "gold") return toast("💰 보물상자! 가지고 탈출하면 특별한 엔딩이...", 2600);
+});
+$("helpBtn").addEventListener("click", showHelp);
+window.addEventListener("resize", resize);
+if (window.ResizeObserver) new ResizeObserver(resize).observe($("sceneWrap"));
+resize(); resetVisual(); render();
+requestAnimationFrame(frame);
+
+showTitle();
+// 세카이 사이트 안에서 처음 누르면 전체 화면 요청 (꼬미 키우기와 같은 방식)
+addEventListener("pointerdown", function askFull() {
+  removeEventListener("pointerdown", askFull, true);
+  try { if (window.parent !== window) window.parent.postMessage({ type: "komi-fullscreen" }, location.origin); } catch (e) {}
+}, true);
+
+})();
+</script>
+</body>
+</html>
