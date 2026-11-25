@@ -3,9 +3,15 @@
 import { useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { ImageIcon, Trash2 } from "lucide-react";
+import { ImageIcon, Pencil, Trash2 } from "lucide-react";
 
-import { deleteEpisode, updateEpisodePublishAt, updateEpisodeThumbnail, type ActionState } from "@/app/admin/actions";
+import {
+  deleteEpisode,
+  updateEpisodePublishAt,
+  updateEpisodeThumbnail,
+  updateEpisodeTitle,
+  type ActionState,
+} from "@/app/admin/actions";
 import { Button } from "@/components/ui/button";
 import type { PublishOption } from "@/lib/publish-time";
 import { ImageSlotButtons } from "./image-slot-buttons";
@@ -60,6 +66,81 @@ function RescheduleControls({ episodeId, choices: allChoices }: { episodeId: str
         <span className={status.ok ? "text-xs text-muted-foreground" : "text-xs text-destructive"}>{status.message}</span>
       ) : null}
     </div>
+  );
+}
+
+/** 회차 제목(한국어) 고치기: 버튼을 누르면 입력칸이 열리고, 저장하면 바로 바뀜 */
+function EpisodeTitleEditor({ episodeId, title }: { episodeId: string; title: string }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState(title);
+  const [pending, setPending] = useState(false);
+  const [status, setStatus] = useState<ActionState | null>(null);
+
+  async function save() {
+    setPending(true);
+    const data = new FormData();
+    data.set("id", episodeId);
+    data.set("title", value);
+    const result = await updateEpisodeTitle(data);
+    setStatus(result);
+    setPending(false);
+    if (result.ok) {
+      setOpen(false);
+      router.refresh();
+    }
+  }
+
+  const message = status?.message ? (
+    <span className={status.ok ? "text-xs text-muted-foreground" : "text-xs text-destructive"}>{status.message}</span>
+  ) : null;
+
+  if (!open) {
+    return (
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          onClick={() => {
+            setValue(title);
+            setStatus(null);
+            setOpen(true);
+          }}
+        >
+          <Pencil />
+          제목 고치기
+        </Button>
+        {message}
+      </div>
+    );
+  }
+
+  return (
+    <form
+      className="flex flex-wrap items-center gap-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        save();
+      }}
+    >
+      <input
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        maxLength={100}
+        required
+        autoFocus
+        aria-label="새 회차 제목"
+        className="h-8 min-w-0 flex-1 rounded-lg border bg-background px-2 text-base sm:text-sm"
+      />
+      <Button type="submit" size="sm" disabled={pending || !value.trim()}>
+        {pending ? "저장 중..." : "저장"}
+      </Button>
+      <Button type="button" size="sm" variant="ghost" disabled={pending} onClick={() => setOpen(false)}>
+        취소
+      </Button>
+      {message}
+    </form>
   );
 }
 
@@ -262,6 +343,10 @@ export function EpisodeManager({
                     <RescheduleControls episodeId={ep.id} choices={publishChoices} />
                   </div>
                 ) : null}
+                {/* 제목 고치기 */}
+                <div className="mt-1 pl-1">
+                  <EpisodeTitleEditor episodeId={ep.id} title={ep.title} />
+                </div>
                 {/* 썸네일 바꾸기 / 무프사로 */}
                 <div className="mt-1 pl-1">
                   <ImageSlotButtons

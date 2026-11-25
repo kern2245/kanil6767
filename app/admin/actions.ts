@@ -10,6 +10,7 @@
    - saveWebtoon / deleteWebtoon : 웹툰 추가·수정 / 삭제 (회장 또는 그 웹툰을 올린 작가)
    - setWebtoonCompleted : 완결로 넘기기 / 연재로 되돌리기 (회장만)
    - updateWebtoonCover  : 표지만 바꾸기 / 무프사로 (회장 또는 그 웹툰을 올린 작가)
+   - updateEpisodeTitle : 회차 제목(한국어) 고치기 (회장 또는 그 웹툰의 작가)
    - updateEpisodeThumbnail : 회차 썸네일 바꾸기 / 무프사로 (회장 또는 그 웹툰의 작가)
    - updateEpisodePublishAt : 예약 회차 공개 날짜 바꾸기(1년 안) / 지금 바로 공개 (회장 또는 그 웹툰의 작가)
    - uploadEpisodeImage / saveEpisode / deleteEpisode : 회차 그림 올리기 / 저장 / 삭제 (회장 또는 그 웹툰의 작가)
@@ -530,6 +531,28 @@ export async function updateEpisodePublishAt(formData: FormData): Promise<Action
         ? `${episode.number}화를 ${formatPublishAt(publishAt)}에 공개하도록 바꿨어요.`
         : `${episode.number}화를 지금 바로 공개했어요.`,
   };
+}
+
+/** 회차 제목(한국어) 고치기 (회차 목록의 "제목 고치기" 버튼) — 회장 또는 그 웹툰의 작가
+    formData: id(회차), title(새 제목) */
+export async function updateEpisodeTitle(formData: FormData): Promise<ActionState> {
+  const editor = await getEditor();
+  if (!editor) return { message: "로그인이 필요합니다. 새로고침 후 다시 로그인하세요." };
+  const supabase = getAdminClient();
+  if (!supabase) return { message: "Supabase가 연결되지 않았습니다." };
+
+  const id = String(formData.get("id") ?? "");
+  const title = String(formData.get("title") ?? "").trim().slice(0, 100);
+  if (!title) return { message: "제목을 적어 주세요." };
+
+  const { data: episode } = await supabase.from("episodes").select("webtoon_id, number").eq("id", id).maybeSingle();
+  if (!episode || !(await canEditWebtoon(editor, episode.webtoon_id as string))) return { message: NO_PERMISSION };
+
+  const { error } = await supabase.from("episodes").update({ title }).eq("id", id);
+  if (error) return { message: `저장 실패: ${error.message}` };
+
+  revalidatePath("/", "layout");
+  return { ok: true, message: `${episode.number}화 제목을 바꿨어요.` };
 }
 
 /** 회차 썸네일만 바꾸기 / 무프사로 (회차 목록의 썸네일 버튼)
