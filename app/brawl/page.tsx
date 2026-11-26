@@ -26,7 +26,7 @@ export default async function BrawlPage() {
       <main className="flex-1 py-4 sm:py-8">
         <Container className="max-w-xl px-0 sm:px-8">
           <h1 className="sr-only">{g.title}</h1>
-          <BrawlFrame src="/games/komi-brawl.html?v=1" title={g.title} />
+          <BrawlFrame src={`/games/komi-brawl.html?v=2${lang === "en" ? "&lang=en" : ""}`} title={g.title} />
         </Container>
       </main>
       <Footer />

@@ -92,7 +92,7 @@ export const siteConfig = {
     en: {
       eyebrow: "Mini game",
       title: "Raise Komi",
-      text: "Komi fights deadline monsters! Power up with bananas, pick a class, and beat the bosses. (Game text is in Korean.)",
+      text: "Komi fights deadline monsters! Power up with bananas, pick a class, and beat the bosses.",
       cta: "Play now",
     },
   },
@@ -109,7 +109,7 @@ export const siteConfig = {
     en: {
       eyebrow: "Mini game",
       title: "Komi's 30 Days on an Island",
-      text: "Komi is stranded on a desert island! Build a raft or send a rescue signal and escape within 30 days. (Game text is in Korean.)",
+      text: "Komi is stranded on a desert island! Build a raft or send a rescue signal and escape within 30 days.",
       cta: "Play now",
     },
   },
@@ -119,7 +119,7 @@ export const siteConfig = {
   games: {
     href: "/games",
     ko: { eyebrow: "mini games", title: "미니게임", text: "하고 싶은 게임을 골라요!" },
-    en: { eyebrow: "mini games", title: "Mini Games", text: "Pick a game to play! (Game text is in Korean.)" },
+    en: { eyebrow: "mini games", title: "Mini Games", text: "Pick a game to play!" },
   },
 
   /* 꼬미 대난투 게임 (주소: /brawl) — 6명 중 마지막까지 살아남기. 온라인 대전(사람이 모자라면 AI) */
@@ -134,7 +134,7 @@ export const siteConfig = {
     en: {
       eyebrow: "Mini game",
       title: "Komi Brawl",
-      text: "Be the last one standing out of 6! Practice solo or battle other players online — empty spots are filled by AI. (Game text is in Korean.)",
+      text: "Be the last one standing out of 6! Practice solo or battle other players online — empty spots are filled by AI.",
       cta: "Play now",
     },
   },
