@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { PenLine, Search } from "lucide-react";
+import { Gamepad2, PenLine, Search } from "lucide-react";
 
 import { siteConfig } from "@/site.config";
 import { Container } from "@/components/layout/container";
@@ -32,6 +32,16 @@ export async function Navbar() {
           {/* 휴대폰: 짧게 "올리기" / 컴퓨터: "내 웹툰 올리기" */}
           <span className="sm:hidden">{lang === "ko" ? "올리기" : "Publish"}</span>
           <span className="hidden sm:inline">{lang === "ko" ? siteConfig.hero.secondaryCta.label : t.hero.create}</span>
+        </Link>
+
+        {/* 미니게임 (올리기 버튼 옆, 작게) — 게임기 아이콘이 살랑살랑, 누르면 바로 꼬미 키우기(/game)
+            움직임은 app/globals.css 의 animate-wiggle */}
+        <Link
+          href={siteConfig.game.href}
+          className="inline-flex h-7 shrink-0 items-center gap-1 rounded-full border border-border px-2 text-[11px] font-semibold text-foreground transition-colors hover:bg-muted sm:h-9 sm:px-3.5 sm:text-sm"
+        >
+          <Gamepad2 className="size-3 animate-wiggle text-primary motion-reduce:animate-none sm:size-4" />
+          {lang === "ko" ? "미니게임" : "Games"}
         </Link>
 
         <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-4">

@@ -120,6 +120,19 @@
   --font-display: var(--font-display);
 }
 
+/* 살랑살랑 흔들리는 움직임 (상단 메뉴 "미니게임" 아이콘) → 클래스 animate-wiggle */
+@theme {
+  --animate-wiggle: wiggle 1.4s ease-in-out infinite;
+  @keyframes wiggle {
+    0%, 60%, 100% { transform: rotate(0deg) scale(1); }
+    10% { transform: rotate(-16deg) scale(1.15); }
+    20% { transform: rotate(14deg) scale(1.15); }
+    30% { transform: rotate(-10deg) scale(1.1); }
+    40% { transform: rotate(6deg) scale(1.05); }
+    50% { transform: rotate(-2deg) scale(1); }
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
