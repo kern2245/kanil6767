@@ -114,6 +114,23 @@ export const siteConfig = {
     },
   },
 
+  /* 꼬미 대난투 게임 (주소: /brawl) — 6명 중 마지막까지 살아남기. 온라인 대전(사람이 모자라면 AI) */
+  brawl: {
+    href: "/brawl",
+    ko: {
+      eyebrow: "미니 게임",
+      title: "꼬미 대난투",
+      text: "6명 중 마지막까지 살아남으세요! 혼자 연습하거나, 온라인에서 다른 사람과 대결해요. 사람이 모자라면 AI 가 채워요.",
+      cta: "게임 하러 가기",
+    },
+    en: {
+      eyebrow: "Mini game",
+      title: "Komi Brawl",
+      text: "Be the last one standing out of 6! Practice solo or battle other players online — empty spots are filled by AI. (Game text is in Korean.)",
+      cta: "Play now",
+    },
+  },
+
   /* 연락처 섹션 */
   contact: {
     eyebrow: "tea time",
