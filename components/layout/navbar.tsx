@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Gamepad2, PenLine, Search } from "lucide-react";
+import { Gamepad2, PenLine, Search, Swords } from "lucide-react";
 
 import { siteConfig } from "@/site.config";
 import { Container } from "@/components/layout/container";
@@ -42,6 +42,17 @@ export async function Navbar() {
         >
           <Gamepad2 className="size-3 animate-wiggle text-primary motion-reduce:animate-none sm:size-4" />
           {lang === "ko" ? "미니게임" : "Games"}
+        </Link>
+
+        {/* 꼬미 대난투 (미니게임 옆, 작게) — 누르면 /brawl. 글자는 site.config.ts 의 brawl
+            아주 좁은 휴대폰(400px 미만)에서는 메뉴가 넘치지 않게 칼 아이콘만 보임 */}
+        <Link
+          href={siteConfig.brawl.href}
+          aria-label={siteConfig.brawl[lang].title}
+          className="inline-flex h-7 shrink-0 items-center gap-1 rounded-full border border-border px-2 text-[11px] font-semibold text-foreground transition-colors hover:bg-muted sm:h-9 sm:px-3.5 sm:text-sm"
+        >
+          <Swords className="size-3 text-primary sm:size-4" />
+          <span className="hidden min-[400px]:inline">{lang === "ko" ? "대난투" : "Brawl"}</span>
         </Link>
 
         <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-4">
