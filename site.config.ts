@@ -114,6 +114,14 @@ export const siteConfig = {
     },
   },
 
+  /* 미니게임 고르는 페이지 (주소: /games) — 상단 메뉴 "미니게임"을 누르면 여기로.
+     카드 순서는 app/games/page.tsx 의 GAMES 에서 바꿉니다. */
+  games: {
+    href: "/games",
+    ko: { eyebrow: "mini games", title: "미니게임", text: "하고 싶은 게임을 골라요!" },
+    en: { eyebrow: "mini games", title: "Mini Games", text: "Pick a game to play! (Game text is in Korean.)" },
+  },
+
   /* 꼬미 대난투 게임 (주소: /brawl) — 6명 중 마지막까지 살아남기. 온라인 대전(사람이 모자라면 AI) */
   brawl: {
     href: "/brawl",
